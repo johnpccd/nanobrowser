@@ -94,6 +94,51 @@ export const ModelSettings = ({ isDarkMode = false }: ModelSettingsProps) => {
 
   const [selectedSpeechToTextModel, setSelectedSpeechToTextModel] = useState<string>('');
 
+  // State for OpenRouter models fetched from API
+  const [openRouterModels, setOpenRouterModels] = useState<Array<{ id: string; name: string }>>([]);
+  const [isLoadingOpenRouterModels, setIsLoadingOpenRouterModels] = useState(false);
+  const [openRouterModelsError, setOpenRouterModelsError] = useState<string | null>(null);
+
+  // Function to fetch OpenRouter models from API
+  const fetchOpenRouterModels = useCallback(async (apiKey: string) => {
+    if (!apiKey) {
+      setOpenRouterModels([]);
+      return;
+    }
+
+    setIsLoadingOpenRouterModels(true);
+    setOpenRouterModelsError(null);
+
+    try {
+      const response = await fetch('https://openrouter.ai/api/v1/models', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch models: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const models = data.data
+        .map((model: { id: string; name?: string }) => ({
+          id: model.id,
+          name: model.name || model.id,
+        }))
+        .sort((a: { id: string }, b: { id: string }) => a.id.localeCompare(b.id));
+
+      setOpenRouterModels(models);
+    } catch (error) {
+      console.error('Error fetching OpenRouter models:', error);
+      setOpenRouterModelsError(error instanceof Error ? error.message : 'Failed to fetch models');
+      setOpenRouterModels([]);
+    } finally {
+      setIsLoadingOpenRouterModels(false);
+    }
+  }, []);
+
   useEffect(() => {
     const loadProviders = async () => {
       try {
@@ -174,6 +219,20 @@ export const ModelSettings = ({ isDarkMode = false }: ModelSettingsProps) => {
     loadSpeechToTextModel();
   }, []);
 
+  // Fetch OpenRouter models when an OpenRouter provider is available with an API key
+  useEffect(() => {
+    const openRouterProvider = Object.entries(providers).find(
+      ([, config]) => config.type === ProviderTypeEnum.OpenRouter && config.apiKey,
+    );
+
+    if (openRouterProvider) {
+      const [, config] = openRouterProvider;
+      if (config.apiKey && providersFromStorage.has(openRouterProvider[0])) {
+        fetchOpenRouterModels(config.apiKey);
+      }
+    }
+  }, [providers, providersFromStorage, fetchOpenRouterModels]);
+
   // Auto-focus the input field when a new provider is added
   useEffect(() => {
     // Only focus if we have a newly added provider reference
@@ -236,8 +295,19 @@ export const ModelSettings = ({ isDarkMode = false }: ModelSettingsProps) => {
               model: deployment,
             })),
           );
+        } else if (config.type === ProviderTypeEnum.OpenRouter) {
+          // Handle OpenRouter specially - use fetched models from API
+          if (openRouterModels.length > 0) {
+            models.push(
+              ...openRouterModels.map(model => ({
+                provider,
+                providerName: config.name || provider,
+                model: model.id,
+              })),
+            );
+          }
         } else {
-          // Standard handling for non-Azure providers
+          // Standard handling for other providers
           const providerModels =
             config.modelNames || llmProviderModelNames[provider as keyof typeof llmProviderModelNames] || [];
           models.push(
@@ -254,9 +324,9 @@ export const ModelSettings = ({ isDarkMode = false }: ModelSettingsProps) => {
     }
 
     return models;
-  }, []);
+  }, [openRouterModels]);
 
-  // Update available models whenever providers change
+  // Update available models whenever providers or openRouterModels change
   useEffect(() => {
     const updateAvailableModels = async () => {
       const models = await getAvailableModelsCallback();
@@ -264,7 +334,7 @@ export const ModelSettings = ({ isDarkMode = false }: ModelSettingsProps) => {
     };
 
     updateAvailableModels();
-  }, [getAvailableModelsCallback]); // Only depends on the callback
+  }, [getAvailableModelsCallback, openRouterModels]); // Depends on callback and openRouterModels
 
   const handleApiKeyChange = (provider: string, apiKey: string, baseUrl?: string) => {
     setModifiedProviders(prev => new Set(prev).add(provider));
@@ -1435,8 +1505,8 @@ export const ModelSettings = ({ isDarkMode = false }: ModelSettingsProps) => {
                       </div>
                     )}
 
-                    {/* Models input section (for non-Azure providers) */}
-                    {(providerConfig.type as ProviderTypeEnum) !== ProviderTypeEnum.AzureOpenAI && (
+                    {/* OpenRouter Models Section - fetched from API */}
+                    {(providerConfig.type as ProviderTypeEnum) === ProviderTypeEnum.OpenRouter && (
                       <div className="flex items-start">
                         <label
                           htmlFor={`${providerId}-models-label`}
@@ -1444,89 +1514,111 @@ export const ModelSettings = ({ isDarkMode = false }: ModelSettingsProps) => {
                           {t('options_models_providers_models')}
                         </label>
                         <div className="flex-1 space-y-2">
-                          {/* Conditional UI for OpenRouter */}
-                          {(providerConfig.type as ProviderTypeEnum) === ProviderTypeEnum.OpenRouter ? (
-                            <>
-                              <div
-                                className={`flex min-h-[42px] flex-wrap items-center gap-2 rounded-md border ${isDarkMode ? 'border-slate-600 bg-slate-700 text-gray-200' : 'border-gray-300 bg-white text-gray-700'} p-2`}>
-                                {providerConfig.modelNames && providerConfig.modelNames.length > 0 ? (
-                                  providerConfig.modelNames.map(model => (
-                                    <div
-                                      key={model}
-                                      className={`flex items-center rounded-full ${isDarkMode ? 'bg-blue-900 text-blue-100' : 'bg-blue-100 text-blue-800'} px-2 py-1 text-sm`}>
-                                      <span>{model}</span>
-                                      <button
-                                        type="button"
-                                        onClick={() => removeModel(providerId, model)}
-                                        className={`ml-1 font-bold ${isDarkMode ? 'text-blue-300 hover:text-blue-100' : 'text-blue-600 hover:text-blue-800'}`}
-                                        aria-label={`Remove ${model}`}>
-                                        ×
-                                      </button>
-                                    </div>
-                                  ))
-                                ) : (
-                                  <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                    {t('options_models_providers_models_openrouter_empty')}
-                                  </span>
-                                )}
-                                <input
-                                  id={`${providerId}-models-input`}
-                                  type="text"
-                                  placeholder=""
-                                  value={newModelInputs[providerId] || ''}
-                                  onChange={e => handleModelsChange(providerId, e.target.value)}
-                                  onKeyDown={e => handleKeyDown(e, providerId)}
-                                  className={`min-w-[150px] flex-1 border-none text-sm ${isDarkMode ? 'bg-transparent text-gray-200' : 'bg-transparent text-gray-700'} p-1 outline-none`}
-                                />
-                              </div>
-                              <p className={`mt-1 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                {t('options_models_providers_models_instructions')}
-                              </p>
-                            </>
-                          ) : (
-                            /* Default Tag Input for other providers */
-                            <>
-                              <div
-                                className={`flex min-h-[42px] flex-wrap items-center gap-2 rounded-md border ${isDarkMode ? 'border-slate-600 bg-slate-700 text-gray-200' : 'border-gray-300 bg-white text-gray-700'} p-2`}>
-                                {(() => {
-                                  const models =
-                                    providerConfig.modelNames !== undefined
-                                      ? providerConfig.modelNames
-                                      : llmProviderModelNames[providerId as keyof typeof llmProviderModelNames] || [];
-                                  return models.map(model => (
-                                    <div
-                                      key={model}
-                                      className={`flex items-center rounded-full ${isDarkMode ? 'bg-blue-900 text-blue-100' : 'bg-blue-100 text-blue-800'} px-2 py-1 text-sm`}>
-                                      <span>{model}</span>
-                                      <button
-                                        type="button"
-                                        onClick={() => removeModel(providerId, model)}
-                                        className={`ml-1 font-bold ${isDarkMode ? 'text-blue-300 hover:text-blue-100' : 'text-blue-600 hover:text-blue-800'}`}
-                                        aria-label={`Remove ${model}`}>
-                                        ×
-                                      </button>
-                                    </div>
-                                  ));
-                                })()}
-                                <input
-                                  id={`${providerId}-models-input`}
-                                  type="text"
-                                  placeholder=""
-                                  value={newModelInputs[providerId] || ''}
-                                  onChange={e => handleModelsChange(providerId, e.target.value)}
-                                  onKeyDown={e => handleKeyDown(e, providerId)}
-                                  className={`min-w-[150px] flex-1 border-none text-sm ${isDarkMode ? 'bg-transparent text-gray-200' : 'bg-transparent text-gray-700'} p-1 outline-none`}
-                                />
-                              </div>
-                              <p className={`mt-1 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                {t('options_models_providers_models_instructions')}
-                              </p>
-                            </>
-                          )}
-                          {/* === END: Conditional UI === */}
+                          <div
+                            className={`flex min-h-[42px] items-center justify-between rounded-md border ${isDarkMode ? 'border-slate-600 bg-slate-700 text-gray-200' : 'border-gray-300 bg-white text-gray-700'} p-2`}>
+                            <div className="flex items-center space-x-2">
+                              {isLoadingOpenRouterModels ? (
+                                <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  Loading models...
+                                </span>
+                              ) : openRouterModelsError ? (
+                                <span className={`text-sm ${isDarkMode ? 'text-red-400' : 'text-red-500'}`}>
+                                  {openRouterModelsError}
+                                </span>
+                              ) : openRouterModels.length > 0 ? (
+                                <span className={`text-sm ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>
+                                  {openRouterModels.length} models available
+                                </span>
+                              ) : providersFromStorage.has(providerId) ? (
+                                <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  Click refresh to load models
+                                </span>
+                              ) : (
+                                <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  Save provider to fetch models
+                                </span>
+                              )}
+                            </div>
+                            {providersFromStorage.has(providerId) && (
+                              <button
+                                type="button"
+                                onClick={() => fetchOpenRouterModels(providerConfig.apiKey || '')}
+                                disabled={isLoadingOpenRouterModels || !providerConfig.apiKey}
+                                className={`flex items-center space-x-1 rounded px-3 py-1 text-sm ${
+                                  isDarkMode
+                                    ? 'bg-blue-600 text-white hover:bg-blue-500 disabled:bg-slate-600 disabled:text-gray-400'
+                                    : 'bg-blue-500 text-white hover:bg-blue-600 disabled:bg-gray-300 disabled:text-gray-500'
+                                } disabled:cursor-not-allowed`}>
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  viewBox="0 0 20 20"
+                                  fill="currentColor"
+                                  className={`size-4 ${isLoadingOpenRouterModels ? 'animate-spin' : ''}`}>
+                                  <path
+                                    fillRule="evenodd"
+                                    d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z"
+                                    clipRule="evenodd"
+                                  />
+                                </svg>
+                                <span>Refresh</span>
+                              </button>
+                            )}
+                          </div>
+                          <p className={`mt-1 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                            Models are automatically fetched from OpenRouter API
+                          </p>
                         </div>
                       </div>
                     )}
+
+                    {/* Models input section (for non-Azure and non-OpenRouter providers) */}
+                    {(providerConfig.type as ProviderTypeEnum) !== ProviderTypeEnum.AzureOpenAI &&
+                      (providerConfig.type as ProviderTypeEnum) !== ProviderTypeEnum.OpenRouter && (
+                        <div className="flex items-start">
+                          <label
+                            htmlFor={`${providerId}-models-label`}
+                            className={`w-20 pt-2 text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            {t('options_models_providers_models')}
+                          </label>
+                          <div className="flex-1 space-y-2">
+                            <div
+                              className={`flex min-h-[42px] flex-wrap items-center gap-2 rounded-md border ${isDarkMode ? 'border-slate-600 bg-slate-700 text-gray-200' : 'border-gray-300 bg-white text-gray-700'} p-2`}>
+                              {(() => {
+                                const models =
+                                  providerConfig.modelNames !== undefined
+                                    ? providerConfig.modelNames
+                                    : llmProviderModelNames[providerId as keyof typeof llmProviderModelNames] || [];
+                                return models.map(model => (
+                                  <div
+                                    key={model}
+                                    className={`flex items-center rounded-full ${isDarkMode ? 'bg-blue-900 text-blue-100' : 'bg-blue-100 text-blue-800'} px-2 py-1 text-sm`}>
+                                    <span>{model}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => removeModel(providerId, model)}
+                                      className={`ml-1 font-bold ${isDarkMode ? 'text-blue-300 hover:text-blue-100' : 'text-blue-600 hover:text-blue-800'}`}
+                                      aria-label={`Remove ${model}`}>
+                                      ×
+                                    </button>
+                                  </div>
+                                ));
+                              })()}
+                              <input
+                                id={`${providerId}-models-input`}
+                                type="text"
+                                placeholder=""
+                                value={newModelInputs[providerId] || ''}
+                                onChange={e => handleModelsChange(providerId, e.target.value)}
+                                onKeyDown={e => handleKeyDown(e, providerId)}
+                                className={`min-w-[150px] flex-1 border-none text-sm ${isDarkMode ? 'bg-transparent text-gray-200' : 'bg-transparent text-gray-700'} p-1 outline-none`}
+                              />
+                            </div>
+                            <p className={`mt-1 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                              {t('options_models_providers_models_instructions')}
+                            </p>
+                          </div>
+                        </div>
+                      )}
 
                     {/* Ollama reminder at the bottom of the section */}
                     {providerConfig.type === ProviderTypeEnum.Ollama && (
