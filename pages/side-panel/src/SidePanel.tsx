@@ -50,8 +50,9 @@ const SidePanel = () => {
   const [isReplaying, setIsReplaying] = useState(false);
   const [replayEnabled, setReplayEnabled] = useState(false);
   const [currentTabId, setCurrentTabId] = useState<number | null>(null);
-  const [mode, setMode] = useState<TabMode>('automation');
+  const [mode, setMode] = useState<TabMode>('qa');
   const [qaResponseBuffer, setQaResponseBuffer] = useState<string>('');
+  const [isQaStreaming, setIsQaStreaming] = useState(false);
   const sessionIdRef = useRef<string | null>(null);
   const isReplayingRef = useRef<boolean>(false);
   const portRef = useRef<chrome.runtime.Port | null>(null);
@@ -423,31 +424,31 @@ const SidePanel = () => {
           setInputEnabled(true);
           setShowStopButton(false);
         } else if (message && message.type === 'qa_response_chunk') {
-          // Handle streaming QA response chunks
+          // Handle streaming QA response chunks - just accumulate in buffer
           if (message.sessionId === sessionIdRef.current) {
-            setQaResponseBuffer(prev => prev + (message.content || ''));
+            const chunk = message.content || '';
+            setIsQaStreaming(true);
+            setQaResponseBuffer(prev => prev + chunk);
           }
         } else if (message && message.type === 'qa_response_complete') {
-          // QA response complete, add final message
+          // QA response complete - now add final message to messages array
           if (message.sessionId === sessionIdRef.current) {
-            // Use a ref or state getter to access current buffer value
+            // Get the accumulated content and add as a message
             setQaResponseBuffer(prev => {
-              const finalContent = prev;
-              if (finalContent) {
-                // Use setTimeout to ensure state update happens after this setState
-                setTimeout(() => {
-                  appendMessage(
-                    {
-                      actor: Actors.SYSTEM,
-                      content: finalContent,
-                      timestamp: Date.now(),
-                    },
-                    sessionIdRef.current,
-                  );
-                }, 0);
+              if (prev) {
+                // Add the final message to messages array
+                appendMessage(
+                  {
+                    actor: Actors.SYSTEM,
+                    content: prev,
+                    timestamp: Date.now(),
+                  },
+                  sessionIdRef.current,
+                );
               }
-              return '';
+              return ''; // Clear buffer
             });
+            setIsQaStreaming(false);
             setInputEnabled(true);
             setShowStopButton(false);
           }
@@ -463,6 +464,7 @@ const SidePanel = () => {
               sessionIdRef.current,
             );
             setQaResponseBuffer('');
+            setIsQaStreaming(false);
             setInputEnabled(true);
             setShowStopButton(false);
           }
@@ -765,6 +767,7 @@ const SidePanel = () => {
       if (mode === 'qa') {
         // QA mode - send QA query
         setQaResponseBuffer(''); // Clear buffer
+        setIsQaStreaming(false);
         await sendMessage({
           type: 'qa_query',
           query: text,
@@ -839,6 +842,12 @@ const SidePanel = () => {
     setIsFollowUpMode(false);
     setIsHistoricalSession(false);
     setQaResponseBuffer('');
+
+    // Set mode to QA for new chats
+    if (currentTabId) {
+      setMode('qa');
+      await setTabMode(currentTabId, 'qa');
+    }
 
     // Clear active session for current tab
     await saveCurrentTabActiveSession(null);
@@ -1335,10 +1344,14 @@ const SidePanel = () => {
                     </div>
                   </>
                 )}
-                {messages.length > 0 && (
+                {(messages.length > 0 || isQaStreaming) && (
                   <div
                     className={`scrollbar-gutter-stable flex-1 overflow-x-hidden overflow-y-scroll scroll-smooth p-2 ${isDarkMode ? 'bg-slate-900/80' : ''}`}>
-                    <MessageList messages={messages} isDarkMode={isDarkMode} />
+                    <MessageList
+                      messages={messages}
+                      isDarkMode={isDarkMode}
+                      streamingContent={isQaStreaming ? qaResponseBuffer : undefined}
+                    />
                     <div ref={messagesEndRef} />
                   </div>
                 )}

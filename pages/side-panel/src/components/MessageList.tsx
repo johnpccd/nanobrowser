@@ -5,9 +5,14 @@ import { memo } from 'react';
 interface MessageListProps {
   messages: Message[];
   isDarkMode?: boolean;
+  streamingContent?: string;
 }
 
-export default memo(function MessageList({ messages, isDarkMode = false }: MessageListProps) {
+export default memo(function MessageList({ messages, isDarkMode = false, streamingContent }: MessageListProps) {
+  // Check if last message is from SYSTEM actor for streaming continuation
+  const lastMessage = messages[messages.length - 1];
+  const lastWasSystem = lastMessage?.actor === 'system';
+
   return (
     <div className="max-w-full space-y-4">
       {messages.map((message, index) => (
@@ -18,6 +23,10 @@ export default memo(function MessageList({ messages, isDarkMode = false }: Messa
           isDarkMode={isDarkMode}
         />
       ))}
+      {/* Render streaming content as a separate block */}
+      {streamingContent && (
+        <StreamingMessageBlock content={streamingContent} isDarkMode={isDarkMode} isSameActor={lastWasSystem} />
+      )}
     </div>
   );
 });
@@ -74,6 +83,49 @@ function MessageBlock({ message, isSameActor, isDarkMode = false }: MessageBlock
               {formatTimestamp(message.timestamp)}
             </div>
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface StreamingMessageBlockProps {
+  content: string;
+  isDarkMode?: boolean;
+  isSameActor?: boolean;
+}
+
+function StreamingMessageBlock({ content, isDarkMode = false, isSameActor = false }: StreamingMessageBlockProps) {
+  const actor = ACTOR_PROFILES['system'];
+
+  return (
+    <div
+      className={`flex max-w-full gap-3 ${
+        !isSameActor
+          ? `mt-4 border-t ${isDarkMode ? 'border-sky-800/50' : 'border-sky-200/50'} pt-4 first:mt-0 first:border-t-0 first:pt-0`
+          : ''
+      }`}>
+      {!isSameActor && (
+        <div
+          className="flex size-8 shrink-0 items-center justify-center rounded-full"
+          style={{ backgroundColor: actor.iconBackground }}>
+          <img src={actor.icon} alt={actor.name} className="size-6" />
+        </div>
+      )}
+      {isSameActor && <div className="w-8" />}
+
+      <div className="min-w-0 flex-1">
+        {!isSameActor && (
+          <div className={`mb-1 text-sm font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-900'}`}>
+            {actor.name}
+          </div>
+        )}
+
+        <div className="space-y-0.5">
+          <div className={`whitespace-pre-wrap break-words text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+            {content}
+            <span className="inline-block w-2 h-4 ml-1 bg-blue-500 animate-pulse" />
+          </div>
         </div>
       </div>
     </div>

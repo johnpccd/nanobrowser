@@ -5,12 +5,12 @@ export type TabMode = 'automation' | 'qa';
 /**
  * Get the mode for a specific tab
  * @param tabId - The tab ID
- * @returns The mode for the tab, or 'automation' if not set
+ * @returns The mode for the tab, or 'qa' if not set
  */
 export async function getTabMode(tabId: number): Promise<TabMode> {
   const key = `tab-mode-${tabId}`;
   const result = await chrome.storage.local.get([key]);
-  return (result[key] as TabMode) || 'automation';
+  return (result[key] as TabMode) || 'qa';
 }
 
 /**
