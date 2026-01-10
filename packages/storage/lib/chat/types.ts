@@ -22,6 +22,7 @@ export interface ChatSessionMetadata {
   createdAt: number; // Unix timestamp in milliseconds
   updatedAt: number; // Unix timestamp in milliseconds
   messageCount: number;
+  tabId?: number; // Tab ID associated with this session
 }
 
 // ChatSession is the full conversation history displayed in the Sidepanel
@@ -38,19 +39,19 @@ export interface ChatAgentStepHistory {
 
 export interface ChatHistoryStorage {
   // Get all chat sessions (with empty message arrays for listing)
-  getAllSessions: () => Promise<ChatSession[]>;
+  getAllSessions: (tabId?: number) => Promise<ChatSession[]>;
 
   // Clear all chat sessions and messages
   clearAllSessions: () => Promise<void>;
 
   // Get only session metadata (for efficient listing)
-  getSessionsMetadata: () => Promise<ChatSessionMetadata[]>;
+  getSessionsMetadata: (tabId?: number) => Promise<ChatSessionMetadata[]>;
 
   // Get a specific chat session with its messages
   getSession: (sessionId: string) => Promise<ChatSession | null>;
 
   // Create a new chat session
-  createSession: (title: string) => Promise<ChatSession>;
+  createSession: (title: string, tabId?: number) => Promise<ChatSession>;
 
   // Update an existing chat session
   updateTitle: (sessionId: string, title: string) => Promise<ChatSessionMetadata>;

@@ -56,12 +56,16 @@ const getCurrentTimestamp = (): number => Date.now();
  */
 export function createChatHistoryStorage(): ChatHistoryStorage {
   return {
-    getAllSessions: async (): Promise<ChatSession[]> => {
+    getAllSessions: async (tabId?: number): Promise<ChatSession[]> => {
       const sessionsMeta = await chatSessionsMetaStorage.get();
+
+      // Filter by tabId if provided
+      const filteredSessions =
+        tabId !== undefined ? sessionsMeta.filter(session => session.tabId === tabId) : sessionsMeta;
 
       // For listing purposes, we can return sessions without loading messages
       // This makes the list view very fast
-      return sessionsMeta.map(meta => ({
+      return filteredSessions.map(meta => ({
         ...meta,
         messages: [], // Empty array as we don't load messages for listing
       }));
@@ -77,8 +81,10 @@ export function createChatHistoryStorage(): ChatHistoryStorage {
     },
 
     // Get session metadata without messages (for UI listing)
-    getSessionsMetadata: async (): Promise<ChatSessionMetadata[]> => {
-      return await chatSessionsMetaStorage.get();
+    getSessionsMetadata: async (tabId?: number): Promise<ChatSessionMetadata[]> => {
+      const sessionsMeta = await chatSessionsMetaStorage.get();
+      // Filter by tabId if provided
+      return tabId !== undefined ? sessionsMeta.filter(session => session.tabId === tabId) : sessionsMeta;
     },
 
     getSession: async (sessionId: string): Promise<ChatSession | null> => {
@@ -97,7 +103,7 @@ export function createChatHistoryStorage(): ChatHistoryStorage {
       };
     },
 
-    createSession: async (title: string): Promise<ChatSession> => {
+    createSession: async (title: string, tabId?: number): Promise<ChatSession> => {
       const newSessionId = crypto.randomUUID();
       const currentTime = getCurrentTimestamp();
       const newSessionMeta: ChatSessionMetadata = {
@@ -106,6 +112,7 @@ export function createChatHistoryStorage(): ChatHistoryStorage {
         createdAt: currentTime,
         updatedAt: currentTime,
         messageCount: 0,
+        tabId,
       };
 
       // Create empty messages array for the new session

@@ -16,14 +16,24 @@ import { createChatModel } from './agent/helper';
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { DEFAULT_AGENT_OPTIONS } from './agent/types';
 import { SpeechToTextService } from './services/speechToText';
-import { injectBuildDomTreeScripts } from './browser/dom/service';
+import { injectBuildDomTreeScripts, getMarkdownContent } from './browser/dom/service';
 import { analytics } from './services/analytics';
+import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 
 const logger = createLogger('background');
 
 const browserContext = new BrowserContext({});
-let currentExecutor: Executor | null = null;
-let currentPort: chrome.runtime.Port | null = null;
+
+// Multi-tab connection tracking
+interface TabConnection {
+  executor?: Executor;
+  port?: chrome.runtime.Port;
+  qaStream?: AbortController;
+  mode?: 'automation' | 'qa';
+}
+
+const tabConnections = new Map<number, TabConnection>();
+
 const SIDE_PANEL_URL = chrome.runtime.getURL('side-panel/index.html');
 
 // Setup side panel behavior
@@ -41,7 +51,8 @@ chrome.debugger.onDetach.addListener(async (source, reason) => {
   console.log('Debugger detached:', source, reason);
   if (reason === 'canceled_by_user') {
     if (source.tabId) {
-      currentExecutor?.cancel();
+      const tabConn = tabConnections.get(source.tabId);
+      tabConn?.executor?.cancel();
       await browserContext.cleanup();
     }
   }
@@ -50,6 +61,13 @@ chrome.debugger.onDetach.addListener(async (source, reason) => {
 // Cleanup when tab is closed
 chrome.tabs.onRemoved.addListener(tabId => {
   browserContext.removeAttachedPage(tabId);
+  // Cleanup tab connection
+  const tabConn = tabConnections.get(tabId);
+  if (tabConn) {
+    tabConn.executor?.cancel();
+    tabConn.qaStream?.abort();
+    tabConnections.delete(tabId);
+  }
 });
 
 logger.info('background loaded');
@@ -85,9 +103,17 @@ chrome.runtime.onConnect.addListener(port => {
       return;
     }
 
-    currentPort = port;
+    // Track port but associate with tab when first message arrives
+    let portTabId: number | null = null;
 
     port.onMessage.addListener(async message => {
+      // Associate port with tabId from first message that has it
+      if (!portTabId && message.tabId) {
+        portTabId = message.tabId;
+        const tabConn = tabConnections.get(portTabId) || {};
+        tabConn.port = port;
+        tabConnections.set(portTabId, tabConn);
+      }
       try {
         switch (message.type) {
           case 'heartbeat':
@@ -100,10 +126,21 @@ chrome.runtime.onConnect.addListener(port => {
             if (!message.tabId) return port.postMessage({ type: 'error', error: t('bg_errors_noTabId') });
 
             logger.info('new_task', message.tabId, message.task);
-            currentExecutor = await setupExecutor(message.taskId, message.task, browserContext);
-            subscribeToExecutorEvents(currentExecutor);
 
-            const result = await currentExecutor.execute();
+            // Get or create tab connection
+            let tabConn = tabConnections.get(message.tabId);
+            if (!tabConn) {
+              tabConn = { port, mode: 'automation' };
+              tabConnections.set(message.tabId, tabConn);
+            } else {
+              tabConn.port = port;
+            }
+
+            const executor = await setupExecutor(message.taskId, message.task, browserContext);
+            tabConn.executor = executor;
+            subscribeToExecutorEvents(executor, message.tabId);
+
+            const result = await executor.execute();
             logger.info('new_task execution result', message.tabId, result);
             break;
           }
@@ -114,12 +151,13 @@ chrome.runtime.onConnect.addListener(port => {
 
             logger.info('follow_up_task', message.tabId, message.task);
 
+            const tabConn = tabConnections.get(message.tabId);
             // If executor exists, add follow-up task
-            if (currentExecutor) {
-              currentExecutor.addFollowUpTask(message.task);
+            if (tabConn?.executor) {
+              tabConn.executor.addFollowUpTask(message.task);
               // Re-subscribe to events in case the previous subscription was cleaned up
-              subscribeToExecutorEvents(currentExecutor);
-              const result = await currentExecutor.execute();
+              subscribeToExecutorEvents(tabConn.executor, message.tabId);
+              const result = await tabConn.executor.execute();
               logger.info('follow_up_task execution result', message.tabId, result);
             } else {
               // executor was cleaned up, can not add follow-up task
@@ -130,20 +168,34 @@ chrome.runtime.onConnect.addListener(port => {
           }
 
           case 'cancel_task': {
-            if (!currentExecutor) return port.postMessage({ type: 'error', error: t('bg_errors_noRunningTask') });
-            await currentExecutor.cancel();
+            if (!message.tabId) return port.postMessage({ type: 'error', error: t('bg_errors_noTabId') });
+            const tabConn = tabConnections.get(message.tabId);
+            if (!tabConn?.executor && !tabConn?.qaStream) {
+              return port.postMessage({ type: 'error', error: t('bg_errors_noRunningTask') });
+            }
+            if (tabConn.executor) {
+              await tabConn.executor.cancel();
+            }
+            if (tabConn.qaStream) {
+              tabConn.qaStream.abort();
+              tabConn.qaStream = undefined;
+            }
             break;
           }
 
           case 'resume_task': {
-            if (!currentExecutor) return port.postMessage({ type: 'error', error: t('bg_cmd_resumeTask_noTask') });
-            await currentExecutor.resume();
+            if (!message.tabId) return port.postMessage({ type: 'error', error: t('bg_errors_noTabId') });
+            const tabConn = tabConnections.get(message.tabId);
+            if (!tabConn?.executor) return port.postMessage({ type: 'error', error: t('bg_cmd_resumeTask_noTask') });
+            await tabConn.executor.resume();
             return port.postMessage({ type: 'success' });
           }
 
           case 'pause_task': {
-            if (!currentExecutor) return port.postMessage({ type: 'error', error: t('bg_errors_noRunningTask') });
-            await currentExecutor.pause();
+            if (!message.tabId) return port.postMessage({ type: 'error', error: t('bg_errors_noTabId') });
+            const tabConn = tabConnections.get(message.tabId);
+            if (!tabConn?.executor) return port.postMessage({ type: 'error', error: t('bg_errors_noRunningTask') });
+            await tabConn.executor.pause();
             return port.postMessage({ type: 'success' });
           }
 
@@ -227,12 +279,23 @@ chrome.runtime.onConnect.addListener(port => {
             try {
               // Switch to the specified tab
               await browserContext.switchTab(message.tabId);
+
+              // Get or create tab connection
+              let tabConn = tabConnections.get(message.tabId);
+              if (!tabConn) {
+                tabConn = { port, mode: 'automation' };
+                tabConnections.set(message.tabId, tabConn);
+              } else {
+                tabConn.port = port;
+              }
+
               // Setup executor with the new taskId and a dummy task description
-              currentExecutor = await setupExecutor(message.taskId, message.task, browserContext);
-              subscribeToExecutorEvents(currentExecutor);
+              const executor = await setupExecutor(message.taskId, message.task, browserContext);
+              tabConn.executor = executor;
+              subscribeToExecutorEvents(executor, message.tabId);
 
               // Run replayHistory with the history session ID
-              const result = await currentExecutor.replayHistory(message.historySessionId);
+              const result = await executor.replayHistory(message.historySessionId);
               logger.debug('replay execution result', message.tabId, result);
             } catch (error) {
               logger.error('Replay failed:', error);
@@ -241,6 +304,114 @@ chrome.runtime.onConnect.addListener(port => {
                 error: error instanceof Error ? error.message : t('bg_cmd_replay_failed'),
               });
             }
+            break;
+          }
+
+          case 'qa_query': {
+            if (!message.tabId) return port.postMessage({ type: 'error', error: t('bg_errors_noTabId') });
+            if (!message.query) return port.postMessage({ type: 'error', error: 'No query provided' });
+            if (!message.sessionId) return port.postMessage({ type: 'error', error: 'No session ID provided' });
+
+            const tabId = message.tabId;
+            const userQuery = message.query;
+            const sessionId = message.sessionId;
+
+            // Get or create tab connection
+            let tabConn = tabConnections.get(tabId);
+            if (!tabConn) {
+              tabConn = { port, mode: 'qa' };
+              tabConnections.set(tabId, tabConn);
+            } else {
+              tabConn.port = port;
+              tabConn.mode = 'qa';
+            }
+
+            // Cancel any existing QA stream for this tab
+            if (tabConn.qaStream) {
+              tabConn.qaStream.abort();
+            }
+
+            // Create new abort controller
+            const abortController = new AbortController();
+            tabConn.qaStream = abortController;
+
+            // Execute QA query asynchronously
+            (async () => {
+              try {
+                // 0. Ensure scripts are injected before getting markdown content
+                await injectBuildDomTreeScripts(tabId);
+
+                // 1. Get page markdown content
+                const pageContent = await getMarkdownContent(tabId);
+
+                // 2. Get QA model config
+                const qaModel = await agentModelStore.getAgentModel(AgentNameEnum.QA);
+                if (!qaModel) {
+                  throw new Error('QA model not configured. Please configure it in settings.');
+                }
+
+                const providers = await llmProviderStore.getAllProviders();
+                const provider = providers[qaModel.provider];
+                if (!provider) {
+                  throw new Error(`Provider ${qaModel.provider} not found`);
+                }
+
+                // 3. Create LLM instance
+                const qaLLM = createChatModel(provider, qaModel);
+
+                // 4. Stream LLM response
+                const stream = await qaLLM.stream(
+                  [
+                    new SystemMessage(
+                      'You are a helpful assistant. Answer questions based on the provided page content. Be concise and accurate.',
+                    ),
+                    new HumanMessage(`Page content:\n${pageContent}\n\nUser question: ${userQuery}`),
+                  ],
+                  { signal: abortController.signal },
+                );
+
+                // 5. Stream chunks to side panel
+                for await (const chunk of stream) {
+                  if (tabConn?.port && !abortController.signal.aborted) {
+                    const content = typeof chunk.content === 'string' ? chunk.content : String(chunk.content);
+                    tabConn.port.postMessage({
+                      type: 'qa_response_chunk',
+                      sessionId,
+                      content,
+                    });
+                  }
+                }
+
+                // 6. Send completion
+                if (tabConn?.port && !abortController.signal.aborted) {
+                  tabConn.port.postMessage({
+                    type: 'qa_response_complete',
+                    sessionId,
+                  });
+                }
+              } catch (error) {
+                if (error instanceof Error && error.name === 'AbortError') {
+                  // Stream was cancelled, ignore
+                  return;
+                }
+                const errorMessage = error instanceof Error ? error.message : String(error) || 'Unknown error occurred';
+
+                logger.error('QA query failed:', error);
+
+                if (tabConn?.port) {
+                  tabConn.port.postMessage({
+                    type: 'qa_response_error',
+                    sessionId,
+                    error: errorMessage,
+                  });
+                }
+              } finally {
+                if (tabConn) {
+                  tabConn.qaStream = undefined;
+                }
+              }
+            })();
+
             break;
           }
 
@@ -259,8 +430,14 @@ chrome.runtime.onConnect.addListener(port => {
     port.onDisconnect.addListener(() => {
       // this event is also triggered when the side panel is closed, so we need to cancel the task
       console.log('Side panel disconnected');
-      currentPort = null;
-      currentExecutor?.cancel();
+      if (portTabId) {
+        const tabConn = tabConnections.get(portTabId);
+        if (tabConn) {
+          tabConn.port = undefined;
+          tabConn.executor?.cancel();
+          tabConn.qaStream?.abort();
+        }
+      }
     });
   }
 });
@@ -335,16 +512,17 @@ async function setupExecutor(taskId: string, task: string, browserContext: Brows
   return executor;
 }
 
-// Update subscribeToExecutorEvents to use port
-async function subscribeToExecutorEvents(executor: Executor) {
+// Update subscribeToExecutorEvents to use port for specific tab
+async function subscribeToExecutorEvents(executor: Executor, tabId: number) {
   // Clear previous event listeners to prevent multiple subscriptions
   executor.clearExecutionEvents();
 
   // Subscribe to new events
   executor.subscribeExecutionEvents(async event => {
     try {
-      if (currentPort) {
-        currentPort.postMessage(event);
+      const tabConn = tabConnections.get(tabId);
+      if (tabConn?.port) {
+        tabConn.port.postMessage(event);
       }
     } catch (error) {
       logger.error('Failed to send message to side panel:', error);
@@ -355,7 +533,8 @@ async function subscribeToExecutorEvents(executor: Executor) {
       event.state === ExecutionState.TASK_FAIL ||
       event.state === ExecutionState.TASK_CANCEL
     ) {
-      await currentExecutor?.cleanup();
+      const tabConn = tabConnections.get(tabId);
+      await tabConn?.executor?.cleanup();
     }
   });
 }

@@ -4,7 +4,18 @@ import { RxDiscordLogo } from 'react-icons/rx';
 import { FiSettings } from 'react-icons/fi';
 import { PiPlusBold } from 'react-icons/pi';
 import { GrHistory } from 'react-icons/gr';
-import { type Message, Actors, chatHistoryStore, agentModelStore, generalSettingsStore } from '@extension/storage';
+import {
+  type Message,
+  Actors,
+  chatHistoryStore,
+  agentModelStore,
+  generalSettingsStore,
+  getTabMode,
+  setTabMode,
+  getTabActiveSession,
+  setTabActiveSession,
+  type TabMode,
+} from '@extension/storage';
 import favoritesStorage, { type FavoritePrompt } from '@extension/storage/lib/prompt/favorites';
 import { t } from '@extension/i18n';
 import MessageList from './components/MessageList';
@@ -38,6 +49,9 @@ const SidePanel = () => {
   const [isProcessingSpeech, setIsProcessingSpeech] = useState(false);
   const [isReplaying, setIsReplaying] = useState(false);
   const [replayEnabled, setReplayEnabled] = useState(false);
+  const [currentTabId, setCurrentTabId] = useState<number | null>(null);
+  const [mode, setMode] = useState<TabMode>('automation');
+  const [qaResponseBuffer, setQaResponseBuffer] = useState<string>('');
   const sessionIdRef = useRef<string | null>(null);
   const isReplayingRef = useRef<boolean>(false);
   const portRef = useRef<chrome.runtime.Port | null>(null);
@@ -86,11 +100,100 @@ const SidePanel = () => {
     }
   }, []);
 
+  // Load current tab and its state
+  const loadCurrentTabState = useCallback(async () => {
+    try {
+      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+      const tabId = tabs[0]?.id;
+      if (!tabId) return;
+
+      setCurrentTabId(tabId);
+
+      // Load mode for this tab
+      const tabMode = await getTabMode(tabId);
+      setMode(tabMode);
+
+      // Load chat sessions for this tab
+      const sessions = await chatHistoryStore.getSessionsMetadata(tabId);
+      setChatSessions(sessions);
+
+      // Load active session for this tab
+      const activeSessionId = await getTabActiveSession(tabId);
+      if (activeSessionId) {
+        const session = await chatHistoryStore.getSession(activeSessionId);
+        if (session) {
+          setCurrentSessionId(activeSessionId);
+          sessionIdRef.current = activeSessionId;
+          setMessages(session.messages);
+          setIsHistoricalSession(false);
+        }
+      } else {
+        // No active session, clear messages
+        setCurrentSessionId(null);
+        sessionIdRef.current = null;
+        setMessages([]);
+      }
+    } catch (error) {
+      console.error('Error loading tab state:', error);
+    }
+  }, []);
+
+  // Save current tab's active session
+  const saveCurrentTabActiveSession = useCallback(
+    async (sessionId: string | null) => {
+      if (currentTabId) {
+        await setTabActiveSession(currentTabId, sessionId);
+      }
+    },
+    [currentTabId],
+  );
+
+  // Handle mode change
+  const handleModeChange = useCallback(
+    async (newMode: TabMode) => {
+      if (!currentTabId) return;
+      setMode(newMode);
+      await setTabMode(currentTabId, newMode);
+      // Clear current session when switching modes
+      if (currentSessionId) {
+        setCurrentSessionId(null);
+        sessionIdRef.current = null;
+        setMessages([]);
+        await saveCurrentTabActiveSession(null);
+      }
+    },
+    [currentTabId, currentSessionId, saveCurrentTabActiveSession],
+  );
+
   // Check model configuration on mount
   useEffect(() => {
     checkModelConfiguration();
     loadGeneralSettings();
-  }, [checkModelConfiguration, loadGeneralSettings]);
+    loadCurrentTabState();
+  }, [checkModelConfiguration, loadGeneralSettings, loadCurrentTabState]);
+
+  // Listen for tab changes
+  useEffect(() => {
+    const handleTabActivated = async (activeInfo: chrome.tabs.TabActiveInfo) => {
+      if (activeInfo.tabId) {
+        await loadCurrentTabState();
+      }
+    };
+
+    const handleTabUpdated = async (tabId: number, changeInfo: chrome.tabs.TabChangeInfo) => {
+      if (changeInfo.status === 'complete' && tabId === currentTabId) {
+        await loadCurrentTabState();
+      }
+    };
+
+    chrome.tabs.onActivated.addListener(handleTabActivated);
+    chrome.tabs.onUpdated.addListener(handleTabUpdated);
+
+    return () => {
+      chrome.tabs.onActivated.removeListener(handleTabActivated);
+      chrome.tabs.onUpdated.removeListener(handleTabUpdated);
+    };
+  }, [currentTabId, loadCurrentTabState]);
 
   // Re-check model configuration when the side panel becomes visible again
   useEffect(() => {
@@ -319,6 +422,50 @@ const SidePanel = () => {
           });
           setInputEnabled(true);
           setShowStopButton(false);
+        } else if (message && message.type === 'qa_response_chunk') {
+          // Handle streaming QA response chunks
+          if (message.sessionId === sessionIdRef.current) {
+            setQaResponseBuffer(prev => prev + (message.content || ''));
+          }
+        } else if (message && message.type === 'qa_response_complete') {
+          // QA response complete, add final message
+          if (message.sessionId === sessionIdRef.current) {
+            // Use a ref or state getter to access current buffer value
+            setQaResponseBuffer(prev => {
+              const finalContent = prev;
+              if (finalContent) {
+                // Use setTimeout to ensure state update happens after this setState
+                setTimeout(() => {
+                  appendMessage(
+                    {
+                      actor: Actors.SYSTEM,
+                      content: finalContent,
+                      timestamp: Date.now(),
+                    },
+                    sessionIdRef.current,
+                  );
+                }, 0);
+              }
+              return '';
+            });
+            setInputEnabled(true);
+            setShowStopButton(false);
+          }
+        } else if (message && message.type === 'qa_response_error') {
+          // QA response error
+          if (message.sessionId === sessionIdRef.current) {
+            appendMessage(
+              {
+                actor: Actors.SYSTEM,
+                content: `Error: ${message.error || 'Unknown error'}`,
+                timestamp: Date.now(),
+              },
+              sessionIdRef.current,
+            );
+            setQaResponseBuffer('');
+            setInputEnabled(true);
+            setShowStopButton(false);
+          }
         } else if (message && message.type === 'speech_to_text_result') {
           // Handle speech-to-text result
           if (message.text && setInputTextRef.current) {
@@ -434,7 +581,10 @@ const SidePanel = () => {
       }
 
       // Create a new chat session for this replay task
-      const newSession = await chatHistoryStore.createSession(`Replay of ${historySessionId.substring(0, 20)}...`);
+      const newSession = await chatHistoryStore.createSession(
+        `Replay of ${historySessionId.substring(0, 20)}...`,
+        tabId,
+      );
       console.log('newSession for replay', newSession);
 
       // Store the new session ID in both state and ref
@@ -586,6 +736,7 @@ const SidePanel = () => {
         const titleText = displayText || text;
         const newSession = await chatHistoryStore.createSession(
           titleText.substring(0, 50) + (titleText.length > 50 ? '...' : ''),
+          tabId,
         );
         console.log('newSession', newSession);
 
@@ -593,6 +744,7 @@ const SidePanel = () => {
         const sessionId = newSession.id;
         setCurrentSessionId(sessionId);
         sessionIdRef.current = sessionId;
+        await saveCurrentTabActiveSession(sessionId);
       }
 
       const userMessage = {
@@ -610,7 +762,17 @@ const SidePanel = () => {
       }
 
       // Send message using the utility function
-      if (isFollowUpMode) {
+      if (mode === 'qa') {
+        // QA mode - send QA query
+        setQaResponseBuffer(''); // Clear buffer
+        await sendMessage({
+          type: 'qa_query',
+          query: text,
+          sessionId: sessionIdRef.current,
+          tabId,
+        });
+        console.log('qa_query sent', text, tabId, sessionIdRef.current);
+      } else if (isFollowUpMode) {
         // Send as follow-up task
         await sendMessage({
           type: 'follow_up_task',
@@ -645,8 +807,14 @@ const SidePanel = () => {
 
   const handleStopTask = async () => {
     try {
+      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+      const tabId = tabs[0]?.id;
+      if (!tabId) {
+        throw new Error('No active tab found');
+      }
       portRef.current?.postMessage({
         type: 'cancel_task',
+        tabId,
       });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
@@ -661,7 +829,7 @@ const SidePanel = () => {
     setShowStopButton(false);
   };
 
-  const handleNewChat = () => {
+  const handleNewChat = async () => {
     // Clear messages and start a new chat
     setMessages([]);
     setCurrentSessionId(null);
@@ -670,6 +838,10 @@ const SidePanel = () => {
     setShowStopButton(false);
     setIsFollowUpMode(false);
     setIsHistoricalSession(false);
+    setQaResponseBuffer('');
+
+    // Clear active session for current tab
+    await saveCurrentTabActiveSession(null);
 
     // Disconnect any existing connection
     stopConnection();
@@ -677,7 +849,7 @@ const SidePanel = () => {
 
   const loadChatSessions = useCallback(async () => {
     try {
-      const sessions = await chatHistoryStore.getSessionsMetadata();
+      const sessions = await chatHistoryStore.getSessionsMetadata(currentTabId || undefined);
       setChatSessions(sessions.sort((a, b) => b.createdAt - a.createdAt));
     } catch (error) {
       console.error('Failed to load chat sessions:', error);
@@ -1020,6 +1192,14 @@ const SidePanel = () => {
           <div className="header-icons">
             {!showHistory && (
               <>
+                <select
+                  value={mode}
+                  onChange={e => handleModeChange(e.target.value as TabMode)}
+                  className={`header-icon ${isDarkMode ? 'text-sky-400 hover:text-sky-300 bg-slate-800' : 'text-sky-400 hover:text-sky-500 bg-white'} cursor-pointer border-0 rounded px-2 py-1 text-sm`}
+                  aria-label="Select mode">
+                  <option value="automation">Automation Agent</option>
+                  <option value="qa">QA Mode</option>
+                </select>
                 <button
                   type="button"
                   onClick={handleNewChat}

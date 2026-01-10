@@ -1503,3 +1503,142 @@ window.buildDomTree = (
 
   return { rootId, map: DOM_HASH_MAP };
 };
+
+// Convert HTML element to markdown
+window.turn2Markdown = selector => {
+  try {
+    let element;
+    if (selector) {
+      element = document.querySelector(selector);
+      if (!element) {
+        return '';
+      }
+    } else {
+      element = document.body;
+    }
+
+    // Simple markdown conversion function
+    function elementToMarkdown(el) {
+      if (!el) return '';
+
+      let markdown = '';
+
+      // Handle text nodes
+      if (el.nodeType === Node.TEXT_NODE) {
+        const text = el.textContent?.trim();
+        return text ? text + '\n' : '';
+      }
+
+      // Handle element nodes
+      if (el.nodeType === Node.ELEMENT_NODE) {
+        const tagName = el.tagName?.toLowerCase();
+
+        // Skip script, style, and other non-content elements
+        if (['script', 'style', 'meta', 'link', 'noscript'].includes(tagName)) {
+          return '';
+        }
+
+        // Handle headings
+        if (['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tagName)) {
+          const level = parseInt(tagName.charAt(1));
+          const text = el.textContent?.trim();
+          if (text) {
+            markdown += '#'.repeat(level) + ' ' + text + '\n\n';
+          }
+        }
+        // Handle paragraphs
+        else if (tagName === 'p') {
+          const text = el.textContent?.trim();
+          if (text) {
+            markdown += text + '\n\n';
+          }
+        }
+        // Handle lists
+        else if (tagName === 'ul' || tagName === 'ol') {
+          const items = el.querySelectorAll('li');
+          items.forEach((item, index) => {
+            const text = item.textContent?.trim();
+            if (text) {
+              const prefix = tagName === 'ol' ? `${index + 1}. ` : '- ';
+              markdown += prefix + text + '\n';
+            }
+          });
+          markdown += '\n';
+        }
+        // Handle links
+        else if (tagName === 'a') {
+          const text = el.textContent?.trim();
+          const href = el.getAttribute('href');
+          if (text) {
+            if (href) {
+              markdown += `[${text}](${href})`;
+            } else {
+              markdown += text;
+            }
+          }
+        }
+        // Handle images
+        else if (tagName === 'img') {
+          const alt = el.getAttribute('alt') || '';
+          const src = el.getAttribute('src') || '';
+          if (alt || src) {
+            markdown += `![${alt}](${src})\n`;
+          }
+        }
+        // Handle code blocks
+        else if (tagName === 'pre' || tagName === 'code') {
+          const text = el.textContent?.trim();
+          if (text) {
+            if (tagName === 'pre') {
+              markdown += '```\n' + text + '\n```\n\n';
+            } else {
+              markdown += '`' + text + '`';
+            }
+          }
+        }
+        // Handle blockquotes
+        else if (tagName === 'blockquote') {
+          const text = el.textContent?.trim();
+          if (text) {
+            markdown += '> ' + text.split('\n').join('\n> ') + '\n\n';
+          }
+        }
+        // Handle bold and italic
+        else if (tagName === 'strong' || tagName === 'b') {
+          const text = el.textContent?.trim();
+          if (text) {
+            markdown += '**' + text + '**';
+          }
+        } else if (tagName === 'em' || tagName === 'i') {
+          const text = el.textContent?.trim();
+          if (text) {
+            markdown += '*' + text + '*';
+          }
+        }
+        // Handle line breaks
+        else if (tagName === 'br') {
+          markdown += '\n';
+        }
+        // Handle horizontal rules
+        else if (tagName === 'hr') {
+          markdown += '---\n\n';
+        }
+        // For other elements, process children
+        else {
+          // Process children
+          for (const child of Array.from(el.childNodes)) {
+            markdown += elementToMarkdown(child);
+          }
+        }
+      }
+
+      return markdown;
+    }
+
+    const result = elementToMarkdown(element);
+    return result || '';
+  } catch (error) {
+    console.error('Error converting to markdown:', error);
+    return '';
+  }
+};

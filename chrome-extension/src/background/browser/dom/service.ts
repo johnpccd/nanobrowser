@@ -47,19 +47,80 @@ declare global {
  * @returns The markdown content for the selected element on the current page.
  */
 export async function getMarkdownContent(tabId: number, selector?: string): Promise<string> {
-  const results = await chrome.scripting.executeScript({
-    target: { tabId: tabId },
-    func: sel => {
-      return window.turn2Markdown(sel);
-    },
-    args: [selector || ''], // Pass the selector as an argument
-  });
+  try {
+    // Check if turn2Markdown is available, if not, inject scripts first
+    const checkResults = await chrome.scripting.executeScript({
+      target: { tabId: tabId },
+      func: () => {
+        return typeof window.turn2Markdown === 'function';
+      },
+    });
 
-  const result = results[0]?.result;
-  if (!result) {
-    throw new Error('Failed to get markdown content');
+    const isAvailable = checkResults[0]?.result;
+    if (!isAvailable) {
+      // Scripts not available, try to inject them
+      await injectBuildDomTreeScripts(tabId);
+      // Wait a bit for scripts to load
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    const results = await chrome.scripting.executeScript({
+      target: { tabId: tabId },
+      func: sel => {
+        if (typeof window.turn2Markdown !== 'function') {
+          throw new Error('turn2Markdown function is not available. The page may not support content extraction.');
+        }
+        return window.turn2Markdown(sel);
+      },
+      args: [selector || ''], // Pass the selector as an argument
+    });
+
+    const result = results[0]?.result;
+
+    // Check if result is null, undefined, or empty string
+    if (result === null || result === undefined) {
+      // Try to get more diagnostic information
+      const diagnosticResults = await chrome.scripting.executeScript({
+        target: { tabId: tabId },
+        func: () => {
+          return {
+            hasBody: !!document.body,
+            bodyTextLength: document.body?.textContent?.length || 0,
+            url: window.location.href,
+            isChromePage:
+              window.location.href.startsWith('chrome://') || window.location.href.startsWith('chrome-extension://'),
+          };
+        },
+      });
+
+      const diagnostics = diagnosticResults[0]?.result;
+      if (diagnostics?.isChromePage) {
+        throw new Error(
+          'Cannot extract content from chrome:// or extension pages. Please navigate to a regular web page.',
+        );
+      }
+      if (!diagnostics?.hasBody || diagnostics?.bodyTextLength === 0) {
+        throw new Error('Page has no content to extract. The page may still be loading or may be empty.');
+      }
+      throw new Error(
+        'Failed to get markdown content: function returned no result. The page may not support content extraction.',
+      );
+    }
+
+    // Allow empty string as valid result (page might be empty)
+    return result as string;
+  } catch (error) {
+    if (error instanceof Error) {
+      // Check if it's a scripting error (e.g., cannot access page)
+      if (error.message.includes('Cannot access') || error.message.includes('Extension context invalidated')) {
+        throw new Error(
+          'Cannot access page content. Make sure you are on a valid web page (not chrome:// or extension pages).',
+        );
+      }
+      throw error;
+    }
+    throw new Error('Failed to get markdown content: ' + String(error));
   }
-  return result as string;
 }
 
 /**

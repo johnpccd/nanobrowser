@@ -64,10 +64,12 @@ export const ModelSettings = ({ isDarkMode = false }: ModelSettingsProps) => {
   const [selectedModels, setSelectedModels] = useState<Record<AgentNameEnum, string>>({
     [AgentNameEnum.Navigator]: '',
     [AgentNameEnum.Planner]: '',
+    [AgentNameEnum.QA]: '',
   });
   const [modelParameters, setModelParameters] = useState<Record<AgentNameEnum, { temperature: number; topP: number }>>({
     [AgentNameEnum.Navigator]: { temperature: 0, topP: 0 },
     [AgentNameEnum.Planner]: { temperature: 0, topP: 0 },
+    [AgentNameEnum.QA]: { temperature: 0, topP: 0 },
   });
 
   // State for reasoning effort for O-series models
@@ -76,6 +78,7 @@ export const ModelSettings = ({ isDarkMode = false }: ModelSettingsProps) => {
   >({
     [AgentNameEnum.Navigator]: undefined,
     [AgentNameEnum.Planner]: undefined,
+    [AgentNameEnum.QA]: undefined,
   });
   const [newModelInputs, setNewModelInputs] = useState<Record<string, string>>({});
   const [isProviderSelectorOpen, setIsProviderSelectorOpen] = useState(false);
@@ -873,6 +876,8 @@ export const ModelSettings = ({ isDarkMode = false }: ModelSettingsProps) => {
         return t('options_models_agents_navigator');
       case AgentNameEnum.Planner:
         return t('options_models_agents_planner');
+      case AgentNameEnum.QA:
+        return 'QA Mode - Direct question answering based on page content';
       default:
         return '';
     }
@@ -1628,7 +1633,7 @@ export const ModelSettings = ({ isDarkMode = false }: ModelSettingsProps) => {
           {t('options_models_selection_header')}
         </h2>
         <div className="space-y-4">
-          {[AgentNameEnum.Planner, AgentNameEnum.Navigator].map(agentName => (
+          {[AgentNameEnum.Planner, AgentNameEnum.Navigator, AgentNameEnum.QA].map(agentName => (
             <div key={agentName}>{renderModelSelect(agentName)}</div>
           ))}
         </div>
