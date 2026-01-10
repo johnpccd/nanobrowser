@@ -6,9 +6,15 @@ interface MessageListProps {
   messages: Message[];
   isDarkMode?: boolean;
   streamingContent?: string;
+  isWaitingForResponse?: boolean;
 }
 
-export default memo(function MessageList({ messages, isDarkMode = false, streamingContent }: MessageListProps) {
+export default memo(function MessageList({
+  messages,
+  isDarkMode = false,
+  streamingContent,
+  isWaitingForResponse = false,
+}: MessageListProps) {
   // Check if last message is from SYSTEM actor for streaming continuation
   const lastMessage = messages[messages.length - 1];
   const lastWasSystem = lastMessage?.actor === 'system';
@@ -23,8 +29,12 @@ export default memo(function MessageList({ messages, isDarkMode = false, streami
           isDarkMode={isDarkMode}
         />
       ))}
+      {/* Render waiting indicator while waiting for first response chunk */}
+      {isWaitingForResponse && (!streamingContent || streamingContent.trim() === '') && (
+        <WaitingMessageBlock isDarkMode={isDarkMode} isSameActor={lastWasSystem} />
+      )}
       {/* Render streaming content as a separate block */}
-      {streamingContent && (
+      {streamingContent && streamingContent.trim() !== '' && (
         <StreamingMessageBlock content={streamingContent} isDarkMode={isDarkMode} isSameActor={lastWasSystem} />
       )}
     </div>
@@ -125,6 +135,52 @@ function StreamingMessageBlock({ content, isDarkMode = false, isSameActor = fals
           <div className={`whitespace-pre-wrap break-words text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
             {content}
             <span className="inline-block w-2 h-4 ml-1 bg-blue-500 animate-pulse" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface WaitingMessageBlockProps {
+  isDarkMode?: boolean;
+  isSameActor?: boolean;
+}
+
+function WaitingMessageBlock({ isDarkMode = false, isSameActor = false }: WaitingMessageBlockProps) {
+  const actor = ACTOR_PROFILES['system'];
+
+  return (
+    <div
+      className={`flex max-w-full gap-3 ${
+        !isSameActor
+          ? `mt-4 border-t ${isDarkMode ? 'border-sky-800/50' : 'border-sky-200/50'} pt-4 first:mt-0 first:border-t-0 first:pt-0`
+          : ''
+      }`}>
+      {!isSameActor && (
+        <div
+          className="flex size-8 shrink-0 items-center justify-center rounded-full"
+          style={{ backgroundColor: actor.iconBackground }}>
+          <img src={actor.icon} alt={actor.name} className="size-6" />
+        </div>
+      )}
+      {isSameActor && <div className="w-8" />}
+
+      <div className="min-w-0 flex-1">
+        {!isSameActor && (
+          <div className={`mb-1 text-sm font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-900'}`}>
+            {actor.name}
+          </div>
+        )}
+
+        <div className="space-y-0.5">
+          <div className={`flex items-center gap-2 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+            <div className="flex gap-1">
+              <span className="size-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '0ms' }} />
+              <span className="size-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '150ms' }} />
+              <span className="size-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '300ms' }} />
+            </div>
+            <span>Thinking...</span>
           </div>
         </div>
       </div>

@@ -53,6 +53,7 @@ const SidePanel = () => {
   const [mode, setMode] = useState<TabMode>('qa');
   const [qaResponseBuffer, setQaResponseBuffer] = useState<string>('');
   const [isQaStreaming, setIsQaStreaming] = useState(false);
+  const [isWaitingForQaResponse, setIsWaitingForQaResponse] = useState(false);
   const sessionIdRef = useRef<string | null>(null);
   const isReplayingRef = useRef<boolean>(false);
   const portRef = useRef<chrome.runtime.Port | null>(null);
@@ -427,6 +428,10 @@ const SidePanel = () => {
           // Handle streaming QA response chunks - just accumulate in buffer
           if (message.sessionId === sessionIdRef.current) {
             const chunk = message.content || '';
+            // Only clear waiting state when we get actual content
+            if (chunk.trim() !== '') {
+              setIsWaitingForQaResponse(false); // First chunk with content received
+            }
             setIsQaStreaming(true);
             setQaResponseBuffer(prev => prev + chunk);
           }
@@ -448,6 +453,7 @@ const SidePanel = () => {
               }
               return ''; // Clear buffer
             });
+            setIsWaitingForQaResponse(false);
             setIsQaStreaming(false);
             setInputEnabled(true);
             setShowStopButton(false);
@@ -464,6 +470,7 @@ const SidePanel = () => {
               sessionIdRef.current,
             );
             setQaResponseBuffer('');
+            setIsWaitingForQaResponse(false);
             setIsQaStreaming(false);
             setInputEnabled(true);
             setShowStopButton(false);
@@ -495,6 +502,9 @@ const SidePanel = () => {
           clearInterval(heartbeatIntervalRef.current);
           heartbeatIntervalRef.current = null;
         }
+        setIsWaitingForQaResponse(false);
+        setIsQaStreaming(false);
+        setQaResponseBuffer('');
         setInputEnabled(true);
         setShowStopButton(false);
       });
@@ -768,6 +778,7 @@ const SidePanel = () => {
         // QA mode - send QA query
         setQaResponseBuffer(''); // Clear buffer
         setIsQaStreaming(false);
+        setIsWaitingForQaResponse(true); // Show loading indicator
         await sendMessage({
           type: 'qa_query',
           query: text,
@@ -802,6 +813,11 @@ const SidePanel = () => {
         content: errorMessage,
         timestamp: Date.now(),
       });
+      if (mode === 'qa') {
+        setIsWaitingForQaResponse(false);
+        setIsQaStreaming(false);
+        setQaResponseBuffer('');
+      }
       setInputEnabled(true);
       setShowStopButton(false);
       stopConnection();
@@ -828,6 +844,9 @@ const SidePanel = () => {
         timestamp: Date.now(),
       });
     }
+    setIsWaitingForQaResponse(false);
+    setIsQaStreaming(false);
+    setQaResponseBuffer('');
     setInputEnabled(true);
     setShowStopButton(false);
   };
@@ -842,6 +861,7 @@ const SidePanel = () => {
     setIsFollowUpMode(false);
     setIsHistoricalSession(false);
     setQaResponseBuffer('');
+    setIsWaitingForQaResponse(false);
 
     // Set mode to QA for new chats
     if (currentTabId) {
@@ -1010,11 +1030,10 @@ const SidePanel = () => {
     };
   }, [stopConnection]);
 
-  // Scroll to bottom when new messages arrive
-  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
+  // Scroll to bottom when new messages arrive or when streaming content updates
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, qaResponseBuffer]);
 
   const handleMicClick = async () => {
     if (isRecording) {
@@ -1344,13 +1363,14 @@ const SidePanel = () => {
                     </div>
                   </>
                 )}
-                {(messages.length > 0 || isQaStreaming) && (
+                {(messages.length > 0 || isQaStreaming || isWaitingForQaResponse) && (
                   <div
                     className={`scrollbar-gutter-stable flex-1 overflow-x-hidden overflow-y-scroll scroll-smooth p-2 ${isDarkMode ? 'bg-slate-900/80' : ''}`}>
                     <MessageList
                       messages={messages}
                       isDarkMode={isDarkMode}
                       streamingContent={isQaStreaming ? qaResponseBuffer : undefined}
+                      isWaitingForResponse={isWaitingForQaResponse}
                     />
                     <div ref={messagesEndRef} />
                   </div>
