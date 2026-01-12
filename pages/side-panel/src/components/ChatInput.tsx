@@ -3,6 +3,13 @@ import { FaMicrophone } from 'react-icons/fa';
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import { t } from '@extension/i18n';
 
+interface ModelOption {
+  provider: string;
+  providerName: string;
+  model: string;
+  displayName: string;
+}
+
 interface ChatInputProps {
   onSendMessage: (text: string, displayText?: string) => void;
   onStopTask: () => void;
@@ -16,6 +23,11 @@ interface ChatInputProps {
   // Historical session ID - if provided, shows replay button instead of send button
   historicalSessionId?: string | null;
   onReplay?: (sessionId: string) => void;
+  // QA mode model selection
+  isQAMode?: boolean;
+  availableModels?: ModelOption[];
+  currentQAModel?: string;
+  onQAModelChange?: (provider: string, model: string) => void;
 }
 
 // File attachment interface
@@ -37,6 +49,10 @@ export default function ChatInput({
   isDarkMode = false,
   historicalSessionId,
   onReplay,
+  isQAMode = false,
+  availableModels = [],
+  currentQAModel,
+  onQAModelChange,
 }: ChatInputProps) {
   const [text, setText] = useState('');
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
@@ -271,32 +287,70 @@ export default function ChatInput({
             />
 
             {onMicClick && (
-              <button
-                type="button"
-                onClick={onMicClick}
-                disabled={disabled || isProcessingSpeech}
-                aria-label={
-                  isProcessingSpeech
-                    ? t('chat_stt_processing')
-                    : isRecording
-                      ? t('chat_stt_recording_stop')
-                      : t('chat_stt_input_start')
-                }
-                className={`rounded-md p-1.5 transition-colors ${
-                  disabled || isProcessingSpeech
-                    ? 'cursor-not-allowed opacity-50'
-                    : isRecording
-                      ? 'bg-red-500 text-white hover:bg-red-600'
-                      : isDarkMode
-                        ? 'text-gray-400 hover:bg-slate-700 hover:text-gray-200'
-                        : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
-                }`}>
-                {isProcessingSpeech ? (
-                  <AiOutlineLoading3Quarters className="size-4 animate-spin" />
-                ) : (
-                  <FaMicrophone className={`size-4 ${isRecording ? 'animate-pulse' : ''}`} />
+              <>
+                <button
+                  type="button"
+                  onClick={onMicClick}
+                  disabled={disabled || isProcessingSpeech}
+                  aria-label={
+                    isProcessingSpeech
+                      ? t('chat_stt_processing')
+                      : isRecording
+                        ? t('chat_stt_recording_stop')
+                        : t('chat_stt_input_start')
+                  }
+                  className={`rounded-md p-1.5 transition-colors ${
+                    disabled || isProcessingSpeech
+                      ? 'cursor-not-allowed opacity-50'
+                      : isRecording
+                        ? 'bg-red-500 text-white hover:bg-red-600'
+                        : isDarkMode
+                          ? 'text-gray-400 hover:bg-slate-700 hover:text-gray-200'
+                          : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
+                  }`}>
+                  {isProcessingSpeech ? (
+                    <AiOutlineLoading3Quarters className="size-4 animate-spin" />
+                  ) : (
+                    <FaMicrophone className={`size-4 ${isRecording ? 'animate-pulse' : ''}`} />
+                  )}
+                </button>
+                {isQAMode && availableModels.length > 0 && onQAModelChange && (
+                  <select
+                    value={currentQAModel || ''}
+                    onChange={e => {
+                      const value = e.target.value;
+                      if (value) {
+                        const [provider, model] = value.split('>');
+                        if (provider && model) {
+                          onQAModelChange(provider, model);
+                        }
+                      }
+                    }}
+                    disabled={disabled}
+                    className={`rounded-md px-2 py-1.5 text-xs transition-colors max-w-[200px] ${
+                      disabled
+                        ? 'cursor-not-allowed opacity-50'
+                        : isDarkMode
+                          ? 'bg-slate-700 text-gray-200 hover:bg-slate-600 border border-slate-600'
+                          : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                    }`}
+                    aria-label="Select QA model">
+                    {!currentQAModel && (
+                      <option value="" disabled>
+                        Select model...
+                      </option>
+                    )}
+                    {availableModels.map(option => {
+                      const value = `${option.provider}>${option.model}`;
+                      return (
+                        <option key={value} value={value}>
+                          {option.displayName}
+                        </option>
+                      );
+                    })}
+                  </select>
                 )}
-              </button>
+              </>
             )}
           </div>
 

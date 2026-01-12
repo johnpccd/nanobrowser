@@ -15,6 +15,10 @@ import {
   getTabActiveSession,
   setTabActiveSession,
   type TabMode,
+  llmProviderStore,
+  AgentNameEnum,
+  ProviderTypeEnum,
+  llmProviderModelNames,
 } from '@extension/storage';
 import favoritesStorage, { type FavoritePrompt } from '@extension/storage/lib/prompt/favorites';
 import { t } from '@extension/i18n';
@@ -63,6 +67,12 @@ const SidePanel = () => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<number | null>(null);
+  // QA model selection state
+  const [availableModels, setAvailableModels] = useState<
+    Array<{ provider: string; providerName: string; model: string; displayName: string }>
+  >([]);
+  const [currentQAModel, setCurrentQAModel] = useState<string>('');
+  const [openRouterModels, setOpenRouterModels] = useState<Array<{ id: string; name: string }>>([]);
 
   // Check for dark mode preference
   useEffect(() => {
@@ -166,6 +176,163 @@ const SidePanel = () => {
     },
     [currentTabId, currentSessionId, saveCurrentTabActiveSession],
   );
+
+  // Fetch OpenRouter models from API
+  const fetchOpenRouterModels = useCallback(async (apiKey: string) => {
+    if (!apiKey) {
+      setOpenRouterModels([]);
+      return;
+    }
+
+    try {
+      const response = await fetch('https://openrouter.ai/api/v1/models', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch models: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const models = data.data
+        .map((model: { id: string; name?: string }) => ({
+          id: model.id,
+          name: model.name || model.id,
+        }))
+        .sort((a: { id: string }, b: { id: string }) => a.id.localeCompare(b.id));
+
+      setOpenRouterModels(models);
+    } catch (error) {
+      console.error('Error fetching OpenRouter models:', error);
+      setOpenRouterModels([]);
+    }
+  }, []);
+
+  // Load available models for QA mode
+  const loadAvailableModels = useCallback(async () => {
+    const models: Array<{ provider: string; providerName: string; model: string; displayName: string }> = [];
+
+    try {
+      const storedProviders = await llmProviderStore.getAllProviders();
+
+      for (const [provider, config] of Object.entries(storedProviders)) {
+        if (config.type === ProviderTypeEnum.AzureOpenAI) {
+          const deploymentNames = config.azureDeploymentNames || [];
+          models.push(
+            ...deploymentNames.map(deployment => ({
+              provider,
+              providerName: config.name || provider,
+              model: deployment,
+              displayName: `${config.name || provider}: ${deployment}`,
+            })),
+          );
+        } else if (config.type === ProviderTypeEnum.OpenRouter) {
+          if (openRouterModels.length > 0) {
+            models.push(
+              ...openRouterModels.map(model => ({
+                provider,
+                providerName: config.name || provider,
+                model: model.id,
+                displayName: model.name || model.id,
+              })),
+            );
+          }
+        } else {
+          const providerModels =
+            config.modelNames || llmProviderModelNames[provider as keyof typeof llmProviderModelNames] || [];
+          models.push(
+            ...providerModels.map(model => ({
+              provider,
+              providerName: config.name || provider,
+              model,
+              displayName: `${config.name || provider}: ${model}`,
+            })),
+          );
+        }
+      }
+    } catch (error) {
+      console.error('Error loading available models:', error);
+    }
+
+    setAvailableModels(models);
+  }, [openRouterModels]);
+
+  // Load current QA model
+  const loadCurrentQAModel = useCallback(async () => {
+    try {
+      const qaModel = await agentModelStore.getAgentModel(AgentNameEnum.QA);
+      if (qaModel) {
+        setCurrentQAModel(`${qaModel.provider}>${qaModel.modelName}`);
+      } else {
+        setCurrentQAModel('');
+      }
+    } catch (error) {
+      console.error('Error loading current QA model:', error);
+      setCurrentQAModel('');
+    }
+  }, []);
+
+  // Handle QA model change
+  const handleQAModelChange = useCallback(
+    async (provider: string, model: string) => {
+      try {
+        const providers = await llmProviderStore.getAllProviders();
+        const providerConfig = providers[provider];
+        if (!providerConfig) {
+          throw new Error(`Provider ${provider} not found`);
+        }
+
+        await agentModelStore.setAgentModel(AgentNameEnum.QA, {
+          provider,
+          modelName: model,
+          parameters: {},
+        });
+
+        setCurrentQAModel(`${provider}>${model}`);
+        // Reload the current QA model to ensure it's up to date
+        await loadCurrentQAModel();
+      } catch (error) {
+        console.error('Error updating QA model:', error);
+      }
+    },
+    [loadCurrentQAModel],
+  );
+
+  // Fetch OpenRouter models when providers are loaded
+  useEffect(() => {
+    const fetchOpenRouterData = async () => {
+      try {
+        const providers = await llmProviderStore.getAllProviders();
+        const openRouterProvider = Object.entries(providers).find(
+          ([, config]) => config.type === ProviderTypeEnum.OpenRouter && config.apiKey,
+        );
+
+        if (openRouterProvider) {
+          const [, config] = openRouterProvider;
+          if (config.apiKey) {
+            await fetchOpenRouterModels(config.apiKey);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking for OpenRouter provider:', error);
+      }
+    };
+
+    fetchOpenRouterData();
+  }, [fetchOpenRouterModels]);
+
+  // Load available models when OpenRouter models are loaded or providers change
+  useEffect(() => {
+    loadAvailableModels();
+  }, [loadAvailableModels]);
+
+  // Load current QA model on mount
+  useEffect(() => {
+    loadCurrentQAModel();
+  }, [loadCurrentQAModel]);
 
   // Check model configuration on mount
   useEffect(() => {
@@ -1349,6 +1516,10 @@ const SidePanel = () => {
                         isDarkMode={isDarkMode}
                         historicalSessionId={isHistoricalSession && replayEnabled ? currentSessionId : null}
                         onReplay={handleReplay}
+                        isQAMode={mode === 'qa'}
+                        availableModels={availableModels}
+                        currentQAModel={currentQAModel}
+                        onQAModelChange={handleQAModelChange}
                       />
                     </div>
                     <div className="flex-1 overflow-y-auto">
@@ -1392,6 +1563,10 @@ const SidePanel = () => {
                       isDarkMode={isDarkMode}
                       historicalSessionId={isHistoricalSession && replayEnabled ? currentSessionId : null}
                       onReplay={handleReplay}
+                      isQAMode={mode === 'qa'}
+                      availableModels={availableModels}
+                      currentQAModel={currentQAModel}
+                      onQAModelChange={handleQAModelChange}
                     />
                   </div>
                 )}
