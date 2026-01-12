@@ -921,7 +921,7 @@ const SidePanel = () => {
         throw new Error('No active tab found');
       }
 
-      setInputEnabled(false);
+      // Show stop button but keep input enabled so users can prepare next message
       setShowStopButton(true);
 
       // Create a new chat session for this task if not in follow-up mode
