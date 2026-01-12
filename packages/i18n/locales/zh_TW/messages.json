@@ -262,6 +262,45 @@
   "options_general_replayHistoricalTasks_desc": {
     "message": "啟用儲存與重播代理程式的步驟歷史紀錄 (此為實驗性功能，可能存在問題)"
   },
+  "options_prompts_header": {
+    "message": "快速開始提示"
+  },
+  "options_prompts_description": {
+    "message": "管理出現在聊天下方「快速開始」區段的預定義提示。這些提示可協助您快速開始常見任務。"
+  },
+  "options_prompts_add": {
+    "message": "新增提示"
+  },
+  "options_prompts_title": {
+    "message": "標題"
+  },
+  "options_prompts_titlePlaceholder": {
+    "message": "輸入提示標題"
+  },
+  "options_prompts_content": {
+    "message": "內容"
+  },
+  "options_prompts_contentPlaceholder": {
+    "message": "輸入提示內容"
+  },
+  "options_prompts_save": {
+    "message": "儲存"
+  },
+  "options_prompts_cancel": {
+    "message": "取消"
+  },
+  "options_prompts_edit": {
+    "message": "編輯提示"
+  },
+  "options_prompts_delete": {
+    "message": "刪除提示"
+  },
+  "options_prompts_confirmDelete": {
+    "message": "您確定要刪除此提示嗎？"
+  },
+  "options_prompts_empty": {
+    "message": "尚無提示。點擊「新增提示」以建立您的第一個快速開始提示。"
+  },
   "options_models_providers_header": {
     "message": "LLM 提供者"
   },

@@ -262,6 +262,45 @@
   "options_general_replayHistoricalTasks_desc": {
     "message": "Enable storing and replaying of agent step history (experimental, may have issues)"
   },
+  "options_prompts_header": {
+    "message": "Quick Start Prompts"
+  },
+  "options_prompts_description": {
+    "message": "Manage predefined prompts that appear in the Quick Start section below the chat. These prompts help you quickly start common tasks."
+  },
+  "options_prompts_add": {
+    "message": "Add Prompt"
+  },
+  "options_prompts_title": {
+    "message": "Title"
+  },
+  "options_prompts_titlePlaceholder": {
+    "message": "Enter prompt title"
+  },
+  "options_prompts_content": {
+    "message": "Content"
+  },
+  "options_prompts_contentPlaceholder": {
+    "message": "Enter prompt content"
+  },
+  "options_prompts_save": {
+    "message": "Save"
+  },
+  "options_prompts_cancel": {
+    "message": "Cancel"
+  },
+  "options_prompts_edit": {
+    "message": "Edit prompt"
+  },
+  "options_prompts_delete": {
+    "message": "Delete prompt"
+  },
+  "options_prompts_confirmDelete": {
+    "message": "Are you sure you want to delete this prompt?"
+  },
+  "options_prompts_empty": {
+    "message": "No prompts yet. Click \"Add Prompt\" to create your first Quick Start prompt."
+  },
 
   "options_models_providers_header": {
     "message": "LLM Providers"

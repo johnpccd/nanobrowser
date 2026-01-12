@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { type GeneralSettingsConfig, generalSettingsStore, DEFAULT_GENERAL_SETTINGS } from '@extension/storage';
 import { t } from '@extension/i18n';
+import { QuickStartPromptsSettings } from './QuickStartPromptsSettings';
 
 interface GeneralSettingsProps {
   isDarkMode?: boolean;
@@ -230,6 +231,9 @@ export const GeneralSettings = ({ isDarkMode = false }: GeneralSettingsProps) =>
           </div>
         </div>
       </div>
+
+      {/* Quick Start Prompts Settings */}
+      <QuickStartPromptsSettings isDarkMode={isDarkMode} />
     </section>
   );
 };

@@ -5,6 +5,11 @@ import type { BaseStorage } from '../base/types';
 // Template data
 const defaultFavoritePrompts = [
   {
+    title: '📝 Summarize',
+    content:
+      'Summarize the current page content. Extract the main points and provide a concise summary of the key information.',
+  },
+  {
     title: '📚 Explore AI Papers',
     content:
       '- Go to https://huggingface.co/papers and click through each of the first 3 papers.\n- For each paper:\n  - Record the title, URL and upvotes\n  - Summarise the abstract section\n- Finally, compile together a summary of all 3 papers, ranked by upvotes',
@@ -206,3 +211,6 @@ export function createFavoritesStorage(): FavoritePromptsStorage {
 
 // Export an instance of the storage by default
 export default createFavoritesStorage();
+
+// Export the base storage for subscription
+export { favoritesStorage as favoritesBaseStorage };

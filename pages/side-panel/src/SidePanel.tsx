@@ -19,7 +19,7 @@ import {
   ProviderTypeEnum,
   llmProviderModelNames,
 } from '@extension/storage';
-import favoritesStorage, { type FavoritePrompt } from '@extension/storage/lib/prompt/favorites';
+import favoritesStorage, { type FavoritePrompt, favoritesBaseStorage } from '@extension/storage/lib/prompt/favorites';
 import { t } from '@extension/i18n';
 import MessageList from './components/MessageList';
 import ChatInput from './components/ChatInput';
@@ -1124,9 +1124,8 @@ const SidePanel = () => {
   };
 
   const handleBookmarkSelect = (content: string) => {
-    if (setInputTextRef.current) {
-      setInputTextRef.current(content);
-    }
+    // Automatically send the message instead of just pasting it
+    handleSendMessage(content);
   };
 
   const handleBookmarkUpdateTitle = async (id: number, title: string) => {
@@ -1166,7 +1165,7 @@ const SidePanel = () => {
     }
   };
 
-  // Load favorite prompts from storage
+  // Load favorite prompts from storage and subscribe to changes
   useEffect(() => {
     const loadFavorites = async () => {
       try {
@@ -1178,6 +1177,15 @@ const SidePanel = () => {
     };
 
     loadFavorites();
+
+    // Subscribe to storage changes for real-time updates
+    const unsubscribe = favoritesBaseStorage.subscribe(async () => {
+      await loadFavorites();
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   // Cleanup on unmount

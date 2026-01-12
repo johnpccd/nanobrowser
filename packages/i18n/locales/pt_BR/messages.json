@@ -262,6 +262,45 @@
   "options_general_replayHistoricalTasks_desc": {
     "message": "Ativar o armazenamento e a reprodução do histórico de passos do agente (experimental, pode ter problemas)"
   },
+  "options_prompts_header": {
+    "message": "Prompts de Início Rápido"
+  },
+  "options_prompts_description": {
+    "message": "Gerencie prompts predefinidos que aparecem na seção Início Rápido abaixo do chat. Esses prompts ajudam você a iniciar rapidamente tarefas comuns."
+  },
+  "options_prompts_add": {
+    "message": "Adicionar Prompt"
+  },
+  "options_prompts_title": {
+    "message": "Título"
+  },
+  "options_prompts_titlePlaceholder": {
+    "message": "Digite o título do prompt"
+  },
+  "options_prompts_content": {
+    "message": "Conteúdo"
+  },
+  "options_prompts_contentPlaceholder": {
+    "message": "Digite o conteúdo do prompt"
+  },
+  "options_prompts_save": {
+    "message": "Salvar"
+  },
+  "options_prompts_cancel": {
+    "message": "Cancelar"
+  },
+  "options_prompts_edit": {
+    "message": "Editar prompt"
+  },
+  "options_prompts_delete": {
+    "message": "Excluir prompt"
+  },
+  "options_prompts_confirmDelete": {
+    "message": "Tem certeza de que deseja excluir este prompt?"
+  },
+  "options_prompts_empty": {
+    "message": "Nenhum prompt ainda. Clique em \"Adicionar Prompt\" para criar seu primeiro prompt de Início Rápido."
+  },
   "options_models_providers_header": {
     "message": "Provedores de LLM"
   },
