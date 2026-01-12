@@ -133,22 +133,23 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
               </div>
             ) : (
               <>
-                <div className="flex items-center">
-                  <button
-                    type="button"
-                    onClick={() => onBookmarkSelect(bookmark.content)}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        onBookmarkSelect(bookmark.content);
-                      }
-                    }}
-                    className="w-full text-left">
+                <button
+                  type="button"
+                  onClick={() => onBookmarkSelect(bookmark.content)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      onBookmarkSelect(bookmark.content);
+                    }
+                  }}
+                  className="absolute inset-0 z-0 w-full cursor-pointer rounded-lg text-left"
+                  aria-label={bookmark.title}>
+                  <div className="flex h-full items-center p-3">
                     <div
                       className={`truncate pr-10 text-sm font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>
                       {bookmark.title}
                     </div>
-                  </button>
-                </div>
+                  </div>
+                </button>
               </>
             )}
 
@@ -160,7 +161,7 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
                     e.stopPropagation();
                     handleEditClick(bookmark);
                   }}
-                  className={`absolute right-[28px] top-1/2 z-10 -translate-y-1/2 rounded p-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100 ${
+                  className={`absolute right-[28px] top-1/2 z-20 -translate-y-1/2 rounded p-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100 ${
                     isDarkMode
                       ? 'bg-slate-700 text-sky-400 hover:bg-slate-600'
                       : 'bg-white text-sky-500 hover:bg-gray-100'
@@ -178,7 +179,7 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
                       onBookmarkDelete(bookmark.id);
                     }
                   }}
-                  className={`absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded p-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100 ${
+                  className={`absolute right-2 top-1/2 z-20 -translate-y-1/2 rounded p-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100 ${
                     isDarkMode
                       ? 'bg-slate-700 text-gray-400 hover:bg-slate-600'
                       : 'bg-white text-gray-500 hover:bg-gray-100'
