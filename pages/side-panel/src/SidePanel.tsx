@@ -54,6 +54,7 @@ const SidePanel = () => {
   const [replayEnabled, setReplayEnabled] = useState(false);
   const [currentTabId, setCurrentTabId] = useState<number | null>(null);
   const [mode, setMode] = useState<TabMode>('qa');
+  const modeRef = useRef<TabMode>('qa');
   const [qaResponseBuffer, setQaResponseBuffer] = useState<string>('');
   const [isQaStreaming, setIsQaStreaming] = useState(false);
   const [isWaitingForQaResponse, setIsWaitingForQaResponse] = useState(false);
@@ -63,6 +64,7 @@ const SidePanel = () => {
   const heartbeatIntervalRef = useRef<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const setInputTextRef = useRef<((text: string) => void) | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<number | null>(null);
@@ -123,6 +125,7 @@ const SidePanel = () => {
       // Load mode for this tab
       const tabMode = await getTabMode(tabId);
       setMode(tabMode);
+      modeRef.current = tabMode;
 
       // Load chat sessions for this tab
       const sessions = await chatHistoryStore.getSessionsMetadata(tabId);
@@ -164,6 +167,7 @@ const SidePanel = () => {
     async (newMode: TabMode) => {
       if (!currentTabId) return;
       setMode(newMode);
+      modeRef.current = newMode;
       await setTabMode(currentTabId, newMode);
       // Clear current session when switching modes
       if (currentSessionId) {
@@ -623,6 +627,12 @@ const SidePanel = () => {
             setIsQaStreaming(false);
             setInputEnabled(true);
             setShowStopButton(false);
+            // Focus textarea after streaming completes in QA mode
+            if (modeRef.current === 'qa' && textareaRef.current) {
+              setTimeout(() => {
+                textareaRef.current?.focus();
+              }, 0);
+            }
           }
         } else if (message && message.type === 'qa_response_error') {
           // QA response error
@@ -640,6 +650,12 @@ const SidePanel = () => {
             setIsQaStreaming(false);
             setInputEnabled(true);
             setShowStopButton(false);
+            // Focus textarea after error in QA mode
+            if (modeRef.current === 'qa' && textareaRef.current) {
+              setTimeout(() => {
+                textareaRef.current?.focus();
+              }, 0);
+            }
           }
         } else if (message && message.type === 'speech_to_text_result') {
           // Handle speech-to-text result
@@ -1032,6 +1048,7 @@ const SidePanel = () => {
     // Set mode to QA for new chats
     if (currentTabId) {
       setMode('qa');
+      modeRef.current = 'qa';
       await setTabMode(currentTabId, 'qa');
     }
 
@@ -1520,6 +1537,9 @@ const SidePanel = () => {
                         availableModels={availableModels}
                         currentQAModel={currentQAModel}
                         onQAModelChange={handleQAModelChange}
+                        setTextareaRef={ref => {
+                          textareaRef.current = ref;
+                        }}
                       />
                     </div>
                     <div className="flex-1 overflow-y-auto">
@@ -1567,6 +1587,9 @@ const SidePanel = () => {
                       availableModels={availableModels}
                       currentQAModel={currentQAModel}
                       onQAModelChange={handleQAModelChange}
+                      setTextareaRef={ref => {
+                        textareaRef.current = ref;
+                      }}
                     />
                   </div>
                 )}

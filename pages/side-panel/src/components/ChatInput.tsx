@@ -28,6 +28,8 @@ interface ChatInputProps {
   availableModels?: ModelOption[];
   currentQAModel?: string;
   onQAModelChange?: (provider: string, model: string) => void;
+  // Expose textarea ref for focus management
+  setTextareaRef?: (ref: HTMLTextAreaElement | null) => void;
 }
 
 // File attachment interface
@@ -53,6 +55,7 @@ export default function ChatInput({
   availableModels = [],
   currentQAModel,
   onQAModelChange,
+  setTextareaRef,
 }: ChatInputProps) {
   const [text, setText] = useState('');
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
@@ -82,6 +85,13 @@ export default function ChatInput({
       setContent(setText);
     }
   }, [setContent]);
+
+  // Expose textarea ref for focus management
+  useEffect(() => {
+    if (setTextareaRef) {
+      setTextareaRef(textareaRef.current);
+    }
+  }, [setTextareaRef]);
 
   // Initial resize when component mounts
   useEffect(() => {
@@ -124,9 +134,17 @@ export default function ChatInput({
         onSendMessage(messageContent, displayContent);
         setText('');
         setAttachedFiles([]);
+
+        // In QA mode, keep focus on textarea after submission
+        if (isQAMode && textareaRef.current && !disabled) {
+          // Use setTimeout to ensure focus happens after state updates
+          setTimeout(() => {
+            textareaRef.current?.focus();
+          }, 0);
+        }
       }
     },
-    [text, attachedFiles, onSendMessage],
+    [text, attachedFiles, onSendMessage, isQAMode, disabled],
   );
 
   const handleKeyDown = useCallback(
