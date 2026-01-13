@@ -627,6 +627,8 @@ const SidePanel = () => {
             setIsQaStreaming(false);
             setInputEnabled(true);
             setShowStopButton(false);
+            // Enable follow-up mode so next message continues the same session
+            setIsFollowUpMode(true);
             // Focus textarea after streaming completes in QA mode
             if (modeRef.current === 'qa' && textareaRef.current) {
               setTimeout(() => {
@@ -650,6 +652,8 @@ const SidePanel = () => {
             setIsQaStreaming(false);
             setInputEnabled(true);
             setShowStopButton(false);
+            // Enable follow-up mode so next message continues the same session
+            setIsFollowUpMode(true);
             // Focus textarea after error in QA mode
             if (modeRef.current === 'qa' && textareaRef.current) {
               setTimeout(() => {
@@ -947,9 +951,6 @@ const SidePanel = () => {
         timestamp: Date.now(),
       };
 
-      // Pass the sessionId directly to appendMessage
-      appendMessage(userMessage, sessionIdRef.current);
-
       // Setup connection if not exists
       if (!portRef.current) {
         setupConnection();
@@ -958,6 +959,15 @@ const SidePanel = () => {
       // Send message using the utility function
       if (mode === 'qa') {
         // QA mode - send QA query
+        // IMPORTANT: Save the message to storage BEFORE sending the query
+        // This ensures the message is available when we load chat history
+        if (sessionIdRef.current) {
+          await chatHistoryStore.addMessage(sessionIdRef.current, userMessage);
+        }
+
+        // Update UI state directly (don't use appendMessage as it would save again)
+        setMessages(prev => [...prev, userMessage]);
+
         setQaResponseBuffer(''); // Clear buffer
         setIsQaStreaming(false);
         setIsWaitingForQaResponse(true); // Show loading indicator

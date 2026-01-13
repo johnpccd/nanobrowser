@@ -6,6 +6,7 @@ import {
   generalSettingsStore,
   llmProviderStore,
   analyticsSettingsStore,
+  chatHistoryStore,
 } from '@extension/storage';
 import { t } from '@extension/i18n';
 import BrowserContext from './browser/context';
@@ -18,7 +19,8 @@ import { DEFAULT_AGENT_OPTIONS } from './agent/types';
 import { SpeechToTextService } from './services/speechToText';
 import { injectBuildDomTreeScripts, getMarkdownContent } from './browser/dom/service';
 import { analytics } from './services/analytics';
-import { HumanMessage, SystemMessage } from '@langchain/core/messages';
+import { HumanMessage, SystemMessage, AIMessage } from '@langchain/core/messages';
+import { Actors } from '@extension/storage/lib/chat/types';
 
 const logger = createLogger('background');
 
@@ -110,9 +112,11 @@ chrome.runtime.onConnect.addListener(port => {
       // Associate port with tabId from first message that has it
       if (!portTabId && message.tabId) {
         portTabId = message.tabId;
-        const tabConn = tabConnections.get(portTabId) || {};
-        tabConn.port = port;
-        tabConnections.set(portTabId, tabConn);
+        if (portTabId !== null) {
+          const tabConn = tabConnections.get(portTabId) || {};
+          tabConn.port = port;
+          tabConnections.set(portTabId, tabConn);
+        }
       }
       try {
         switch (message.type) {
@@ -359,16 +363,47 @@ chrome.runtime.onConnect.addListener(port => {
                 // 3. Create LLM instance
                 const qaLLM = createChatModel(provider, qaModel);
 
-                // 4. Stream LLM response
-                const stream = await qaLLM.stream(
-                  [
-                    new SystemMessage(
-                      'You are a helpful assistant. Answer questions based on the provided page content. Be concise and accurate.',
-                    ),
-                    new HumanMessage(`Page content:\n${pageContent}\n\nUser question: ${userQuery}`),
-                  ],
-                  { signal: abortController.signal },
+                // 4. Load chat history for this session and build conversation
+                const session = await chatHistoryStore.getSession(sessionId);
+                const conversationMessages: (SystemMessage | HumanMessage | AIMessage)[] = [];
+
+                // Add system message with page content
+                conversationMessages.push(
+                  new SystemMessage(
+                    `You are a helpful assistant. Answer questions based on the provided page content. Be concise and accurate.\n\nCurrent page content:\n${pageContent}`,
+                  ),
                 );
+
+                // Convert stored messages to LangChain messages
+                // Include ALL messages from history to maintain conversation context
+                if (session && session.messages && session.messages.length > 0) {
+                  for (const msg of session.messages) {
+                    if (msg.actor === Actors.USER) {
+                      conversationMessages.push(new HumanMessage(msg.content));
+                    } else if (msg.actor === Actors.SYSTEM) {
+                      // SYSTEM actor is used for AI responses in QA mode
+                      conversationMessages.push(new AIMessage(msg.content));
+                    }
+                    // Skip other actor types (PLANNER, NAVIGATOR, VALIDATOR) as they're not relevant for QA
+                  }
+                }
+
+                // Add the current user query only if it's not already the last message in history
+                // (to avoid duplicates since we save the message before sending)
+                // Note: The saved message might use displayText, so we check if the query is contained in or matches the last message
+                const lastMessage = session?.messages?.[session.messages.length - 1];
+                const isLastMessageCurrentQuery =
+                  lastMessage?.actor === Actors.USER &&
+                  (lastMessage.content.trim() === userQuery.trim() ||
+                    lastMessage.content.trim().includes(userQuery.trim()) ||
+                    userQuery.trim().includes(lastMessage.content.trim()));
+
+                if (!isLastMessageCurrentQuery) {
+                  conversationMessages.push(new HumanMessage(userQuery));
+                }
+
+                // 5. Stream LLM response
+                const stream = await qaLLM.stream(conversationMessages, { signal: abortController.signal });
 
                 // 5. Stream chunks to side panel
                 for await (const chunk of stream) {
