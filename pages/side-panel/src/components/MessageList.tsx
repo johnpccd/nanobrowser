@@ -8,6 +8,7 @@ interface MessageListProps {
   isDarkMode?: boolean;
   streamingContent?: string;
   isWaitingForResponse?: boolean;
+  fontSize?: number;
 }
 
 export default memo(function MessageList({
@@ -15,6 +16,7 @@ export default memo(function MessageList({
   isDarkMode = false,
   streamingContent,
   isWaitingForResponse = false,
+  fontSize = 14,
 }: MessageListProps) {
   // Check if last message is from SYSTEM actor for streaming continuation
   const lastMessage = messages[messages.length - 1];
@@ -28,15 +30,21 @@ export default memo(function MessageList({
           message={message}
           isSameActor={index > 0 ? messages[index - 1].actor === message.actor : false}
           isDarkMode={isDarkMode}
+          fontSize={fontSize}
         />
       ))}
       {/* Render waiting indicator while waiting for first response chunk */}
       {isWaitingForResponse && (!streamingContent || streamingContent.trim() === '') && (
-        <WaitingMessageBlock isDarkMode={isDarkMode} isSameActor={lastWasSystem} />
+        <WaitingMessageBlock isDarkMode={isDarkMode} isSameActor={lastWasSystem} fontSize={fontSize} />
       )}
       {/* Render streaming content as a separate block */}
       {streamingContent && streamingContent.trim() !== '' && (
-        <StreamingMessageBlock content={streamingContent} isDarkMode={isDarkMode} isSameActor={lastWasSystem} />
+        <StreamingMessageBlock
+          content={streamingContent}
+          isDarkMode={isDarkMode}
+          isSameActor={lastWasSystem}
+          fontSize={fontSize}
+        />
       )}
     </div>
   );
@@ -46,9 +54,10 @@ interface MessageBlockProps {
   message: Message;
   isSameActor: boolean;
   isDarkMode?: boolean;
+  fontSize?: number;
 }
 
-function MessageBlock({ message, isSameActor, isDarkMode = false }: MessageBlockProps) {
+function MessageBlock({ message, isSameActor, isDarkMode = false, fontSize = 14 }: MessageBlockProps) {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
   const handleImageClick = useCallback(() => {
@@ -113,7 +122,8 @@ function MessageBlock({ message, isSameActor, isDarkMode = false }: MessageBlock
               </div>
             )}
             <div
-              className={`whitespace-pre-wrap break-words text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+              className={`whitespace-pre-wrap break-words ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}
+              style={{ fontSize: `${fontSize}px` }}>
               {isProgress ? (
                 <div className={`h-1 overflow-hidden rounded ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
                   <div className="h-full animate-progress bg-blue-500" />
@@ -175,9 +185,15 @@ interface StreamingMessageBlockProps {
   content: string;
   isDarkMode?: boolean;
   isSameActor?: boolean;
+  fontSize?: number;
 }
 
-function StreamingMessageBlock({ content, isDarkMode = false, isSameActor = false }: StreamingMessageBlockProps) {
+function StreamingMessageBlock({
+  content,
+  isDarkMode = false,
+  isSameActor = false,
+  fontSize = 14,
+}: StreamingMessageBlockProps) {
   const actor = ACTOR_PROFILES['system'];
 
   return (
@@ -204,7 +220,9 @@ function StreamingMessageBlock({ content, isDarkMode = false, isSameActor = fals
         )}
 
         <div className="space-y-0.5">
-          <div className={`whitespace-pre-wrap break-words text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+          <div
+            className={`whitespace-pre-wrap break-words ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}
+            style={{ fontSize: `${fontSize}px` }}>
             {content}
             <span className="inline-block w-2 h-4 ml-1 bg-blue-500 animate-pulse" />
           </div>
@@ -217,9 +235,10 @@ function StreamingMessageBlock({ content, isDarkMode = false, isSameActor = fals
 interface WaitingMessageBlockProps {
   isDarkMode?: boolean;
   isSameActor?: boolean;
+  fontSize?: number;
 }
 
-function WaitingMessageBlock({ isDarkMode = false, isSameActor = false }: WaitingMessageBlockProps) {
+function WaitingMessageBlock({ isDarkMode = false, isSameActor = false, fontSize = 14 }: WaitingMessageBlockProps) {
   const actor = ACTOR_PROFILES['system'];
 
   return (

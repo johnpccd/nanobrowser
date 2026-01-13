@@ -11,7 +11,7 @@ import {
 const logger = createLogger('MessageManager');
 
 export class MessageManagerSettings {
-  maxInputTokens = 128000;
+  maxInputTokens = 1000000;
   estimatedCharactersPerToken = 3;
   imageTokens = 800;
   includeAttributes: string[] = [];

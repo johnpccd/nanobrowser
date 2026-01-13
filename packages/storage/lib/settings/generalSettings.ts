@@ -14,6 +14,8 @@ export interface GeneralSettingsConfig {
   minWaitPageLoad: number;
   replayHistoricalTasks: boolean;
   includePageContent: boolean;
+  fontSize: number;
+  maxInputTokens: number;
 }
 
 export type GeneralSettingsStorage = BaseStorage<GeneralSettingsConfig> & {
@@ -34,6 +36,8 @@ export const DEFAULT_GENERAL_SETTINGS: GeneralSettingsConfig = {
   minWaitPageLoad: 250,
   replayHistoricalTasks: false,
   includePageContent: true,
+  fontSize: 14,
+  maxInputTokens: 1000000,
 };
 
 const storage = createStorage<GeneralSettingsConfig>('general-settings', DEFAULT_GENERAL_SETTINGS, {

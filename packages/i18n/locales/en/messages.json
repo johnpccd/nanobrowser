@@ -316,6 +316,18 @@
   "options_general_includePageContent_desc": {
     "message": "When enabled, page content is sent with QA queries for context-aware answers. Disable for generic LLM chat."
   },
+  "options_general_fontSize": {
+    "message": "Chat Font Size"
+  },
+  "options_general_fontSize_desc": {
+    "message": "Adjust the font size for chat messages (in pixels). Changes apply immediately to visible chat."
+  },
+  "options_general_maxInputTokens": {
+    "message": "Max Input Tokens"
+  },
+  "options_general_maxInputTokens_desc": {
+    "message": "Maximum number of tokens allowed in the chat history context. When exceeded, older messages are trimmed. Default: 1,000,000 tokens."
+  },
   "options_prompts_header": {
     "message": "Quick Start Prompts"
   },

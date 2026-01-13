@@ -295,6 +295,18 @@
   "options_general_replayHistoricalTasks_desc": {
     "message": "啟用儲存與重播代理程式的步驟歷史紀錄 (此為實驗性功能，可能存在問題)"
   },
+  "options_general_fontSize": {
+    "message": "聊天字體大小"
+  },
+  "options_general_fontSize_desc": {
+    "message": "調整聊天訊息的字體大小（單位：像素）。變更會立即套用到可見的聊天內容。"
+  },
+  "options_general_maxInputTokens": {
+    "message": "最大輸入 Token 數"
+  },
+  "options_general_maxInputTokens_desc": {
+    "message": "聊天歷史記錄中允許的最大 token 數。超過此限制時，較舊的訊息將被截斷。預設值：1,000,000 tokens。"
+  },
   "options_prompts_header": {
     "message": "快速開始提示"
   },

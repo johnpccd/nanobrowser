@@ -63,6 +63,8 @@ const SidePanel = () => {
   const [isCapturingImage, setIsCapturingImage] = useState(false);
   // Page content inclusion state for QA mode
   const [includePageContent, setIncludePageContent] = useState(true);
+  // Font size state
+  const [fontSize, setFontSize] = useState<number>(14);
   const sessionIdRef = useRef<string | null>(null);
   const isReplayingRef = useRef<boolean>(false);
   const portRef = useRef<chrome.runtime.Port | null>(null);
@@ -113,10 +115,12 @@ const SidePanel = () => {
       const settings = await generalSettingsStore.getSettings();
       setReplayEnabled(settings.replayHistoricalTasks);
       setIncludePageContent(settings.includePageContent);
+      setFontSize(settings.fontSize);
     } catch (error) {
       console.error('Error loading general settings:', error);
       setReplayEnabled(false);
       setIncludePageContent(true);
+      setFontSize(14);
     }
   }, []);
 
@@ -153,6 +157,10 @@ const SidePanel = () => {
         setCurrentSessionId(null);
         sessionIdRef.current = null;
         setMessages([]);
+        // For new tabs/sessions in QA mode, enable page content by default
+        if (tabMode === 'qa') {
+          setIncludePageContent(true);
+        }
       }
     } catch (error) {
       console.error('Error loading tab state:', error);
@@ -182,6 +190,10 @@ const SidePanel = () => {
         sessionIdRef.current = null;
         setMessages([]);
         await saveCurrentTabActiveSession(null);
+      }
+      // For new sessions in QA mode, enable page content by default
+      if (newMode === 'qa' && !currentSessionId) {
+        setIncludePageContent(true);
       }
     },
     [currentTabId, currentSessionId, saveCurrentTabActiveSession],
@@ -398,6 +410,17 @@ const SidePanel = () => {
       window.removeEventListener('focus', handleFocus);
     };
   }, [checkModelConfiguration, loadGeneralSettings]);
+
+  // Subscribe to general settings changes for immediate updates
+  useEffect(() => {
+    const unsubscribe = generalSettingsStore.subscribe(async () => {
+      await loadGeneralSettings();
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [loadGeneralSettings]);
 
   useEffect(() => {
     sessionIdRef.current = currentSessionId;
@@ -1085,6 +1108,9 @@ const SidePanel = () => {
       await setTabMode(currentTabId, 'qa');
     }
 
+    // Enable page content by default for new chats in QA mode
+    setIncludePageContent(true);
+
     // Clear active session for current tab
     await saveCurrentTabActiveSession(null);
 
@@ -1694,6 +1720,7 @@ const SidePanel = () => {
                       isDarkMode={isDarkMode}
                       streamingContent={isQaStreaming ? qaResponseBuffer : undefined}
                       isWaitingForResponse={isWaitingForQaResponse}
+                      fontSize={fontSize}
                     />
                     <div ref={messagesEndRef} />
                   </div>

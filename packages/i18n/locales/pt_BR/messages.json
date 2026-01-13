@@ -295,6 +295,18 @@
   "options_general_replayHistoricalTasks_desc": {
     "message": "Ativar o armazenamento e a reprodução do histórico de passos do agente (experimental, pode ter problemas)"
   },
+  "options_general_fontSize": {
+    "message": "Tamanho da Fonte do Chat"
+  },
+  "options_general_fontSize_desc": {
+    "message": "Ajuste o tamanho da fonte das mensagens do chat (em pixels). As alterações são aplicadas imediatamente ao chat visível."
+  },
+  "options_general_maxInputTokens": {
+    "message": "Tokens de Entrada Máximos"
+  },
+  "options_general_maxInputTokens_desc": {
+    "message": "Número máximo de tokens permitidos no histórico do chat. Quando excedido, mensagens mais antigas são cortadas. Padrão: 1.000.000 de tokens."
+  },
   "options_prompts_header": {
     "message": "Prompts de Início Rápido"
   },

@@ -254,6 +254,60 @@ export const GeneralSettings = ({ isDarkMode = false }: GeneralSettingsProps) =>
               </label>
             </div>
           </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className={`text-base font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                {t('options_general_fontSize')}
+              </h3>
+              <p className={`text-sm font-normal ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                {t('options_general_fontSize_desc')}
+              </p>
+            </div>
+            <div className="flex items-center space-x-2">
+              <label htmlFor="fontSize" className="sr-only">
+                {t('options_general_fontSize')}
+              </label>
+              <input
+                id="fontSize"
+                type="number"
+                min={10}
+                max={24}
+                step={1}
+                value={settings.fontSize}
+                onChange={e => updateSetting('fontSize', Number.parseInt(e.target.value, 10))}
+                className={`w-20 rounded-md border ${isDarkMode ? 'border-slate-600 bg-slate-700 text-gray-200' : 'border-gray-300 bg-white text-gray-700'} px-3 py-2`}
+              />
+              <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>px</span>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className={`text-base font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                {t('options_general_maxInputTokens')}
+              </h3>
+              <p className={`text-sm font-normal ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                {t('options_general_maxInputTokens_desc')}
+              </p>
+            </div>
+            <div className="flex items-center space-x-2">
+              <label htmlFor="maxInputTokens" className="sr-only">
+                {t('options_general_maxInputTokens')}
+              </label>
+              <input
+                id="maxInputTokens"
+                type="number"
+                min={10000}
+                max={10000000}
+                step={10000}
+                value={settings.maxInputTokens}
+                onChange={e => updateSetting('maxInputTokens', Number.parseInt(e.target.value, 10))}
+                className={`w-32 rounded-md border ${isDarkMode ? 'border-slate-600 bg-slate-700 text-gray-200' : 'border-gray-300 bg-white text-gray-700'} px-3 py-2`}
+              />
+              <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>tokens</span>
+            </div>
+          </div>
         </div>
       </div>
 
