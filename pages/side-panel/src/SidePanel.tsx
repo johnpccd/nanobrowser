@@ -61,6 +61,8 @@ const SidePanel = () => {
   // Image capture state
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [isCapturingImage, setIsCapturingImage] = useState(false);
+  // Page content inclusion state for QA mode
+  const [includePageContent, setIncludePageContent] = useState(true);
   const sessionIdRef = useRef<string | null>(null);
   const isReplayingRef = useRef<boolean>(false);
   const portRef = useRef<chrome.runtime.Port | null>(null);
@@ -105,14 +107,16 @@ const SidePanel = () => {
     }
   }, []);
 
-  // Load general settings to check if replay is enabled
+  // Load general settings to check if replay is enabled and page content inclusion
   const loadGeneralSettings = useCallback(async () => {
     try {
       const settings = await generalSettingsStore.getSettings();
       setReplayEnabled(settings.replayHistoricalTasks);
+      setIncludePageContent(settings.includePageContent);
     } catch (error) {
       console.error('Error loading general settings:', error);
       setReplayEnabled(false);
+      setIncludePageContent(true);
     }
   }, []);
 
@@ -987,8 +991,16 @@ const SidePanel = () => {
           sessionId: sessionIdRef.current,
           tabId,
           imageData, // Include image in the message to background
+          includePageContent, // Whether to include page content in the query
         });
-        console.log('qa_query sent', text, tabId, sessionIdRef.current, imageData ? '(with image)' : '');
+        console.log(
+          'qa_query sent',
+          text,
+          tabId,
+          sessionIdRef.current,
+          imageData ? '(with image)' : '',
+          includePageContent ? '(with page content)' : '(generic chat)',
+        );
       } else if (isFollowUpMode) {
         // Send as follow-up task
         await sendMessage({
@@ -1327,6 +1339,19 @@ const SidePanel = () => {
     setCapturedImage(null);
   }, []);
 
+  // Handle toggling page content inclusion for QA mode
+  const handleToggleIncludePageContent = useCallback(async () => {
+    const newValue = !includePageContent;
+    setIncludePageContent(newValue);
+    try {
+      await generalSettingsStore.updateSettings({ includePageContent: newValue });
+    } catch (error) {
+      console.error('Error updating includePageContent setting:', error);
+      // Revert on error
+      setIncludePageContent(!newValue);
+    }
+  }, [includePageContent]);
+
   const handleMicClick = async () => {
     if (isRecording) {
       // Stop recording
@@ -1645,6 +1670,8 @@ const SidePanel = () => {
                         capturedImage={capturedImage}
                         onRemoveCapturedImage={handleRemoveCapturedImage}
                         isCapturingImage={isCapturingImage}
+                        includePageContent={includePageContent}
+                        onToggleIncludePageContent={mode === 'qa' ? handleToggleIncludePageContent : undefined}
                       />
                     </div>
                     <div className="flex-1 overflow-y-auto">
@@ -1699,6 +1726,8 @@ const SidePanel = () => {
                       capturedImage={capturedImage}
                       onRemoveCapturedImage={handleRemoveCapturedImage}
                       isCapturingImage={isCapturingImage}
+                      includePageContent={includePageContent}
+                      onToggleIncludePageContent={mode === 'qa' ? handleToggleIncludePageContent : undefined}
                     />
                   </div>
                 )}

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { FaMicrophone } from 'react-icons/fa';
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
-import { HiOutlineCamera } from 'react-icons/hi';
+import { HiOutlineCamera, HiOutlineDocumentText, HiOutlineChat } from 'react-icons/hi';
 import { t } from '@extension/i18n';
 
 interface ModelOption {
@@ -36,6 +36,9 @@ interface ChatInputProps {
   capturedImage?: string | null;
   onRemoveCapturedImage?: () => void;
   isCapturingImage?: boolean;
+  // Page content toggle for QA mode
+  includePageContent?: boolean;
+  onToggleIncludePageContent?: () => void;
 }
 
 // File attachment interface
@@ -66,6 +69,8 @@ export default function ChatInput({
   capturedImage,
   onRemoveCapturedImage,
   isCapturingImage = false,
+  includePageContent = true,
+  onToggleIncludePageContent,
 }: ChatInputProps) {
   const [text, setText] = useState('');
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
@@ -426,6 +431,39 @@ export default function ChatInput({
                         );
                       })}
                     </select>
+                    {/* Page Content Toggle button */}
+                    {onToggleIncludePageContent && (
+                      <button
+                        type="button"
+                        onClick={onToggleIncludePageContent}
+                        disabled={disabled}
+                        aria-label={t('chat_pageContent_toggle')}
+                        title={
+                          includePageContent
+                            ? t('chat_pageContent_tooltip_enabled')
+                            : t('chat_pageContent_tooltip_disabled')
+                        }
+                        className={`flex items-center gap-1 rounded-md px-2 py-1.5 text-xs transition-colors ${
+                          disabled
+                            ? 'cursor-not-allowed opacity-50'
+                            : includePageContent
+                              ? isDarkMode
+                                ? 'bg-sky-700 text-white hover:bg-sky-600 border border-sky-600'
+                                : 'bg-sky-100 text-sky-700 hover:bg-sky-200 border border-sky-300'
+                              : isDarkMode
+                                ? 'bg-slate-700 text-gray-400 hover:bg-slate-600 border border-slate-600'
+                                : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-300'
+                        }`}>
+                        {includePageContent ? (
+                          <HiOutlineDocumentText className="size-4" />
+                        ) : (
+                          <HiOutlineChat className="size-4" />
+                        )}
+                        <span className="hidden sm:inline">
+                          {includePageContent ? t('chat_pageContent_enabled') : t('chat_pageContent_disabled')}
+                        </span>
+                      </button>
+                    )}
                     {/* Image Capture button */}
                     {onCaptureImage && (
                       <button

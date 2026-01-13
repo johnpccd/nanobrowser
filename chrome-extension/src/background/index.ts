@@ -338,6 +338,7 @@ chrome.runtime.onConnect.addListener(port => {
             const userQuery = message.query || '';
             const sessionId = message.sessionId;
             const imageData = message.imageData as string | undefined;
+            const includePageContent = message.includePageContent !== false; // Default to true
 
             // Get or create tab connection
             let tabConn = tabConnections.get(tabId);
@@ -361,11 +362,16 @@ chrome.runtime.onConnect.addListener(port => {
             // Execute QA query asynchronously
             (async () => {
               try {
-                // 0. Ensure scripts are injected before getting markdown content
-                await injectBuildDomTreeScripts(tabId);
+                let pageContent = '';
 
-                // 1. Get page markdown content
-                const pageContent = await getMarkdownContent(tabId);
+                // 0. Only get page content if includePageContent is true
+                if (includePageContent) {
+                  // Ensure scripts are injected before getting markdown content
+                  await injectBuildDomTreeScripts(tabId);
+
+                  // Get page markdown content
+                  pageContent = await getMarkdownContent(tabId);
+                }
 
                 // 2. Get QA model config
                 const qaModel = await agentModelStore.getAgentModel(AgentNameEnum.QA);
@@ -386,12 +392,20 @@ chrome.runtime.onConnect.addListener(port => {
                 const session = await chatHistoryStore.getSession(sessionId);
                 const conversationMessages: (SystemMessage | HumanMessage | AIMessage)[] = [];
 
-                // Add system message with page content
-                conversationMessages.push(
-                  new SystemMessage(
-                    `You are a helpful assistant. Answer questions based on the provided page content. Be concise and accurate.\n\nCurrent page content:\n${pageContent}`,
-                  ),
-                );
+                // Add system message - different prompts based on whether page content is included
+                if (includePageContent && pageContent) {
+                  conversationMessages.push(
+                    new SystemMessage(
+                      `You are a helpful assistant. Answer questions based on the provided page content. Be concise and accurate.\n\nCurrent page content:\n${pageContent}`,
+                    ),
+                  );
+                } else {
+                  conversationMessages.push(
+                    new SystemMessage(
+                      `You are a helpful, knowledgeable, and friendly AI assistant. Provide clear, accurate, and helpful responses to the user's questions. Be concise but thorough in your explanations.`,
+                    ),
+                  );
+                }
 
                 // Convert stored messages to LangChain messages
                 // Include ALL messages from history to maintain conversation context

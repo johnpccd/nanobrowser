@@ -196,6 +196,21 @@
   "chat_imageCapture_fullImage": {
     "message": "Full size screenshot"
   },
+  "chat_pageContent_toggle": {
+    "message": "Toggle page content"
+  },
+  "chat_pageContent_enabled": {
+    "message": "Page content included"
+  },
+  "chat_pageContent_disabled": {
+    "message": "Generic chat mode"
+  },
+  "chat_pageContent_tooltip_enabled": {
+    "message": "Click to disable page content - responses will be generic LLM chat without page context"
+  },
+  "chat_pageContent_tooltip_disabled": {
+    "message": "Click to enable page content - responses will be based on the current page"
+  },
   "permissions_microphone_title": {
     "message": "Enable Voice Input"
   },
@@ -294,6 +309,12 @@
   },
   "options_general_replayHistoricalTasks_desc": {
     "message": "Enable storing and replaying of agent step history (experimental, may have issues)"
+  },
+  "options_general_includePageContent": {
+    "message": "Include Page Content in QA Mode"
+  },
+  "options_general_includePageContent_desc": {
+    "message": "When enabled, page content is sent with QA queries for context-aware answers. Disable for generic LLM chat."
   },
   "options_prompts_header": {
     "message": "Quick Start Prompts"
