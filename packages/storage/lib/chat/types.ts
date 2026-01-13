@@ -10,6 +10,7 @@ export interface Message {
   actor: Actors;
   content: string;
   timestamp: number; // Unix timestamp in milliseconds
+  imageData?: string; // Base64 encoded image data for QA mode image capture
 }
 
 export interface ChatMessage extends Message {

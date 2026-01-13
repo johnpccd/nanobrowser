@@ -163,6 +163,39 @@
   "chat_stt_microphone_notFound": {
     "message": "找不到麥克風。"
   },
+  "chat_imageCapture_button": {
+    "message": "擷取頁面截圖"
+  },
+  "chat_imageCapture_tooltip": {
+    "message": "擷取當前頁面的截圖以包含在您的訊息中"
+  },
+  "chat_imageCapture_label": {
+    "message": "擷取"
+  },
+  "chat_imageCapture_preview": {
+    "message": "截圖預覽"
+  },
+  "chat_imageCapture_remove": {
+    "message": "移除截圖"
+  },
+  "chat_imageCapture_attached": {
+    "message": "已附加截圖"
+  },
+  "chat_imageCapture_failed": {
+    "message": "擷取截圖失敗。請再試一次。"
+  },
+  "chat_imageCapture_viewFull": {
+    "message": "檢視完整圖片"
+  },
+  "chat_imageCapture_clickToExpand": {
+    "message": "點擊展開"
+  },
+  "chat_imageCapture_closeModal": {
+    "message": "關閉圖片"
+  },
+  "chat_imageCapture_fullImage": {
+    "message": "全尺寸截圖"
+  },
   "permissions_microphone_title": {
     "message": "啟用語音輸入"
   },

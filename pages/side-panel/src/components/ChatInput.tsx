@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { FaMicrophone } from 'react-icons/fa';
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
+import { HiOutlineCamera } from 'react-icons/hi';
 import { t } from '@extension/i18n';
 
 interface ModelOption {
@@ -11,7 +12,7 @@ interface ModelOption {
 }
 
 interface ChatInputProps {
-  onSendMessage: (text: string, displayText?: string) => void;
+  onSendMessage: (text: string, displayText?: string, imageData?: string) => void;
   onStopTask: () => void;
   onMicClick?: () => void;
   isRecording?: boolean;
@@ -30,6 +31,11 @@ interface ChatInputProps {
   onQAModelChange?: (provider: string, model: string) => void;
   // Expose textarea ref for focus management
   setTextareaRef?: (ref: HTMLTextAreaElement | null) => void;
+  // Image capture
+  onCaptureImage?: () => Promise<string | null>;
+  capturedImage?: string | null;
+  onRemoveCapturedImage?: () => void;
+  isCapturingImage?: boolean;
 }
 
 // File attachment interface
@@ -56,12 +62,16 @@ export default function ChatInput({
   currentQAModel,
   onQAModelChange,
   setTextareaRef,
+  onCaptureImage,
+  capturedImage,
+  onRemoveCapturedImage,
+  isCapturingImage = false,
 }: ChatInputProps) {
   const [text, setText] = useState('');
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
   const isSendButtonDisabled = useMemo(
-    () => disabled || (text.trim() === '' && attachedFiles.length === 0),
-    [disabled, text, attachedFiles],
+    () => disabled || (text.trim() === '' && attachedFiles.length === 0 && !capturedImage),
+    [disabled, text, attachedFiles, capturedImage],
   );
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -107,7 +117,7 @@ export default function ChatInput({
       e.preventDefault();
       const trimmedText = text.trim();
 
-      if (trimmedText || attachedFiles.length > 0) {
+      if (trimmedText || attachedFiles.length > 0 || capturedImage) {
         let messageContent = trimmedText;
         let displayContent = trimmedText;
 
@@ -131,9 +141,20 @@ export default function ChatInput({
           displayContent = trimmedText ? `${trimmedText}\n\n${fileList}` : fileList;
         }
 
-        onSendMessage(messageContent, displayContent);
+        // Add image indicator to display content if image is attached
+        if (capturedImage) {
+          displayContent = displayContent
+            ? `${displayContent}\n\n📷 ${t('chat_imageCapture_attached')}`
+            : `📷 ${t('chat_imageCapture_attached')}`;
+        }
+
+        onSendMessage(messageContent, displayContent, capturedImage || undefined);
         setText('');
         setAttachedFiles([]);
+        // Clear captured image after sending
+        if (capturedImage && onRemoveCapturedImage) {
+          onRemoveCapturedImage();
+        }
 
         // In QA mode, keep focus on textarea after submission
         if (isQAMode && textareaRef.current && !disabled) {
@@ -144,7 +165,7 @@ export default function ChatInput({
         }
       }
     },
-    [text, attachedFiles, onSendMessage, isQAMode, disabled],
+    [text, attachedFiles, capturedImage, onSendMessage, isQAMode, disabled, onRemoveCapturedImage],
   );
 
   const handleKeyDown = useCallback(
@@ -222,12 +243,49 @@ export default function ChatInput({
       className={`overflow-hidden rounded-lg border transition-colors ${disabled ? 'cursor-not-allowed' : 'focus-within:border-sky-400 hover:border-sky-400'} ${isDarkMode ? 'border-slate-700' : ''}`}
       aria-label={t('chat_input_form')}>
       <div className="flex flex-col">
-        {/* File attachments display */}
-        {attachedFiles.length > 0 && (
+        {/* File attachments and captured image display */}
+        {(attachedFiles.length > 0 || capturedImage) && (
           <div
             className={`flex flex-wrap gap-2 border-b p-2 ${
               isDarkMode ? 'border-slate-700 bg-slate-800' : 'border-gray-200 bg-gray-50'
             }`}>
+            {/* Captured image preview */}
+            {capturedImage && (
+              <div
+                className={`relative flex items-center gap-1 rounded-md p-1 ${
+                  isDarkMode ? 'bg-slate-700' : 'bg-gray-200'
+                }`}>
+                <img
+                  src={`data:image/jpeg;base64,${capturedImage}`}
+                  alt={t('chat_imageCapture_preview')}
+                  className="h-12 w-auto max-w-[100px] rounded object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => {
+                    // Open image in a modal-like view
+                    const modal = document.createElement('div');
+                    modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/80 cursor-pointer';
+                    modal.onclick = () => modal.remove();
+                    const img = document.createElement('img');
+                    img.src = `data:image/jpeg;base64,${capturedImage}`;
+                    img.className = 'max-h-[90vh] max-w-[90vw] object-contain rounded-lg';
+                    img.onclick = e => e.stopPropagation();
+                    modal.appendChild(img);
+                    document.body.appendChild(modal);
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={onRemoveCapturedImage}
+                  className={`absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full text-xs ${
+                    isDarkMode
+                      ? 'bg-slate-600 text-gray-200 hover:bg-slate-500'
+                      : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+                  }`}
+                  aria-label={t('chat_imageCapture_remove')}>
+                  ✕
+                </button>
+              </div>
+            )}
+            {/* File attachments */}
             {attachedFiles.map((file, index) => (
               <div
                 key={index}
@@ -333,40 +391,65 @@ export default function ChatInput({
                   )}
                 </button>
                 {isQAMode && availableModels.length > 0 && onQAModelChange && (
-                  <select
-                    value={currentQAModel || ''}
-                    onChange={e => {
-                      const value = e.target.value;
-                      if (value) {
-                        const [provider, model] = value.split('>');
-                        if (provider && model) {
-                          onQAModelChange(provider, model);
+                  <>
+                    <select
+                      value={currentQAModel || ''}
+                      onChange={e => {
+                        const value = e.target.value;
+                        if (value) {
+                          const [provider, model] = value.split('>');
+                          if (provider && model) {
+                            onQAModelChange(provider, model);
+                          }
                         }
-                      }
-                    }}
-                    disabled={disabled}
-                    className={`rounded-md px-2 py-1.5 text-xs transition-colors max-w-[200px] ${
-                      disabled
-                        ? 'cursor-not-allowed opacity-50'
-                        : isDarkMode
-                          ? 'bg-slate-700 text-gray-200 hover:bg-slate-600 border border-slate-600'
-                          : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
-                    }`}
-                    aria-label="Select QA model">
-                    {!currentQAModel && (
-                      <option value="" disabled>
-                        Select model...
-                      </option>
-                    )}
-                    {availableModels.map(option => {
-                      const value = `${option.provider}>${option.model}`;
-                      return (
-                        <option key={value} value={value}>
-                          {option.displayName}
+                      }}
+                      disabled={disabled}
+                      className={`rounded-md px-2 py-1.5 text-xs transition-colors max-w-[200px] ${
+                        disabled
+                          ? 'cursor-not-allowed opacity-50'
+                          : isDarkMode
+                            ? 'bg-slate-700 text-gray-200 hover:bg-slate-600 border border-slate-600'
+                            : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                      }`}
+                      aria-label="Select QA model">
+                      {!currentQAModel && (
+                        <option value="" disabled>
+                          Select model...
                         </option>
-                      );
-                    })}
-                  </select>
+                      )}
+                      {availableModels.map(option => {
+                        const value = `${option.provider}>${option.model}`;
+                        return (
+                          <option key={value} value={value}>
+                            {option.displayName}
+                          </option>
+                        );
+                      })}
+                    </select>
+                    {/* Image Capture button */}
+                    {onCaptureImage && (
+                      <button
+                        type="button"
+                        onClick={onCaptureImage}
+                        disabled={disabled || isCapturingImage}
+                        aria-label={t('chat_imageCapture_button')}
+                        title={t('chat_imageCapture_tooltip')}
+                        className={`flex items-center gap-1 rounded-md px-2 py-1.5 text-xs transition-colors ${
+                          disabled || isCapturingImage
+                            ? 'cursor-not-allowed opacity-50'
+                            : isDarkMode
+                              ? 'bg-slate-700 text-gray-200 hover:bg-slate-600 border border-slate-600'
+                              : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                        }`}>
+                        {isCapturingImage ? (
+                          <AiOutlineLoading3Quarters className="size-4 animate-spin" />
+                        ) : (
+                          <HiOutlineCamera className="size-4" />
+                        )}
+                        <span className="hidden sm:inline">{t('chat_imageCapture_label')}</span>
+                      </button>
+                    )}
+                  </>
                 )}
               </>
             )}

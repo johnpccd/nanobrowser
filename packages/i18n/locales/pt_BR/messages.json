@@ -163,6 +163,39 @@
   "chat_stt_microphone_notFound": {
     "message": "Nenhum microfone encontrado."
   },
+  "chat_imageCapture_button": {
+    "message": "Capturar captura de tela da página"
+  },
+  "chat_imageCapture_tooltip": {
+    "message": "Capture uma captura de tela da página atual para incluir na sua mensagem"
+  },
+  "chat_imageCapture_label": {
+    "message": "Capturar"
+  },
+  "chat_imageCapture_preview": {
+    "message": "Pré-visualização da captura de tela"
+  },
+  "chat_imageCapture_remove": {
+    "message": "Remover captura de tela"
+  },
+  "chat_imageCapture_attached": {
+    "message": "Captura de tela anexada"
+  },
+  "chat_imageCapture_failed": {
+    "message": "Falha ao capturar captura de tela. Por favor, tente novamente."
+  },
+  "chat_imageCapture_viewFull": {
+    "message": "Ver imagem completa"
+  },
+  "chat_imageCapture_clickToExpand": {
+    "message": "Clique para expandir"
+  },
+  "chat_imageCapture_closeModal": {
+    "message": "Fechar imagem"
+  },
+  "chat_imageCapture_fullImage": {
+    "message": "Captura de tela em tamanho real"
+  },
   "permissions_microphone_title": {
     "message": "Ativar Entrada de Voz"
   },

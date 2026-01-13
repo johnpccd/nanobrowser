@@ -211,6 +211,23 @@ chrome.runtime.onConnect.addListener(port => {
             return port.postMessage({ type: 'success', screenshot });
           }
 
+          case 'capture_screenshot': {
+            // Handle screenshot capture for QA mode image capture feature
+            if (!message.tabId) {
+              return port.postMessage({ type: 'screenshot_result', error: t('bg_errors_noTabId') });
+            }
+            try {
+              const page = await browserContext.switchTab(message.tabId);
+              const screenshot = await page.takeScreenshot();
+              logger.info('capture_screenshot', message.tabId, screenshot ? 'success' : 'failed');
+              return port.postMessage({ type: 'screenshot_result', screenshot });
+            } catch (error) {
+              const errorMessage = error instanceof Error ? error.message : 'Failed to capture screenshot';
+              logger.error('capture_screenshot failed:', error);
+              return port.postMessage({ type: 'screenshot_result', error: errorMessage });
+            }
+          }
+
           case 'state': {
             try {
               const browserState = await browserContext.getState(true);
@@ -313,12 +330,14 @@ chrome.runtime.onConnect.addListener(port => {
 
           case 'qa_query': {
             if (!message.tabId) return port.postMessage({ type: 'error', error: t('bg_errors_noTabId') });
-            if (!message.query) return port.postMessage({ type: 'error', error: 'No query provided' });
+            if (!message.query && !message.imageData)
+              return port.postMessage({ type: 'error', error: 'No query or image provided' });
             if (!message.sessionId) return port.postMessage({ type: 'error', error: 'No session ID provided' });
 
             const tabId = message.tabId;
-            const userQuery = message.query;
+            const userQuery = message.query || '';
             const sessionId = message.sessionId;
+            const imageData = message.imageData as string | undefined;
 
             // Get or create tab connection
             let tabConn = tabConnections.get(tabId);
@@ -379,7 +398,24 @@ chrome.runtime.onConnect.addListener(port => {
                 if (session && session.messages && session.messages.length > 0) {
                   for (const msg of session.messages) {
                     if (msg.actor === Actors.USER) {
-                      conversationMessages.push(new HumanMessage(msg.content));
+                      // Check if message has an image attached (stored in extended message type)
+                      const msgWithImage = msg as { imageData?: string } & typeof msg;
+                      if (msgWithImage.imageData) {
+                        // Create message with both text and image
+                        conversationMessages.push(
+                          new HumanMessage({
+                            content: [
+                              { type: 'text', text: msg.content || 'Please analyze this image.' },
+                              {
+                                type: 'image_url',
+                                image_url: { url: `data:image/jpeg;base64,${msgWithImage.imageData}` },
+                              },
+                            ],
+                          }),
+                        );
+                      } else {
+                        conversationMessages.push(new HumanMessage(msg.content));
+                      }
                     } else if (msg.actor === Actors.SYSTEM) {
                       // SYSTEM actor is used for AI responses in QA mode
                       conversationMessages.push(new AIMessage(msg.content));
@@ -399,7 +435,22 @@ chrome.runtime.onConnect.addListener(port => {
                     userQuery.trim().includes(lastMessage.content.trim()));
 
                 if (!isLastMessageCurrentQuery) {
-                  conversationMessages.push(new HumanMessage(userQuery));
+                  // If we have an image attached to the current query, include it
+                  if (imageData) {
+                    conversationMessages.push(
+                      new HumanMessage({
+                        content: [
+                          { type: 'text', text: userQuery || 'Please analyze this image.' },
+                          {
+                            type: 'image_url',
+                            image_url: { url: `data:image/jpeg;base64,${imageData}` },
+                          },
+                        ],
+                      }),
+                    );
+                  } else {
+                    conversationMessages.push(new HumanMessage(userQuery));
+                  }
                 }
 
                 // 5. Stream LLM response

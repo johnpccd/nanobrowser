@@ -58,6 +58,9 @@ const SidePanel = () => {
   const [qaResponseBuffer, setQaResponseBuffer] = useState<string>('');
   const [isQaStreaming, setIsQaStreaming] = useState(false);
   const [isWaitingForQaResponse, setIsWaitingForQaResponse] = useState(false);
+  // Image capture state
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [isCapturingImage, setIsCapturingImage] = useState(false);
   const sessionIdRef = useRef<string | null>(null);
   const isReplayingRef = useRef<boolean>(false);
   const portRef = useRef<chrome.runtime.Port | null>(null);
@@ -897,13 +900,13 @@ const SidePanel = () => {
     }
   };
 
-  const handleSendMessage = async (text: string, displayText?: string) => {
-    console.log('handleSendMessage', text);
+  const handleSendMessage = async (text: string, displayText?: string, imageData?: string) => {
+    console.log('handleSendMessage', text, imageData ? '(with image)' : '');
 
     // Trim the input text first
     const trimmedText = text.trim();
 
-    if (!trimmedText) return;
+    if (!trimmedText && !imageData) return;
 
     // Check if the input is a command (starts with /)
     if (trimmedText.startsWith('/')) {
@@ -962,11 +965,18 @@ const SidePanel = () => {
         // IMPORTANT: Save the message to storage BEFORE sending the query
         // This ensures the message is available when we load chat history
         if (sessionIdRef.current) {
-          await chatHistoryStore.addMessage(sessionIdRef.current, userMessage);
+          // Include image reference in stored message if image was attached
+          const messageToStore = imageData
+            ? { ...userMessage, imageData } // Store image data with the message
+            : userMessage;
+          await chatHistoryStore.addMessage(sessionIdRef.current, messageToStore);
         }
 
         // Update UI state directly (don't use appendMessage as it would save again)
-        setMessages(prev => [...prev, userMessage]);
+        setMessages(prev => [...prev, imageData ? { ...userMessage, imageData } : userMessage]);
+
+        // Clear captured image after sending
+        setCapturedImage(null);
 
         setQaResponseBuffer(''); // Clear buffer
         setIsQaStreaming(false);
@@ -976,8 +986,9 @@ const SidePanel = () => {
           query: text,
           sessionId: sessionIdRef.current,
           tabId,
+          imageData, // Include image in the message to background
         });
-        console.log('qa_query sent', text, tabId, sessionIdRef.current);
+        console.log('qa_query sent', text, tabId, sessionIdRef.current, imageData ? '(with image)' : '');
       } else if (isFollowUpMode) {
         // Send as follow-up task
         await sendMessage({
@@ -1235,6 +1246,86 @@ const SidePanel = () => {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, qaResponseBuffer]);
+
+  // Handle image capture from the current page
+  const handleCaptureImage = useCallback(async (): Promise<string | null> => {
+    if (isCapturingImage) return null;
+
+    try {
+      setIsCapturingImage(true);
+
+      // Get current tab
+      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+      const tabId = tabs[0]?.id;
+      if (!tabId) {
+        throw new Error('No active tab found');
+      }
+
+      // Setup connection if not exists
+      if (!portRef.current) {
+        setupConnection();
+      }
+
+      // Request screenshot from background service
+      return new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error('Screenshot capture timed out'));
+        }, 10000);
+
+        // Create a one-time message listener for the screenshot response
+        const handleScreenshotResponse = (message: { type: string; screenshot?: string; error?: string }) => {
+          if (message.type === 'screenshot_result') {
+            clearTimeout(timeout);
+            if (message.screenshot) {
+              setCapturedImage(message.screenshot);
+              resolve(message.screenshot);
+            } else {
+              reject(new Error(message.error || 'Failed to capture screenshot'));
+            }
+          }
+        };
+
+        // Store the listener so we can remove it later
+        const port = portRef.current;
+        if (port) {
+          port.onMessage.addListener(handleScreenshotResponse);
+
+          // Send screenshot request
+          port.postMessage({
+            type: 'capture_screenshot',
+            tabId,
+          });
+
+          // Clean up listener after response
+          setTimeout(() => {
+            try {
+              port.onMessage.removeListener(handleScreenshotResponse);
+            } catch {
+              // Port might be disconnected
+            }
+          }, 10000);
+        } else {
+          clearTimeout(timeout);
+          reject(new Error('No connection available'));
+        }
+      });
+    } catch (error) {
+      console.error('Failed to capture screenshot:', error);
+      appendMessage({
+        actor: Actors.SYSTEM,
+        content: t('chat_imageCapture_failed'),
+        timestamp: Date.now(),
+      });
+      return null;
+    } finally {
+      setIsCapturingImage(false);
+    }
+  }, [isCapturingImage, setupConnection, appendMessage]);
+
+  // Handle removing captured image
+  const handleRemoveCapturedImage = useCallback(() => {
+    setCapturedImage(null);
+  }, []);
 
   const handleMicClick = async () => {
     if (isRecording) {
@@ -1550,6 +1641,10 @@ const SidePanel = () => {
                         setTextareaRef={ref => {
                           textareaRef.current = ref;
                         }}
+                        onCaptureImage={mode === 'qa' ? handleCaptureImage : undefined}
+                        capturedImage={capturedImage}
+                        onRemoveCapturedImage={handleRemoveCapturedImage}
+                        isCapturingImage={isCapturingImage}
                       />
                     </div>
                     <div className="flex-1 overflow-y-auto">
@@ -1600,6 +1695,10 @@ const SidePanel = () => {
                       setTextareaRef={ref => {
                         textareaRef.current = ref;
                       }}
+                      onCaptureImage={mode === 'qa' ? handleCaptureImage : undefined}
+                      capturedImage={capturedImage}
+                      onRemoveCapturedImage={handleRemoveCapturedImage}
+                      isCapturingImage={isCapturingImage}
                     />
                   </div>
                 )}

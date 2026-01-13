@@ -163,6 +163,39 @@
   "chat_stt_microphone_notFound": {
     "message": "No microphone found."
   },
+  "chat_imageCapture_button": {
+    "message": "Capture page screenshot"
+  },
+  "chat_imageCapture_tooltip": {
+    "message": "Capture a screenshot of the current page to include with your message"
+  },
+  "chat_imageCapture_label": {
+    "message": "Capture"
+  },
+  "chat_imageCapture_preview": {
+    "message": "Screenshot preview"
+  },
+  "chat_imageCapture_remove": {
+    "message": "Remove screenshot"
+  },
+  "chat_imageCapture_attached": {
+    "message": "Screenshot attached"
+  },
+  "chat_imageCapture_failed": {
+    "message": "Failed to capture screenshot. Please try again."
+  },
+  "chat_imageCapture_viewFull": {
+    "message": "View full image"
+  },
+  "chat_imageCapture_clickToExpand": {
+    "message": "Click to expand"
+  },
+  "chat_imageCapture_closeModal": {
+    "message": "Close image"
+  },
+  "chat_imageCapture_fullImage": {
+    "message": "Full size screenshot"
+  },
   "permissions_microphone_title": {
     "message": "Enable Voice Input"
   },
