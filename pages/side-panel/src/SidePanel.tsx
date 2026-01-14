@@ -157,6 +157,8 @@ const SidePanel = () => {
         setCurrentSessionId(null);
         sessionIdRef.current = null;
         setMessages([]);
+        // Reset follow-up mode when there's no active session
+        setIsFollowUpMode(false);
         // For new tabs/sessions in QA mode, enable page content by default
         if (tabMode === 'qa') {
           setIncludePageContent(true);
@@ -959,7 +961,8 @@ const SidePanel = () => {
       setShowStopButton(true);
 
       // Create a new chat session for this task if not in follow-up mode
-      if (!isFollowUpMode) {
+      // For QA mode, always ensure we have a session (create if missing)
+      if (!isFollowUpMode || (mode === 'qa' && !sessionIdRef.current)) {
         // Use display text for session title if available, otherwise use full text
         const titleText = displayText || text;
         const newSession = await chatHistoryStore.createSession(
@@ -989,15 +992,18 @@ const SidePanel = () => {
       // Send message using the utility function
       if (mode === 'qa') {
         // QA mode - send QA query
+        // Ensure we have a session ID before sending
+        if (!sessionIdRef.current) {
+          throw new Error('No session ID available for QA query');
+        }
+
         // IMPORTANT: Save the message to storage BEFORE sending the query
         // This ensures the message is available when we load chat history
-        if (sessionIdRef.current) {
-          // Include image reference in stored message if image was attached
-          const messageToStore = imageData
-            ? { ...userMessage, imageData } // Store image data with the message
-            : userMessage;
-          await chatHistoryStore.addMessage(sessionIdRef.current, messageToStore);
-        }
+        // Include image reference in stored message if image was attached
+        const messageToStore = imageData
+          ? { ...userMessage, imageData } // Store image data with the message
+          : userMessage;
+        await chatHistoryStore.addMessage(sessionIdRef.current, messageToStore);
 
         // Update UI state directly (don't use appendMessage as it would save again)
         setMessages(prev => [...prev, imageData ? { ...userMessage, imageData } : userMessage]);
