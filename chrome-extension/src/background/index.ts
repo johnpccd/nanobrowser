@@ -477,6 +477,7 @@ chrome.runtime.onConnect.addListener(port => {
                     tabConn.port.postMessage({
                       type: 'qa_response_chunk',
                       sessionId,
+                      tabId,
                       content,
                     });
                   }
@@ -487,6 +488,7 @@ chrome.runtime.onConnect.addListener(port => {
                   tabConn.port.postMessage({
                     type: 'qa_response_complete',
                     sessionId,
+                    tabId,
                   });
                 }
               } catch (error) {
@@ -502,6 +504,7 @@ chrome.runtime.onConnect.addListener(port => {
                   tabConn.port.postMessage({
                     type: 'qa_response_error',
                     sessionId,
+                    tabId,
                     error: errorMessage,
                   });
                 }

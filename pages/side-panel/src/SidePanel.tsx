@@ -68,6 +68,12 @@ const SidePanel = () => {
   const sessionIdRef = useRef<string | null>(null);
   const isReplayingRef = useRef<boolean>(false);
   const portRef = useRef<chrome.runtime.Port | null>(null);
+  const streamingTabIdRef = useRef<number | null>(null);
+  const currentTabIdRef = useRef<number | null>(null);
+  // Store streaming buffers per tab to preserve content when switching tabs
+  const tabBuffersRef = useRef<Map<number, string>>(new Map());
+  // Track current buffer value to access it in callbacks without dependency issues
+  const qaResponseBufferRef = useRef<string>('');
   const heartbeatIntervalRef = useRef<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const setInputTextRef = useRef<((text: string) => void) | null>(null);
@@ -131,7 +137,24 @@ const SidePanel = () => {
       const tabId = tabs[0]?.id;
       if (!tabId) return;
 
+      // Save current buffer for the previous tab before switching
+      const previousTabId = currentTabIdRef.current;
+      if (previousTabId !== null && previousTabId !== tabId) {
+        tabBuffersRef.current.set(previousTabId, qaResponseBufferRef.current);
+      }
+
+      // Restore buffer for the new tab, or clear if none exists
+      const savedBuffer = tabBuffersRef.current.get(tabId) || '';
+      setQaResponseBuffer(savedBuffer);
+      qaResponseBufferRef.current = savedBuffer;
+
+      // Update streaming state based on whether we have a saved buffer
+      setIsQaStreaming(savedBuffer.length > 0);
+      setIsWaitingForQaResponse(false);
+      setShowStopButton(savedBuffer.length > 0);
+
       setCurrentTabId(tabId);
+      currentTabIdRef.current = tabId;
 
       // Load mode for this tab
       const tabMode = await getTabMode(tabId);
@@ -628,18 +651,36 @@ const SidePanel = () => {
           setShowStopButton(false);
         } else if (message && message.type === 'qa_response_chunk') {
           // Handle streaming QA response chunks - just accumulate in buffer
-          if (message.sessionId === sessionIdRef.current) {
+          // Only process chunks for the currently active tab and session
+          if (
+            message.sessionId === sessionIdRef.current &&
+            message.tabId === currentTabIdRef.current &&
+            message.tabId === streamingTabIdRef.current
+          ) {
             const chunk = message.content || '';
             // Only clear waiting state when we get actual content
             if (chunk.trim() !== '') {
               setIsWaitingForQaResponse(false); // First chunk with content received
             }
             setIsQaStreaming(true);
-            setQaResponseBuffer(prev => prev + chunk);
+            setQaResponseBuffer(prev => {
+              const newBuffer = prev + chunk;
+              qaResponseBufferRef.current = newBuffer;
+              // Also update the per-tab buffer storage
+              if (message.tabId !== null && message.tabId !== undefined) {
+                tabBuffersRef.current.set(message.tabId, newBuffer);
+              }
+              return newBuffer;
+            });
           }
         } else if (message && message.type === 'qa_response_complete') {
           // QA response complete - now add final message to messages array
-          if (message.sessionId === sessionIdRef.current) {
+          // Only process completion for the currently active tab and session
+          if (
+            message.sessionId === sessionIdRef.current &&
+            message.tabId === currentTabIdRef.current &&
+            message.tabId === streamingTabIdRef.current
+          ) {
             // Get the accumulated content and add as a message
             setQaResponseBuffer(prev => {
               if (prev) {
@@ -653,12 +694,18 @@ const SidePanel = () => {
                   sessionIdRef.current,
                 );
               }
+              // Clear buffer from per-tab storage as well
+              if (message.tabId !== null && message.tabId !== undefined) {
+                tabBuffersRef.current.delete(message.tabId);
+              }
+              qaResponseBufferRef.current = '';
               return ''; // Clear buffer
             });
             setIsWaitingForQaResponse(false);
             setIsQaStreaming(false);
             setInputEnabled(true);
             setShowStopButton(false);
+            streamingTabIdRef.current = null; // Clear streaming tab tracking
             // Enable follow-up mode so next message continues the same session
             setIsFollowUpMode(true);
             // Focus textarea after streaming completes in QA mode
@@ -670,7 +717,12 @@ const SidePanel = () => {
           }
         } else if (message && message.type === 'qa_response_error') {
           // QA response error
-          if (message.sessionId === sessionIdRef.current) {
+          // Only process error for the currently active tab and session
+          if (
+            message.sessionId === sessionIdRef.current &&
+            message.tabId === currentTabIdRef.current &&
+            message.tabId === streamingTabIdRef.current
+          ) {
             appendMessage(
               {
                 actor: Actors.SYSTEM,
@@ -680,10 +732,16 @@ const SidePanel = () => {
               sessionIdRef.current,
             );
             setQaResponseBuffer('');
+            qaResponseBufferRef.current = '';
+            // Clear buffer from per-tab storage as well
+            if (message.tabId !== null && message.tabId !== undefined) {
+              tabBuffersRef.current.delete(message.tabId);
+            }
             setIsWaitingForQaResponse(false);
             setIsQaStreaming(false);
             setInputEnabled(true);
             setShowStopButton(false);
+            streamingTabIdRef.current = null; // Clear streaming tab tracking
             // Enable follow-up mode so next message continues the same session
             setIsFollowUpMode(true);
             // Focus textarea after error in QA mode
@@ -1011,9 +1069,13 @@ const SidePanel = () => {
         // Clear captured image after sending
         setCapturedImage(null);
 
+        // Clear buffer for this tab when starting a new query
+        tabBuffersRef.current.delete(tabId);
         setQaResponseBuffer(''); // Clear buffer
+        qaResponseBufferRef.current = '';
         setIsQaStreaming(false);
         setIsWaitingForQaResponse(true); // Show loading indicator
+        streamingTabIdRef.current = tabId; // Track which tab is streaming
         await sendMessage({
           type: 'qa_query',
           query: text,
@@ -1061,6 +1123,12 @@ const SidePanel = () => {
         setIsWaitingForQaResponse(false);
         setIsQaStreaming(false);
         setQaResponseBuffer('');
+        qaResponseBufferRef.current = '';
+        // Clear buffer from per-tab storage
+        if (currentTabIdRef.current !== null) {
+          tabBuffersRef.current.delete(currentTabIdRef.current);
+        }
+        streamingTabIdRef.current = null; // Clear streaming tab tracking
       }
       setInputEnabled(true);
       setShowStopButton(false);
@@ -1091,6 +1159,12 @@ const SidePanel = () => {
     setIsWaitingForQaResponse(false);
     setIsQaStreaming(false);
     setQaResponseBuffer('');
+    qaResponseBufferRef.current = '';
+    // Clear buffer from per-tab storage
+    if (currentTabIdRef.current !== null) {
+      tabBuffersRef.current.delete(currentTabIdRef.current);
+    }
+    streamingTabIdRef.current = null; // Clear streaming tab tracking
     setInputEnabled(true);
     setShowStopButton(false);
   };
