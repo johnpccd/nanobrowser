@@ -346,13 +346,17 @@ chrome.runtime.onConnect.addListener(port => {
               tabConn = { port, mode: 'qa' };
               tabConnections.set(tabId, tabConn);
             } else {
+              // Update port reference but don't overwrite if it's the same port
+              // This allows multiple tabs to share the same side panel port
               tabConn.port = port;
               tabConn.mode = 'qa';
             }
 
-            // Cancel any existing QA stream for this tab
+            // Cancel any existing QA stream for THIS SPECIFIC TAB only
+            // Each tab has its own tabConn entry, so this won't affect other tabs
             if (tabConn.qaStream) {
               tabConn.qaStream.abort();
+              tabConn.qaStream = undefined;
             }
 
             // Create new abort controller
@@ -360,7 +364,11 @@ chrome.runtime.onConnect.addListener(port => {
             tabConn.qaStream = abortController;
 
             // Execute QA query asynchronously
+            // Capture tabConn in closure to ensure this stream uses the correct connection
+            // even if the port reference gets updated for other tabs
             (async () => {
+              // Capture the tabConn at the start to ensure we use the correct one
+              const streamTabConn = tabConn;
               try {
                 let pageContent = '';
 
@@ -471,10 +479,11 @@ chrome.runtime.onConnect.addListener(port => {
                 const stream = await qaLLM.stream(conversationMessages, { signal: abortController.signal });
 
                 // 5. Stream chunks to side panel
+                // Use streamTabConn (captured at start) to ensure we use the correct connection
                 for await (const chunk of stream) {
-                  if (tabConn?.port && !abortController.signal.aborted) {
+                  if (streamTabConn?.port && !abortController.signal.aborted) {
                     const content = typeof chunk.content === 'string' ? chunk.content : String(chunk.content);
-                    tabConn.port.postMessage({
+                    streamTabConn.port.postMessage({
                       type: 'qa_response_chunk',
                       sessionId,
                       tabId,
@@ -484,8 +493,8 @@ chrome.runtime.onConnect.addListener(port => {
                 }
 
                 // 6. Send completion
-                if (tabConn?.port && !abortController.signal.aborted) {
-                  tabConn.port.postMessage({
+                if (streamTabConn?.port && !abortController.signal.aborted) {
+                  streamTabConn.port.postMessage({
                     type: 'qa_response_complete',
                     sessionId,
                     tabId,
@@ -500,8 +509,8 @@ chrome.runtime.onConnect.addListener(port => {
 
                 logger.error('QA query failed:', error);
 
-                if (tabConn?.port) {
-                  tabConn.port.postMessage({
+                if (streamTabConn?.port) {
+                  streamTabConn.port.postMessage({
                     type: 'qa_response_error',
                     sessionId,
                     tabId,
@@ -509,8 +518,11 @@ chrome.runtime.onConnect.addListener(port => {
                   });
                 }
               } finally {
-                if (tabConn) {
-                  tabConn.qaStream = undefined;
+                // Only clear the stream reference if this is still the active stream for this tab
+                // Check against the current tabConn to avoid clearing if a new stream started
+                const currentTabConn = tabConnections.get(tabId);
+                if (currentTabConn && currentTabConn.qaStream === abortController) {
+                  currentTabConn.qaStream = undefined;
                 }
               }
             })();
