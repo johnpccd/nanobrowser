@@ -2,6 +2,10 @@ import type { Message } from '@extension/storage';
 import { ACTOR_PROFILES } from '../types/message';
 import { memo, useState, useCallback } from 'react';
 import { t } from '@extension/i18n';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeHighlight from 'rehype-highlight';
+import 'highlight.js/styles/github-dark.css';
 
 interface MessageListProps {
   messages: Message[];
@@ -122,14 +126,68 @@ function MessageBlock({ message, isSameActor, isDarkMode = false, fontSize = 14 
               </div>
             )}
             <div
-              className={`whitespace-pre-wrap break-words ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}
+              className={`break-words ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}
               style={{ fontSize: `${fontSize}px` }}>
               {isProgress ? (
                 <div className={`h-1 overflow-hidden rounded ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
                   <div className="h-full animate-progress bg-blue-500" />
                 </div>
               ) : (
-                message.content
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  rehypePlugins={[rehypeHighlight]}
+                  components={{
+                    code({ node, className, children, ...props }) {
+                      const match = /language-(\w+)/.exec(className || '');
+                      const isInline = !match && !className;
+                      return isInline ? (
+                        <code className="px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-sm font-mono" {...props}>
+                          {children}
+                        </code>
+                      ) : (
+                        <code className={className} {...props}>
+                          {children}
+                        </code>
+                      );
+                    },
+                    pre({ children }) {
+                      return (
+                        <pre className="p-4 overflow-x-auto rounded-lg bg-gray-100 dark:bg-gray-800">{children}</pre>
+                      );
+                    },
+                    a({ href, children }) {
+                      return (
+                        <a
+                          href={href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-500 hover:underline">
+                          {children}
+                        </a>
+                      );
+                    },
+                    table({ children }) {
+                      return (
+                        <div className="overflow-x-auto">
+                          <table className="min-w-full border-collapse border border-gray-300 dark:border-gray-600">
+                            {children}
+                          </table>
+                        </div>
+                      );
+                    },
+                    th({ children }) {
+                      return (
+                        <th className="border border-gray-300 dark:border-gray-600 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-left font-semibold">
+                          {children}
+                        </th>
+                      );
+                    },
+                    td({ children }) {
+                      return <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{children}</td>;
+                    },
+                  }}>
+                  {message.content}
+                </ReactMarkdown>
               )}
             </div>
             {!isProgress && (
@@ -221,9 +279,57 @@ function StreamingMessageBlock({
 
         <div className="space-y-0.5">
           <div
-            className={`whitespace-pre-wrap break-words ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}
+            className={`break-words ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}
             style={{ fontSize: `${fontSize}px` }}>
-            {content}
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              rehypePlugins={[rehypeHighlight]}
+              components={{
+                code({ node, className, children, ...props }) {
+                  const match = /language-(\w+)/.exec(className || '');
+                  const isInline = !match && !className;
+                  return isInline ? (
+                    <code className="px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-sm font-mono" {...props}>
+                      {children}
+                    </code>
+                  ) : (
+                    <code className={className} {...props}>
+                      {children}
+                    </code>
+                  );
+                },
+                pre({ children }) {
+                  return <pre className="p-4 overflow-x-auto rounded-lg bg-gray-100 dark:bg-gray-800">{children}</pre>;
+                },
+                a({ href, children }) {
+                  return (
+                    <a href={href} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+                      {children}
+                    </a>
+                  );
+                },
+                table({ children }) {
+                  return (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full border-collapse border border-gray-300 dark:border-gray-600">
+                        {children}
+                      </table>
+                    </div>
+                  );
+                },
+                th({ children }) {
+                  return (
+                    <th className="border border-gray-300 dark:border-gray-600 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-left font-semibold">
+                      {children}
+                    </th>
+                  );
+                },
+                td({ children }) {
+                  return <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{children}</td>;
+                },
+              }}>
+              {content}
+            </ReactMarkdown>
             <span className="inline-block w-2 h-4 ml-1 bg-blue-500 animate-pulse" />
           </div>
         </div>
