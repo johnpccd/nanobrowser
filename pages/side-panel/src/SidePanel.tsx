@@ -35,6 +35,13 @@ declare global {
   }
 }
 
+// Track streaming state per tab (allows streaming to continue in background when switching tabs)
+interface TabStreamingState {
+  isStreaming: boolean;
+  isWaiting: boolean;
+  sessionId: string | null;
+}
+
 const SidePanel = () => {
   const progressMessage = 'Showing progress...';
   const [messages, setMessages] = useState<Message[]>([]);
@@ -72,6 +79,8 @@ const SidePanel = () => {
   const currentTabIdRef = useRef<number | null>(null);
   // Store streaming buffers per tab to preserve content when switching tabs
   const tabBuffersRef = useRef<Map<number, string>>(new Map());
+  // Track streaming state per tab (allows streaming to continue in background when switching tabs)
+  const tabStreamingStatesRef = useRef<Map<number, TabStreamingState>>(new Map());
   // Track current buffer value to access it in callbacks without dependency issues
   const qaResponseBufferRef = useRef<string>('');
   const heartbeatIntervalRef = useRef<number | null>(null);
@@ -137,24 +146,49 @@ const SidePanel = () => {
       const tabId = tabs[0]?.id;
       if (!tabId) return;
 
-      // Save current buffer for the previous tab before switching
+      // Save current buffer for the previous tab before switching (only if it has a streaming state)
       const previousTabId = currentTabIdRef.current;
       if (previousTabId !== null && previousTabId !== tabId) {
-        tabBuffersRef.current.set(previousTabId, qaResponseBufferRef.current);
+        const prevStreamingState = tabStreamingStatesRef.current.get(previousTabId);
+        if (prevStreamingState?.isStreaming) {
+          // Only save buffer if the previous tab was actively streaming
+          tabBuffersRef.current.set(previousTabId, qaResponseBufferRef.current);
+        }
       }
 
-      // Restore buffer for the new tab, or clear if none exists
+      // Get streaming state for the new tab FIRST (before updating refs)
+      const tabStreamingState = tabStreamingStatesRef.current.get(tabId);
+      const isTabStreaming = tabStreamingState?.isStreaming || false;
+      const isTabWaiting = tabStreamingState?.isWaiting || false;
+
+      // CRITICAL: Update refs IMMEDIATELY before any async operations
+      // This ensures incoming chunks will be processed correctly
+      currentTabIdRef.current = tabId;
+      setCurrentTabId(tabId);
+
+      // If this tab has an active streaming session, use that session ID immediately
+      // This prevents race conditions where chunks arrive before async session loading completes
+      if (tabStreamingState?.sessionId) {
+        sessionIdRef.current = tabStreamingState.sessionId;
+        setCurrentSessionId(tabStreamingState.sessionId);
+      }
+
+      // NOW read the buffer (after refs are updated, so new chunks will update React state)
       const savedBuffer = tabBuffersRef.current.get(tabId) || '';
       setQaResponseBuffer(savedBuffer);
       qaResponseBufferRef.current = savedBuffer;
 
-      // Update streaming state based on whether we have a saved buffer
-      setIsQaStreaming(savedBuffer.length > 0);
-      setIsWaitingForQaResponse(false);
-      setShowStopButton(savedBuffer.length > 0);
+      // Update streaming state based on per-tab streaming state
+      setIsQaStreaming(isTabStreaming);
+      setIsWaitingForQaResponse(isTabWaiting);
+      setShowStopButton(isTabStreaming || isTabWaiting);
+      // Only enable input if not streaming or waiting
+      setInputEnabled(!isTabStreaming && !isTabWaiting);
 
-      setCurrentTabId(tabId);
-      currentTabIdRef.current = tabId;
+      // Update streaming tab ref if this tab is streaming
+      if (isTabStreaming) {
+        streamingTabIdRef.current = tabId;
+      }
 
       // Load mode for this tab
       const tabMode = await getTabMode(tabId);
@@ -165,26 +199,41 @@ const SidePanel = () => {
       const sessions = await chatHistoryStore.getSessionsMetadata(tabId);
       setChatSessions(sessions);
 
-      // Load active session for this tab
-      const activeSessionId = await getTabActiveSession(tabId);
-      if (activeSessionId) {
-        const session = await chatHistoryStore.getSession(activeSessionId);
+      // If this tab is actively streaming, we already set the session ID from tabStreamingState
+      // Just load the messages from storage to show existing conversation
+      if (tabStreamingState?.sessionId) {
+        const session = await chatHistoryStore.getSession(tabStreamingState.sessionId);
         if (session) {
-          setCurrentSessionId(activeSessionId);
-          sessionIdRef.current = activeSessionId;
           setMessages(session.messages);
           setIsHistoricalSession(false);
         }
+        // Don't overwrite sessionIdRef - it was already set correctly above
       } else {
-        // No active session, clear messages
-        setCurrentSessionId(null);
-        sessionIdRef.current = null;
-        setMessages([]);
-        // Reset follow-up mode when there's no active session
-        setIsFollowUpMode(false);
-        // For new tabs/sessions in QA mode, enable page content by default
-        if (tabMode === 'qa') {
-          setIncludePageContent(true);
+        // No active streaming, load session from storage normally
+        const activeSessionId = await getTabActiveSession(tabId);
+        if (activeSessionId) {
+          const session = await chatHistoryStore.getSession(activeSessionId);
+          if (session) {
+            setCurrentSessionId(activeSessionId);
+            sessionIdRef.current = activeSessionId;
+            setMessages(session.messages);
+            setIsHistoricalSession(false);
+            // Enable follow-up mode if there are existing messages
+            if (session.messages.length > 0) {
+              setIsFollowUpMode(true);
+            }
+          }
+        } else {
+          // No active session, clear messages
+          setCurrentSessionId(null);
+          sessionIdRef.current = null;
+          setMessages([]);
+          // Reset follow-up mode when there's no active session
+          setIsFollowUpMode(false);
+          // For new tabs/sessions in QA mode, enable page content by default
+          if (tabMode === 'qa') {
+            setIncludePageContent(true);
+          }
         }
       }
     } catch (error) {
@@ -650,105 +699,135 @@ const SidePanel = () => {
           setInputEnabled(true);
           setShowStopButton(false);
         } else if (message && message.type === 'qa_response_chunk') {
-          // Handle streaming QA response chunks - just accumulate in buffer
-          // Only process chunks for the currently active tab and session
-          if (
-            message.sessionId === sessionIdRef.current &&
-            message.tabId === currentTabIdRef.current &&
-            message.tabId === streamingTabIdRef.current
-          ) {
-            const chunk = message.content || '';
-            // Only clear waiting state when we get actual content
-            if (chunk.trim() !== '') {
-              setIsWaitingForQaResponse(false); // First chunk with content received
-            }
-            setIsQaStreaming(true);
-            setQaResponseBuffer(prev => {
-              const newBuffer = prev + chunk;
-              qaResponseBufferRef.current = newBuffer;
-              // Also update the per-tab buffer storage
-              if (message.tabId !== null && message.tabId !== undefined) {
-                tabBuffersRef.current.set(message.tabId, newBuffer);
-              }
-              return newBuffer;
+          // Handle streaming QA response chunks - accumulate in per-tab buffer
+          // Always update the per-tab buffer, even for inactive tabs
+          const chunk = message.content || '';
+          const msgTabId = message.tabId;
+
+          if (msgTabId !== null && msgTabId !== undefined) {
+            // Always update per-tab buffer and streaming state
+            const currentBuffer = tabBuffersRef.current.get(msgTabId) || '';
+            const newBuffer = currentBuffer + chunk;
+            tabBuffersRef.current.set(msgTabId, newBuffer);
+
+            // Update per-tab streaming state
+            tabStreamingStatesRef.current.set(msgTabId, {
+              isStreaming: true,
+              isWaiting: false,
+              sessionId: message.sessionId,
             });
+
+            // Only update React UI state if this is the active tab and session
+            if (message.sessionId === sessionIdRef.current && msgTabId === currentTabIdRef.current) {
+              // Only clear waiting state when we get actual content
+              if (chunk.trim() !== '') {
+                setIsWaitingForQaResponse(false);
+              }
+              setIsQaStreaming(true);
+              setQaResponseBuffer(newBuffer);
+              qaResponseBufferRef.current = newBuffer;
+            }
           }
         } else if (message && message.type === 'qa_response_complete') {
-          // QA response complete - now add final message to messages array
-          // Only process completion for the currently active tab and session
-          if (
-            message.sessionId === sessionIdRef.current &&
-            message.tabId === currentTabIdRef.current &&
-            message.tabId === streamingTabIdRef.current
-          ) {
-            // Get the accumulated content and add as a message
-            setQaResponseBuffer(prev => {
-              if (prev) {
-                // Add the final message to messages array
-                appendMessage(
+          // QA response complete - save final message to storage for all tabs
+          const msgTabId = message.tabId;
+          const msgSessionId = message.sessionId;
+
+          if (msgTabId !== null && msgTabId !== undefined) {
+            // Get the accumulated buffer for this tab and save to storage
+            const tabBuffer = tabBuffersRef.current.get(msgTabId);
+            if (tabBuffer && msgSessionId) {
+              // Save the completed message to chat history storage
+              chatHistoryStore
+                .addMessage(msgSessionId, {
+                  actor: Actors.SYSTEM,
+                  content: tabBuffer,
+                  timestamp: Date.now(),
+                })
+                .catch(err => console.error('Failed to save completed message to history:', err));
+            }
+
+            // Clear per-tab buffer and streaming state
+            tabBuffersRef.current.delete(msgTabId);
+            tabStreamingStatesRef.current.delete(msgTabId);
+
+            // Only update UI state if this is the active tab and session
+            if (msgSessionId === sessionIdRef.current && msgTabId === currentTabIdRef.current) {
+              // Add message to UI if we have content
+              if (tabBuffer) {
+                setMessages(prev => [
+                  ...prev,
                   {
                     actor: Actors.SYSTEM,
-                    content: prev,
+                    content: tabBuffer,
                     timestamp: Date.now(),
                   },
-                  sessionIdRef.current,
-                );
+                ]);
               }
-              // Clear buffer from per-tab storage as well
-              if (message.tabId !== null && message.tabId !== undefined) {
-                tabBuffersRef.current.delete(message.tabId);
-              }
+              setQaResponseBuffer('');
               qaResponseBufferRef.current = '';
-              return ''; // Clear buffer
-            });
-            setIsWaitingForQaResponse(false);
-            setIsQaStreaming(false);
-            setInputEnabled(true);
-            setShowStopButton(false);
-            streamingTabIdRef.current = null; // Clear streaming tab tracking
-            // Enable follow-up mode so next message continues the same session
-            setIsFollowUpMode(true);
-            // Focus textarea after streaming completes in QA mode
-            if (modeRef.current === 'qa' && textareaRef.current) {
-              setTimeout(() => {
-                textareaRef.current?.focus();
-              }, 0);
+              setIsWaitingForQaResponse(false);
+              setIsQaStreaming(false);
+              setInputEnabled(true);
+              setShowStopButton(false);
+              streamingTabIdRef.current = null;
+              // Enable follow-up mode so next message continues the same session
+              setIsFollowUpMode(true);
+              // Focus textarea after streaming completes in QA mode
+              if (modeRef.current === 'qa' && textareaRef.current) {
+                setTimeout(() => {
+                  textareaRef.current?.focus();
+                }, 0);
+              }
             }
           }
         } else if (message && message.type === 'qa_response_error') {
-          // QA response error
-          // Only process error for the currently active tab and session
-          if (
-            message.sessionId === sessionIdRef.current &&
-            message.tabId === currentTabIdRef.current &&
-            message.tabId === streamingTabIdRef.current
-          ) {
-            appendMessage(
-              {
-                actor: Actors.SYSTEM,
-                content: `Error: ${message.error || 'Unknown error'}`,
-                timestamp: Date.now(),
-              },
-              sessionIdRef.current,
-            );
-            setQaResponseBuffer('');
-            qaResponseBufferRef.current = '';
-            // Clear buffer from per-tab storage as well
-            if (message.tabId !== null && message.tabId !== undefined) {
-              tabBuffersRef.current.delete(message.tabId);
+          // QA response error - handle for all tabs
+          const msgTabId = message.tabId;
+          const msgSessionId = message.sessionId;
+          const errorContent = `Error: ${message.error || 'Unknown error'}`;
+
+          if (msgTabId !== null && msgTabId !== undefined) {
+            // Save error message to storage for persistence
+            if (msgSessionId) {
+              chatHistoryStore
+                .addMessage(msgSessionId, {
+                  actor: Actors.SYSTEM,
+                  content: errorContent,
+                  timestamp: Date.now(),
+                })
+                .catch(err => console.error('Failed to save error message to history:', err));
             }
-            setIsWaitingForQaResponse(false);
-            setIsQaStreaming(false);
-            setInputEnabled(true);
-            setShowStopButton(false);
-            streamingTabIdRef.current = null; // Clear streaming tab tracking
-            // Enable follow-up mode so next message continues the same session
-            setIsFollowUpMode(true);
-            // Focus textarea after error in QA mode
-            if (modeRef.current === 'qa' && textareaRef.current) {
-              setTimeout(() => {
-                textareaRef.current?.focus();
-              }, 0);
+
+            // Clear per-tab buffer and streaming state
+            tabBuffersRef.current.delete(msgTabId);
+            tabStreamingStatesRef.current.delete(msgTabId);
+
+            // Only update UI state if this is the active tab and session
+            if (msgSessionId === sessionIdRef.current && msgTabId === currentTabIdRef.current) {
+              setMessages(prev => [
+                ...prev,
+                {
+                  actor: Actors.SYSTEM,
+                  content: errorContent,
+                  timestamp: Date.now(),
+                },
+              ]);
+              setQaResponseBuffer('');
+              qaResponseBufferRef.current = '';
+              setIsWaitingForQaResponse(false);
+              setIsQaStreaming(false);
+              setInputEnabled(true);
+              setShowStopButton(false);
+              streamingTabIdRef.current = null;
+              // Enable follow-up mode so next message continues the same session
+              setIsFollowUpMode(true);
+              // Focus textarea after error in QA mode
+              if (modeRef.current === 'qa' && textareaRef.current) {
+                setTimeout(() => {
+                  textareaRef.current?.focus();
+                }, 0);
+              }
             }
           }
         } else if (message && message.type === 'speech_to_text_result') {
@@ -1076,6 +1155,12 @@ const SidePanel = () => {
         setIsQaStreaming(false);
         setIsWaitingForQaResponse(true); // Show loading indicator
         streamingTabIdRef.current = tabId; // Track which tab is streaming
+        // Set per-tab streaming state so it persists across tab switches
+        tabStreamingStatesRef.current.set(tabId, {
+          isStreaming: false,
+          isWaiting: true,
+          sessionId: sessionIdRef.current,
+        });
         await sendMessage({
           type: 'qa_query',
           query: text,
@@ -1124,9 +1209,10 @@ const SidePanel = () => {
         setIsQaStreaming(false);
         setQaResponseBuffer('');
         qaResponseBufferRef.current = '';
-        // Clear buffer from per-tab storage
+        // Clear buffer and streaming state from per-tab storage
         if (currentTabIdRef.current !== null) {
           tabBuffersRef.current.delete(currentTabIdRef.current);
+          tabStreamingStatesRef.current.delete(currentTabIdRef.current);
         }
         streamingTabIdRef.current = null; // Clear streaming tab tracking
       }
@@ -1160,9 +1246,10 @@ const SidePanel = () => {
     setIsQaStreaming(false);
     setQaResponseBuffer('');
     qaResponseBufferRef.current = '';
-    // Clear buffer from per-tab storage
+    // Clear buffer and streaming state from per-tab storage
     if (currentTabIdRef.current !== null) {
       tabBuffersRef.current.delete(currentTabIdRef.current);
+      tabStreamingStatesRef.current.delete(currentTabIdRef.current);
     }
     streamingTabIdRef.current = null; // Clear streaming tab tracking
     setInputEnabled(true);
