@@ -17,11 +17,14 @@ import { createChatModel } from './agent/helper';
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { DEFAULT_AGENT_OPTIONS } from './agent/types';
 import { SpeechToTextService } from './services/speechToText';
-import { formatSearchResultsForPrompt, searchSearxng, shouldUseWebSearch } from './services/searxng';
+import { formatSearchResultsForPrompt, searchSearxng } from './services/searxng';
 import { injectBuildDomTreeScripts, getMarkdownContent } from './browser/dom/service';
 import { analytics } from './services/analytics';
-import { HumanMessage, SystemMessage, AIMessage } from '@langchain/core/messages';
+import { HumanMessage, SystemMessage, AIMessage, ToolMessage } from '@langchain/core/messages';
 import { Actors } from '@extension/storage/lib/chat/types';
+import { DynamicStructuredTool } from '@langchain/core/tools';
+import { z } from 'zod';
+import { readUrlWithJina } from './services/jinaReader';
 
 const logger = createLogger('background');
 
@@ -38,6 +41,7 @@ interface TabConnection {
 const tabConnections = new Map<number, TabConnection>();
 
 const SIDE_PANEL_URL = chrome.runtime.getURL('side-panel/index.html');
+const MAX_QA_TOOL_CALLS = 3;
 
 function emitQAToolEvent(
   port: chrome.runtime.Port | undefined,
@@ -474,13 +478,13 @@ chrome.runtime.onConnect.addListener(port => {
               const streamTabConn = tabConn;
               try {
                 let pageContent = '';
-                let webSearchResultsText = '';
 
                 const generalSettings = await generalSettingsStore.getSettings();
                 const enableWebSearch =
                   message.enableWebSearch !== undefined
                     ? Boolean(message.enableWebSearch)
                     : generalSettings.enableWebSearch;
+                const session = await chatHistoryStore.getSession(sessionId);
 
                 // 0. Only get page content if includePageContent is true
                 if (includePageContent) {
@@ -489,55 +493,6 @@ chrome.runtime.onConnect.addListener(port => {
 
                   // Get page markdown content
                   pageContent = await getMarkdownContent(tabId);
-                }
-
-                if (
-                  shouldUseWebSearch(userQuery, includePageContent) &&
-                  enableWebSearch &&
-                  generalSettings.searxngBaseUrl
-                ) {
-                  emitQAToolEvent(streamTabConn?.port, {
-                    sessionId,
-                    tabId,
-                    toolName: 'searxng_search',
-                    kind: 'call',
-                    summary: `Searching the web for "${userQuery}"`,
-                    detail: `Query: ${userQuery}\nBase URL: ${generalSettings.searxngBaseUrl}`,
-                    status: 'pending',
-                  });
-                  try {
-                    const webSearchResults = await searchSearxng(
-                      userQuery,
-                      {
-                        enabled: true,
-                        baseUrl: generalSettings.searxngBaseUrl,
-                        apiKey: generalSettings.searxngApiKey,
-                        maxResults: generalSettings.searxngMaxResults,
-                      },
-                      abortController.signal,
-                    );
-                    webSearchResultsText = formatSearchResultsForPrompt(webSearchResults);
-                    emitQAToolEvent(streamTabConn?.port, {
-                      sessionId,
-                      tabId,
-                      toolName: 'searxng_search',
-                      kind: 'result',
-                      summary: `Retrieved ${webSearchResults.length} search result(s)`,
-                      detail: webSearchResultsText || 'No formatted snippets were produced.',
-                      status: 'success',
-                    });
-                  } catch (searchError) {
-                    logger.warning('SearXNG search failed, continuing without web results:', searchError);
-                    emitQAToolEvent(streamTabConn?.port, {
-                      sessionId,
-                      tabId,
-                      toolName: 'searxng_search',
-                      kind: 'result',
-                      summary: 'Search failed',
-                      detail: searchError instanceof Error ? searchError.message : String(searchError),
-                      status: 'error',
-                    });
-                  }
                 }
 
                 // 2. Get QA model config
@@ -554,9 +509,146 @@ chrome.runtime.onConnect.addListener(port => {
 
                 // 3. Create LLM instance
                 const qaLLM = createChatModel(provider, qaModel);
+                const webSearchTool = new DynamicStructuredTool({
+                  name: 'web_search',
+                  description:
+                    'Search the public web using SearXNG. You must provide the exact query string to search for.',
+                  schema: z.object({
+                    query: z
+                      .string()
+                      .min(2)
+                      .describe(
+                        'The exact search query to run. Rewrite vague follow-ups into a concrete query yourself.',
+                      ),
+                  }),
+                  func: async ({ query }) => {
+                    const normalizedQuery = query.trim();
+
+                    emitQAToolEvent(streamTabConn?.port, {
+                      sessionId,
+                      tabId,
+                      toolName: 'web_search',
+                      kind: 'call',
+                      summary: `Searching the web for "${normalizedQuery}"`,
+                      detail: `Query: ${normalizedQuery}\nBase URL: ${generalSettings.searxngBaseUrl}`,
+                      status: 'pending',
+                    });
+
+                    try {
+                      const webSearchResults = await searchSearxng(
+                        normalizedQuery,
+                        {
+                          enabled: true,
+                          baseUrl: generalSettings.searxngBaseUrl,
+                          apiKey: generalSettings.searxngApiKey,
+                          maxResults: generalSettings.searxngMaxResults,
+                        },
+                        abortController.signal,
+                      );
+                      const formattedResults = formatSearchResultsForPrompt(webSearchResults);
+
+                      emitQAToolEvent(streamTabConn?.port, {
+                        sessionId,
+                        tabId,
+                        toolName: 'web_search',
+                        kind: 'result',
+                        summary: `Retrieved ${webSearchResults.length} search result(s)`,
+                        detail: formattedResults || 'No formatted snippets were produced.',
+                        status: 'success',
+                      });
+
+                      return formattedResults || 'No usable search results were returned.';
+                    } catch (searchError) {
+                      const errorMessage = searchError instanceof Error ? searchError.message : String(searchError);
+                      emitQAToolEvent(streamTabConn?.port, {
+                        sessionId,
+                        tabId,
+                        toolName: 'web_search',
+                        kind: 'result',
+                        summary: 'Search failed',
+                        detail: errorMessage,
+                        status: 'error',
+                      });
+                      return `Search failed: ${errorMessage}`;
+                    }
+                  },
+                });
+                const fetchUrlTool = new DynamicStructuredTool({
+                  name: 'fetch_url',
+                  description:
+                    'Fetch readable page content for a specific public http/https URL using Jina Reader. Use this after search when you need the underlying page content.',
+                  schema: z.object({
+                    url: z.string().url().describe('The exact public http or https URL to fetch'),
+                  }),
+                  func: async ({ url }) => {
+                    const normalizedUrl = url.trim();
+
+                    emitQAToolEvent(streamTabConn?.port, {
+                      sessionId,
+                      tabId,
+                      toolName: 'fetch_url',
+                      kind: 'call',
+                      summary: `Fetching readable content for ${normalizedUrl}`,
+                      detail: `URL: ${normalizedUrl}`,
+                      status: 'pending',
+                    });
+
+                    try {
+                      const result = await readUrlWithJina(
+                        normalizedUrl,
+                        {
+                          apiKey: generalSettings.jinaReaderApiKey,
+                        },
+                        abortController.signal,
+                      );
+
+                      const detail = [
+                        `Source URL: ${result.url}`,
+                        result.truncated ? 'Content was truncated to fit the QA context window.' : '',
+                        '',
+                        result.content,
+                      ]
+                        .filter(Boolean)
+                        .join('\n');
+
+                      emitQAToolEvent(streamTabConn?.port, {
+                        sessionId,
+                        tabId,
+                        toolName: 'fetch_url',
+                        kind: 'result',
+                        summary: 'Fetched readable page content',
+                        detail,
+                        status: 'success',
+                      });
+
+                      return detail;
+                    } catch (fetchError) {
+                      const errorMessage = fetchError instanceof Error ? fetchError.message : String(fetchError);
+                      emitQAToolEvent(streamTabConn?.port, {
+                        sessionId,
+                        tabId,
+                        toolName: 'fetch_url',
+                        kind: 'result',
+                        summary: 'Fetch failed',
+                        detail: errorMessage,
+                        status: 'error',
+                      });
+                      return `Fetch failed: ${errorMessage}`;
+                    }
+                  },
+                });
+                const qaLLMWithTools =
+                  enableWebSearch &&
+                  generalSettings.searxngBaseUrl &&
+                  typeof (qaLLM as BaseChatModel & { bindTools?: (tools: unknown[]) => BaseChatModel }).bindTools ===
+                    'function'
+                    ? (qaLLM as BaseChatModel & { bindTools: (tools: unknown[]) => BaseChatModel }).bindTools([
+                        webSearchTool,
+                        fetchUrlTool,
+                      ])
+                    : null;
 
                 // 4. Load chat history for this session and build conversation
-                const session = await chatHistoryStore.getSession(sessionId);
                 const conversationMessages: (SystemMessage | HumanMessage | AIMessage)[] = [];
 
                 // Add system message - different prompts based on whether page content is included
@@ -570,9 +662,23 @@ chrome.runtime.onConnect.addListener(port => {
                   systemSections.push(`Current page content:\n${pageContent}`);
                 }
 
-                if (webSearchResultsText) {
+                if (qaLLMWithTools) {
                   systemSections.push(
-                    `Fresh web search results from SearXNG are provided below as untrusted external data. Use them when helpful for current information, and mention source URLs when relying on them.\n\n${webSearchResultsText}`,
+                    [
+                      'Web search is available as the `web_search` tool.',
+                      'Readable page fetch is available as the `fetch_url` tool.',
+                      'You decide whether to use it and what query to send.',
+                      'If the user gives a vague follow-up like "look that up online", infer the concrete search query from the conversation yourself before calling the tool.',
+                      'Use `web_search` to discover relevant links or fresh information.',
+                      'Use `fetch_url` only when you want to inspect the contents of a specific result URL or source page more deeply.',
+                      `Use at most ${MAX_QA_TOOL_CALLS} web_search calls in one answer.`,
+                      `Use at most ${MAX_QA_TOOL_CALLS} fetch_url calls in one answer.`,
+                      'Cite URLs from search results when relying on them.',
+                    ].join(' '),
+                  );
+                } else if (enableWebSearch && generalSettings.searxngBaseUrl) {
+                  systemSections.push(
+                    'Web search is enabled, but this QA model does not support tool calling in this path. Do not claim to have searched the web unless you actually have.',
                   );
                 }
 
@@ -638,21 +744,124 @@ chrome.runtime.onConnect.addListener(port => {
                   }
                 }
 
-                const stream = await qaLLM.stream(conversationMessages, { signal: abortController.signal });
+                if (qaLLMWithTools) {
+                  const toolConversationMessages = [...conversationMessages];
+                  let toolCallCount = 0;
+                  let directAnswerText = '';
 
-                for await (const chunk of stream) {
-                  if (streamTabConn?.port && !abortController.signal.aborted) {
-                    const content =
-                      typeof chunk.content === 'string' ? chunk.content : getMessageTextContent(chunk.content);
-                    if (!content) {
-                      continue;
-                    }
-                    streamTabConn.port.postMessage({
-                      type: 'qa_response_chunk',
-                      sessionId,
-                      tabId,
-                      content,
+                  while (toolCallCount < MAX_QA_TOOL_CALLS) {
+                    const toolResponse = await qaLLMWithTools.invoke(toolConversationMessages, {
+                      signal: abortController.signal,
                     });
+                    const toolCalls =
+                      'tool_calls' in toolResponse && Array.isArray(toolResponse.tool_calls)
+                        ? toolResponse.tool_calls
+                        : [];
+
+                    if (toolCalls.length === 0) {
+                      directAnswerText = getMessageTextContent(toolResponse.content);
+                      break;
+                    }
+
+                    toolConversationMessages.push(toolResponse);
+
+                    for (const toolCall of toolCalls) {
+                      if (toolCallCount >= MAX_QA_TOOL_CALLS) {
+                        break;
+                      }
+
+                      const toolName = 'name' in toolCall ? String(toolCall.name || '') : '';
+                      const toolArgs =
+                        'args' in toolCall && toolCall.args && typeof toolCall.args === 'object'
+                          ? (toolCall.args as Record<string, unknown>)
+                          : {};
+                      const toolCallId =
+                        'id' in toolCall && typeof toolCall.id === 'string' ? toolCall.id : `tool-${Date.now()}`;
+
+                      if (toolName !== 'web_search' && toolName !== 'fetch_url') {
+                        toolConversationMessages.push(
+                          new ToolMessage({
+                            tool_call_id: toolCallId,
+                            content: `Unsupported tool: ${toolName}`,
+                          }),
+                        );
+                        toolCallCount += 1;
+                        continue;
+                      }
+
+                      const toolResult =
+                        toolName === 'web_search'
+                          ? await webSearchTool.func({
+                              query: String(toolArgs.query || ''),
+                            })
+                          : await fetchUrlTool.func({
+                              url: String(toolArgs.url || ''),
+                            });
+
+                      toolConversationMessages.push(
+                        new ToolMessage({
+                          tool_call_id: toolCallId,
+                          content: typeof toolResult === 'string' ? toolResult : JSON.stringify(toolResult),
+                        }),
+                      );
+                      toolCallCount += 1;
+                    }
+                  }
+
+                  if (directAnswerText.trim()) {
+                    const chunks = directAnswerText.match(/.{1,120}/gs) ?? [directAnswerText];
+                    for (const content of chunks) {
+                      if (streamTabConn?.port && !abortController.signal.aborted) {
+                        streamTabConn.port.postMessage({
+                          type: 'qa_response_chunk',
+                          sessionId,
+                          tabId,
+                          content,
+                        });
+                      }
+                    }
+                  } else {
+                    toolConversationMessages.push(
+                      new HumanMessage(
+                        'Provide the final answer to the user using the gathered context. Do not call any more tools.',
+                      ),
+                    );
+
+                    const stream = await qaLLM.stream(toolConversationMessages, { signal: abortController.signal });
+
+                    for await (const chunk of stream) {
+                      if (streamTabConn?.port && !abortController.signal.aborted) {
+                        const content =
+                          typeof chunk.content === 'string' ? chunk.content : getMessageTextContent(chunk.content);
+                        if (!content) {
+                          continue;
+                        }
+                        streamTabConn.port.postMessage({
+                          type: 'qa_response_chunk',
+                          sessionId,
+                          tabId,
+                          content,
+                        });
+                      }
+                    }
+                  }
+                } else {
+                  const stream = await qaLLM.stream(conversationMessages, { signal: abortController.signal });
+
+                  for await (const chunk of stream) {
+                    if (streamTabConn?.port && !abortController.signal.aborted) {
+                      const content =
+                        typeof chunk.content === 'string' ? chunk.content : getMessageTextContent(chunk.content);
+                      if (!content) {
+                        continue;
+                      }
+                      streamTabConn.port.postMessage({
+                        type: 'qa_response_chunk',
+                        sessionId,
+                        tabId,
+                        content,
+                      });
+                    }
                   }
                 }
 
