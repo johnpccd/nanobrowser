@@ -6,11 +6,20 @@ export enum Actors {
   VALIDATOR = 'validator',
 }
 
+export interface ToolEvent {
+  kind: 'call' | 'result';
+  toolName: string;
+  summary: string;
+  detail?: string;
+  status?: 'pending' | 'success' | 'error';
+}
+
 export interface Message {
   actor: Actors;
   content: string;
   timestamp: number; // Unix timestamp in milliseconds
   imageData?: string; // Base64 encoded image data for QA mode image capture
+  toolEvent?: ToolEvent;
 }
 
 export interface ChatMessage extends Message {

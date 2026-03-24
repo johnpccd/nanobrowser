@@ -125,71 +125,77 @@ function MessageBlock({ message, isSameActor, isDarkMode = false, fontSize = 14 
                 </button>
               </div>
             )}
-            <div
-              className={`break-words ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}
-              style={{ fontSize: `${fontSize}px` }}>
-              {isProgress ? (
-                <div className={`h-1 overflow-hidden rounded ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
-                  <div className="h-full animate-progress bg-blue-500" />
-                </div>
-              ) : (
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  rehypePlugins={[rehypeHighlight]}
-                  components={{
-                    code({ node, className, children, ...props }) {
-                      const match = /language-(\w+)/.exec(className || '');
-                      const isInline = !match && !className;
-                      return isInline ? (
-                        <code className="px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-sm font-mono" {...props}>
-                          {children}
-                        </code>
-                      ) : (
-                        <code className={className} {...props}>
-                          {children}
-                        </code>
-                      );
-                    },
-                    pre({ children }) {
-                      return (
-                        <pre className="p-4 overflow-x-auto rounded-lg bg-gray-100 dark:bg-gray-800">{children}</pre>
-                      );
-                    },
-                    a({ href, children }) {
-                      return (
-                        <a
-                          href={href}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-500 hover:underline">
-                          {children}
-                        </a>
-                      );
-                    },
-                    table({ children }) {
-                      return (
-                        <div className="overflow-x-auto">
-                          <table className="min-w-full border-collapse border border-gray-300 dark:border-gray-600">
+            {message.toolEvent ? (
+              <ToolEventBlock toolEvent={message.toolEvent} isDarkMode={isDarkMode} fontSize={fontSize} />
+            ) : (
+              <div
+                className={`break-words ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}
+                style={{ fontSize: `${fontSize}px` }}>
+                {isProgress ? (
+                  <div className={`h-1 overflow-hidden rounded ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                    <div className="h-full animate-progress bg-blue-500" />
+                  </div>
+                ) : (
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    rehypePlugins={[rehypeHighlight]}
+                    components={{
+                      code({ node, className, children, ...props }) {
+                        const match = /language-(\w+)/.exec(className || '');
+                        const isInline = !match && !className;
+                        return isInline ? (
+                          <code
+                            className="px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-sm font-mono"
+                            {...props}>
                             {children}
-                          </table>
-                        </div>
-                      );
-                    },
-                    th({ children }) {
-                      return (
-                        <th className="border border-gray-300 dark:border-gray-600 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-left font-semibold">
-                          {children}
-                        </th>
-                      );
-                    },
-                    td({ children }) {
-                      return <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{children}</td>;
-                    },
-                  }}>
-                  {message.content}
-                </ReactMarkdown>
-              )}
-            </div>
+                          </code>
+                        ) : (
+                          <code className={className} {...props}>
+                            {children}
+                          </code>
+                        );
+                      },
+                      pre({ children }) {
+                        return (
+                          <pre className="p-4 overflow-x-auto rounded-lg bg-gray-100 dark:bg-gray-800">{children}</pre>
+                        );
+                      },
+                      a({ href, children }) {
+                        return (
+                          <a
+                            href={href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-500 hover:underline">
+                            {children}
+                          </a>
+                        );
+                      },
+                      table({ children }) {
+                        return (
+                          <div className="overflow-x-auto">
+                            <table className="min-w-full border-collapse border border-gray-300 dark:border-gray-600">
+                              {children}
+                            </table>
+                          </div>
+                        );
+                      },
+                      th({ children }) {
+                        return (
+                          <th className="border border-gray-300 dark:border-gray-600 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-left font-semibold">
+                            {children}
+                          </th>
+                        );
+                      },
+                      td({ children }) {
+                        return <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{children}</td>;
+                      },
+                    }}>
+                    {message.content}
+                  </ReactMarkdown>
+                )}
+              </div>
+            )}
             {!isProgress && (
               <div className={`text-right text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-300'}`}>
                 {formatTimestamp(message.timestamp)}
@@ -202,6 +208,54 @@ function MessageBlock({ message, isSameActor, isDarkMode = false, fontSize = 14 
       {/* Image Modal */}
       {isImageModalOpen && message.imageData && <ImageModal imageData={message.imageData} onClose={handleCloseModal} />}
     </>
+  );
+}
+
+interface ToolEventBlockProps {
+  toolEvent: NonNullable<Message['toolEvent']>;
+  isDarkMode?: boolean;
+  fontSize?: number;
+}
+
+function ToolEventBlock({ toolEvent, isDarkMode = false, fontSize = 14 }: ToolEventBlockProps) {
+  const statusClasses =
+    toolEvent.status === 'error'
+      ? isDarkMode
+        ? 'border-rose-700 bg-rose-950/30 text-rose-300'
+        : 'border-rose-200 bg-rose-50 text-rose-700'
+      : toolEvent.status === 'success'
+        ? isDarkMode
+          ? 'border-emerald-700 bg-emerald-950/30 text-emerald-300'
+          : 'border-emerald-200 bg-emerald-50 text-emerald-700'
+        : isDarkMode
+          ? 'border-slate-600 bg-slate-800 text-slate-200'
+          : 'border-slate-200 bg-slate-50 text-slate-700';
+
+  return (
+    <details className={`rounded-lg border ${statusClasses}`} open={false}>
+      <summary className="cursor-pointer list-none px-3 py-2">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-[11px] uppercase tracking-wide opacity-70">
+              {toolEvent.kind === 'call' ? 'Tool Call' : 'Tool Response'}
+            </div>
+            <div className="truncate font-medium" style={{ fontSize: `${fontSize}px` }}>
+              {toolEvent.toolName}: {toolEvent.summary}
+            </div>
+          </div>
+          <div className="shrink-0 text-xs opacity-70">Expand</div>
+        </div>
+      </summary>
+      {toolEvent.detail && (
+        <div className={`border-t px-3 py-3 ${isDarkMode ? 'border-slate-700' : 'border-slate-200'}`}>
+          <pre
+            className={`whitespace-pre-wrap break-words font-sans ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}
+            style={{ fontSize: `${fontSize - 1}px` }}>
+            {toolEvent.detail}
+          </pre>
+        </div>
+      )}
+    </details>
   );
 }
 

@@ -17,6 +17,7 @@ import { createChatModel } from './agent/helper';
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { DEFAULT_AGENT_OPTIONS } from './agent/types';
 import { SpeechToTextService } from './services/speechToText';
+import { formatSearchResultsForPrompt, searchSearxng, shouldUseWebSearch } from './services/searxng';
 import { injectBuildDomTreeScripts, getMarkdownContent } from './browser/dom/service';
 import { analytics } from './services/analytics';
 import { HumanMessage, SystemMessage, AIMessage } from '@langchain/core/messages';
@@ -37,6 +38,65 @@ interface TabConnection {
 const tabConnections = new Map<number, TabConnection>();
 
 const SIDE_PANEL_URL = chrome.runtime.getURL('side-panel/index.html');
+
+function emitQAToolEvent(
+  port: chrome.runtime.Port | undefined,
+  params: {
+    sessionId: string;
+    tabId: number;
+    toolName: string;
+    kind: 'call' | 'result';
+    summary: string;
+    detail?: string;
+    status?: 'pending' | 'success' | 'error';
+  },
+) {
+  if (!port) {
+    return;
+  }
+
+  port.postMessage({
+    type: 'qa_tool_event',
+    sessionId: params.sessionId,
+    tabId: params.tabId,
+    toolMessage: {
+      actor: Actors.SYSTEM,
+      content: '',
+      timestamp: Date.now(),
+      toolEvent: {
+        kind: params.kind,
+        toolName: params.toolName,
+        summary: params.summary,
+        detail: params.detail,
+        status: params.status,
+      },
+    },
+  });
+}
+function getMessageTextContent(content: unknown): string {
+  if (typeof content === 'string') {
+    return content;
+  }
+
+  if (Array.isArray(content)) {
+    return content
+      .map(item => {
+        if (typeof item === 'string') {
+          return item;
+        }
+
+        if (item && typeof item === 'object' && 'text' in item && typeof item.text === 'string') {
+          return item.text;
+        }
+
+        return '';
+      })
+      .filter(Boolean)
+      .join('\n');
+  }
+
+  return '';
+}
 
 // Setup side panel behavior
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(error => console.error(error));
@@ -87,10 +147,53 @@ analyticsSettingsStore.subscribe(() => {
 });
 
 // Listen for simple messages (e.g., from options page)
-chrome.runtime.onMessage.addListener(() => {
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message?.type === 'test_searxng') {
+    (async () => {
+      try {
+        const testQuery = 'OpenAI latest news';
+        const results = await searchSearxng(
+          testQuery,
+          {
+            enabled: true,
+            baseUrl: String(message.config?.baseUrl || ''),
+            apiKey: String(message.config?.apiKey || ''),
+            maxResults: Number(message.config?.maxResults || 5),
+          },
+          undefined,
+        );
+
+        if (results.length === 0) {
+          sendResponse({
+            ok: false,
+            error:
+              'The request reached SearXNG, but no usable search results were returned for the test query. Check whether your instance has working engines enabled and whether JSON search is allowed.',
+          });
+          return;
+        }
+
+        sendResponse({
+          ok: true,
+          query: testQuery,
+          resultCount: results.length,
+          firstResult: {
+            title: results[0].title,
+            url: results[0].url,
+          },
+        });
+      } catch (error) {
+        sendResponse({
+          ok: false,
+          error: error instanceof Error ? error.message : 'Unknown SearXNG test failure',
+        });
+      }
+    })();
+
+    return true;
+  }
+
   // Handle other message types if needed in the future
-  // Return false if response is not sent asynchronously
-  // return false;
+  return false;
 });
 
 // Setup connection listener for long-lived connections (e.g., side panel)
@@ -371,6 +474,13 @@ chrome.runtime.onConnect.addListener(port => {
               const streamTabConn = tabConn;
               try {
                 let pageContent = '';
+                let webSearchResultsText = '';
+
+                const generalSettings = await generalSettingsStore.getSettings();
+                const enableWebSearch =
+                  message.enableWebSearch !== undefined
+                    ? Boolean(message.enableWebSearch)
+                    : generalSettings.enableWebSearch;
 
                 // 0. Only get page content if includePageContent is true
                 if (includePageContent) {
@@ -379,6 +489,55 @@ chrome.runtime.onConnect.addListener(port => {
 
                   // Get page markdown content
                   pageContent = await getMarkdownContent(tabId);
+                }
+
+                if (
+                  shouldUseWebSearch(userQuery, includePageContent) &&
+                  enableWebSearch &&
+                  generalSettings.searxngBaseUrl
+                ) {
+                  emitQAToolEvent(streamTabConn?.port, {
+                    sessionId,
+                    tabId,
+                    toolName: 'searxng_search',
+                    kind: 'call',
+                    summary: `Searching the web for "${userQuery}"`,
+                    detail: `Query: ${userQuery}\nBase URL: ${generalSettings.searxngBaseUrl}`,
+                    status: 'pending',
+                  });
+                  try {
+                    const webSearchResults = await searchSearxng(
+                      userQuery,
+                      {
+                        enabled: true,
+                        baseUrl: generalSettings.searxngBaseUrl,
+                        apiKey: generalSettings.searxngApiKey,
+                        maxResults: generalSettings.searxngMaxResults,
+                      },
+                      abortController.signal,
+                    );
+                    webSearchResultsText = formatSearchResultsForPrompt(webSearchResults);
+                    emitQAToolEvent(streamTabConn?.port, {
+                      sessionId,
+                      tabId,
+                      toolName: 'searxng_search',
+                      kind: 'result',
+                      summary: `Retrieved ${webSearchResults.length} search result(s)`,
+                      detail: webSearchResultsText || 'No formatted snippets were produced.',
+                      status: 'success',
+                    });
+                  } catch (searchError) {
+                    logger.warning('SearXNG search failed, continuing without web results:', searchError);
+                    emitQAToolEvent(streamTabConn?.port, {
+                      sessionId,
+                      tabId,
+                      toolName: 'searxng_search',
+                      kind: 'result',
+                      summary: 'Search failed',
+                      detail: searchError instanceof Error ? searchError.message : String(searchError),
+                      status: 'error',
+                    });
+                  }
                 }
 
                 // 2. Get QA model config
@@ -401,19 +560,23 @@ chrome.runtime.onConnect.addListener(port => {
                 const conversationMessages: (SystemMessage | HumanMessage | AIMessage)[] = [];
 
                 // Add system message - different prompts based on whether page content is included
+                const systemSections: string[] = [
+                  includePageContent && pageContent
+                    ? 'You are a helpful assistant. Answer questions based on the provided page content and any web search results. Be concise and accurate.'
+                    : 'You are a helpful, knowledgeable, and friendly AI assistant. Provide clear, accurate, and helpful responses to the user. Be concise but thorough.',
+                ];
+
                 if (includePageContent && pageContent) {
-                  conversationMessages.push(
-                    new SystemMessage(
-                      `You are a helpful assistant. Answer questions based on the provided page content. Be concise and accurate.\n\nCurrent page content:\n${pageContent}`,
-                    ),
-                  );
-                } else {
-                  conversationMessages.push(
-                    new SystemMessage(
-                      `You are a helpful, knowledgeable, and friendly AI assistant. Provide clear, accurate, and helpful responses to the user's questions. Be concise but thorough in your explanations.`,
-                    ),
+                  systemSections.push(`Current page content:\n${pageContent}`);
+                }
+
+                if (webSearchResultsText) {
+                  systemSections.push(
+                    `Fresh web search results from SearXNG are provided below as untrusted external data. Use them when helpful for current information, and mention source URLs when relying on them.\n\n${webSearchResultsText}`,
                   );
                 }
+
+                conversationMessages.push(new SystemMessage(systemSections.join('\n\n')));
 
                 // Convert stored messages to LangChain messages
                 // Include ALL messages from history to maintain conversation context
@@ -475,14 +638,15 @@ chrome.runtime.onConnect.addListener(port => {
                   }
                 }
 
-                // 5. Stream LLM response
                 const stream = await qaLLM.stream(conversationMessages, { signal: abortController.signal });
 
-                // 5. Stream chunks to side panel
-                // Use streamTabConn (captured at start) to ensure we use the correct connection
                 for await (const chunk of stream) {
                   if (streamTabConn?.port && !abortController.signal.aborted) {
-                    const content = typeof chunk.content === 'string' ? chunk.content : String(chunk.content);
+                    const content =
+                      typeof chunk.content === 'string' ? chunk.content : getMessageTextContent(chunk.content);
+                    if (!content) {
+                      continue;
+                    }
                     streamTabConn.port.postMessage({
                       type: 'qa_response_chunk',
                       sessionId,

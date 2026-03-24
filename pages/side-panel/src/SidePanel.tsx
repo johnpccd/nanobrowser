@@ -70,6 +70,7 @@ const SidePanel = () => {
   const [isCapturingImage, setIsCapturingImage] = useState(false);
   // Page content inclusion state for QA mode
   const [includePageContent, setIncludePageContent] = useState(true);
+  const [enableWebSearch, setEnableWebSearch] = useState(false);
   // Font size state
   const [fontSize, setFontSize] = useState<number>(14);
   const sessionIdRef = useRef<string | null>(null);
@@ -130,11 +131,13 @@ const SidePanel = () => {
       const settings = await generalSettingsStore.getSettings();
       setReplayEnabled(settings.replayHistoricalTasks);
       setIncludePageContent(settings.includePageContent);
+      setEnableWebSearch(settings.enableWebSearch);
       setFontSize(settings.fontSize);
     } catch (error) {
       console.error('Error loading general settings:', error);
       setReplayEnabled(false);
       setIncludePageContent(true);
+      setEnableWebSearch(false);
       setFontSize(14);
     }
   }, []);
@@ -728,6 +731,20 @@ const SidePanel = () => {
               qaResponseBufferRef.current = newBuffer;
             }
           }
+        } else if (message && message.type === 'qa_tool_event') {
+          const msgTabId = message.tabId;
+          const msgSessionId = message.sessionId;
+          const toolMessage = message.toolMessage as Message | undefined;
+
+          if (msgTabId !== null && msgTabId !== undefined && msgSessionId && toolMessage) {
+            chatHistoryStore.addMessage(msgSessionId, toolMessage).catch(err => {
+              console.error('Failed to save tool event to history:', err);
+            });
+
+            if (msgSessionId === sessionIdRef.current && msgTabId === currentTabIdRef.current) {
+              setMessages(prev => [...prev, toolMessage]);
+            }
+          }
         } else if (message && message.type === 'qa_response_complete') {
           // QA response complete - save final message to storage for all tabs
           const msgTabId = message.tabId;
@@ -1168,6 +1185,7 @@ const SidePanel = () => {
           tabId,
           imageData, // Include image in the message to background
           includePageContent, // Whether to include page content in the query
+          enableWebSearch, // Whether to include web search in the query
         });
         console.log(
           'qa_query sent',
@@ -1176,6 +1194,7 @@ const SidePanel = () => {
           sessionIdRef.current,
           imageData ? '(with image)' : '',
           includePageContent ? '(with page content)' : '(generic chat)',
+          enableWebSearch ? '(with web search)' : '(without web search)',
         );
       } else if (isFollowUpMode) {
         // Send as follow-up task
@@ -1545,6 +1564,17 @@ const SidePanel = () => {
     }
   }, [includePageContent]);
 
+  const handleToggleEnableWebSearch = useCallback(async () => {
+    const newValue = !enableWebSearch;
+    setEnableWebSearch(newValue);
+    try {
+      await generalSettingsStore.updateSettings({ enableWebSearch: newValue });
+    } catch (error) {
+      console.error('Error updating enableWebSearch setting:', error);
+      setEnableWebSearch(!newValue);
+    }
+  }, [enableWebSearch]);
+
   const handleMicClick = async () => {
     if (isRecording) {
       // Stop recording
@@ -1865,6 +1895,8 @@ const SidePanel = () => {
                         isCapturingImage={isCapturingImage}
                         includePageContent={includePageContent}
                         onToggleIncludePageContent={mode === 'qa' ? handleToggleIncludePageContent : undefined}
+                        enableWebSearch={enableWebSearch}
+                        onToggleEnableWebSearch={mode === 'qa' ? handleToggleEnableWebSearch : undefined}
                       />
                     </div>
                     <div className="flex-1 overflow-y-auto">
@@ -1922,6 +1954,8 @@ const SidePanel = () => {
                       isCapturingImage={isCapturingImage}
                       includePageContent={includePageContent}
                       onToggleIncludePageContent={mode === 'qa' ? handleToggleIncludePageContent : undefined}
+                      enableWebSearch={enableWebSearch}
+                      onToggleEnableWebSearch={mode === 'qa' ? handleToggleEnableWebSearch : undefined}
                     />
                   </div>
                 )}

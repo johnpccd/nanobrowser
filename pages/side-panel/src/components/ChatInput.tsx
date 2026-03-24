@@ -39,6 +39,9 @@ interface ChatInputProps {
   // Page content toggle for QA mode
   includePageContent?: boolean;
   onToggleIncludePageContent?: () => void;
+  // Web search toggle for QA mode
+  enableWebSearch?: boolean;
+  onToggleEnableWebSearch?: () => void;
 }
 
 // File attachment interface
@@ -71,6 +74,8 @@ export default function ChatInput({
   isCapturingImage = false,
   includePageContent = true,
   onToggleIncludePageContent,
+  enableWebSearch = false,
+  onToggleEnableWebSearch,
 }: ChatInputProps) {
   const [text, setText] = useState('');
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
@@ -462,6 +467,32 @@ export default function ChatInput({
                         <span className="hidden sm:inline">
                           {includePageContent ? t('chat_pageContent_enabled') : t('chat_pageContent_disabled')}
                         </span>
+                      </button>
+                    )}
+                    {onToggleEnableWebSearch && (
+                      <button
+                        type="button"
+                        onClick={onToggleEnableWebSearch}
+                        disabled={disabled}
+                        aria-label="Toggle web search"
+                        title={
+                          enableWebSearch
+                            ? 'Click to disable web search for this chat'
+                            : 'Click to enable web search for this chat'
+                        }
+                        className={`flex items-center gap-1 rounded-md px-2 py-1.5 text-xs transition-colors ${
+                          disabled
+                            ? 'cursor-not-allowed opacity-50'
+                            : enableWebSearch
+                              ? isDarkMode
+                                ? 'bg-emerald-700 text-white border border-emerald-600 hover:bg-emerald-600'
+                                : 'bg-emerald-100 text-emerald-700 border border-emerald-300 hover:bg-emerald-200'
+                              : isDarkMode
+                                ? 'bg-slate-700 text-gray-400 border border-slate-600 hover:bg-slate-600'
+                                : 'bg-gray-100 text-gray-500 border border-gray-300 hover:bg-gray-200'
+                        }`}>
+                        <span className="hidden sm:inline">{enableWebSearch ? 'Web search on' : 'Web search off'}</span>
+                        <span className="sm:hidden">{enableWebSearch ? 'Web' : 'No Web'}</span>
                       </button>
                     )}
                     {/* Image Capture button */}

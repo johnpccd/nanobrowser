@@ -16,6 +16,11 @@ export interface GeneralSettingsConfig {
   includePageContent: boolean;
   fontSize: number;
   maxInputTokens: number;
+  enableWebSearch: boolean;
+  searxngBaseUrl: string;
+  searxngApiKey: string;
+  searxngMaxResults: number;
+  jinaReaderApiKey: string;
 }
 
 export type GeneralSettingsStorage = BaseStorage<GeneralSettingsConfig> & {
@@ -38,6 +43,11 @@ export const DEFAULT_GENERAL_SETTINGS: GeneralSettingsConfig = {
   includePageContent: true,
   fontSize: 14,
   maxInputTokens: 1000000,
+  enableWebSearch: false,
+  searxngBaseUrl: '',
+  searxngApiKey: '',
+  searxngMaxResults: 5,
+  jinaReaderApiKey: '',
 };
 
 const storage = createStorage<GeneralSettingsConfig>('general-settings', DEFAULT_GENERAL_SETTINGS, {
@@ -53,6 +63,18 @@ export const generalSettingsStore: GeneralSettingsStorage = {
       ...currentSettings,
       ...settings,
     };
+
+    if (typeof updatedSettings.searxngBaseUrl === 'string') {
+      updatedSettings.searxngBaseUrl = updatedSettings.searxngBaseUrl.trim().replace(/\/+$/, '');
+    }
+
+    if (typeof updatedSettings.jinaReaderApiKey === 'string') {
+      updatedSettings.jinaReaderApiKey = updatedSettings.jinaReaderApiKey.trim();
+    }
+
+    if (typeof updatedSettings.searxngMaxResults === 'number') {
+      updatedSettings.searxngMaxResults = Math.min(10, Math.max(1, Math.round(updatedSettings.searxngMaxResults)));
+    }
 
     // If useVision is true, displayHighlights must also be true
     if (updatedSettings.useVision && !updatedSettings.displayHighlights) {
