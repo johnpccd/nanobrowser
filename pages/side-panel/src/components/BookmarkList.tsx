@@ -1,5 +1,5 @@
 /* eslint-disable react/prop-types */
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, type CSSProperties } from 'react';
 import { FaTrash, FaPen, FaCheck, FaTimes } from 'react-icons/fa';
 import { t } from '@extension/i18n';
 import type { ResolvedQaUiTheme } from '@extension/storage';
@@ -83,6 +83,18 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
     }
   }, [editingId]);
 
+  const cardStyle = {
+    ...(qaUiTheme?.separatorColor ? { borderColor: qaUiTheme.separatorColor } : {}),
+    ...(qaUiTheme?.inputSurface ? { backgroundColor: qaUiTheme.inputSurface } : {}),
+  };
+
+  const actionButtonStyle = {
+    ...(qaUiTheme?.inputSurface ? { backgroundColor: qaUiTheme.inputSurface } : {}),
+    ...(qaUiTheme?.inputText ? { color: qaUiTheme.inputText } : {}),
+    ...(qaUiTheme?.inputBorder ? { borderColor: qaUiTheme.inputBorder, borderWidth: '1px' } : {}),
+    ...(qaUiTheme?.chromeFontSizePx ? { fontSize: `${Math.max(qaUiTheme.chromeFontSizePx - 1, 11)}px` } : {}),
+  } as CSSProperties;
+
   return (
     <div className="p-2">
       <h3
@@ -107,7 +119,7 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
                 ? 'border-slate-700 bg-slate-800 hover:bg-slate-700'
                 : 'border-sky-100 bg-white hover:bg-sky-50'
             }`}
-            style={qaUiTheme?.separatorColor ? { borderColor: qaUiTheme.separatorColor } : undefined}>
+            style={cardStyle}>
             {editingId === bookmark.id ? (
               <div className="flex items-center">
                 <input
@@ -118,6 +130,11 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
                   className={`mr-2 grow rounded px-2 py-1 text-sm ${
                     isDarkMode ? 'border-slate-600 bg-slate-700 text-gray-200' : 'border-sky-100 bg-white text-gray-700'
                   } border`}
+                  style={{
+                    ...(qaUiTheme?.inputSurface ? { backgroundColor: qaUiTheme.inputSurface } : {}),
+                    ...(qaUiTheme?.inputText ? { color: qaUiTheme.inputText } : {}),
+                    ...(qaUiTheme?.inputBorder ? { borderColor: qaUiTheme.inputBorder } : {}),
+                  }}
                 />
                 <button
                   onClick={() => handleSaveEdit(bookmark.id)}
@@ -126,6 +143,7 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
                       ? 'bg-slate-700 text-green-400 hover:bg-slate-600'
                       : 'bg-white text-green-500 hover:bg-gray-100'
                   }`}
+                  style={actionButtonStyle}
                   aria-label={t('chat_bookmarks_saveEdit')}
                   type="button">
                   <FaCheck size={14} />
@@ -137,6 +155,7 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
                       ? 'bg-slate-700 text-red-400 hover:bg-slate-600'
                       : 'bg-white text-red-500 hover:bg-gray-100'
                   }`}
+                  style={actionButtonStyle}
                   aria-label={t('chat_bookmarks_cancelEdit')}
                   type="button">
                   <FaTimes size={14} />
@@ -181,6 +200,7 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
                       ? 'bg-slate-700 text-sky-400 hover:bg-slate-600'
                       : 'bg-white text-sky-500 hover:bg-gray-100'
                   }`}
+                  style={actionButtonStyle}
                   aria-label={t('chat_bookmarks_edit')}
                   type="button">
                   <FaPen size={14} />
@@ -199,6 +219,7 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
                       ? 'bg-slate-700 text-gray-400 hover:bg-slate-600'
                       : 'bg-white text-gray-500 hover:bg-gray-100'
                   }`}
+                  style={actionButtonStyle}
                   aria-label={t('chat_bookmarks_delete')}
                   type="button">
                   <FaTrash size={14} />

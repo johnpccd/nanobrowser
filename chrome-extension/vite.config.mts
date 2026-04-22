@@ -1,5 +1,5 @@
 import { resolve } from 'node:path';
-import { defineConfig, type PluginOption, loadEnv } from "vite";
+import { defineConfig, type PluginOption } from 'vite';
 import libAssetsPlugin from '@laynezh/vite-plugin-lib-assets';
 import makeManifestPlugin from './utils/plugins/make-manifest-plugin';
 import { watchPublicPlugin, watchRebuildPlugin } from '@extension/hmr';
@@ -10,11 +10,7 @@ const srcDir = resolve(rootDir, 'src');
 
 const outDir = resolve(rootDir, '..', 'dist');
 
-export default defineConfig(({ mode }) => {
-  // Load environment variables from the parent directory
-  const env = loadEnv(mode, resolve(rootDir, '..'), 'VITE_');
-  
-  return {
+export default defineConfig({
   resolve: {
     alias: {
       '@root': rootDir,
@@ -66,10 +62,8 @@ export default defineConfig(({ mode }) => {
 
   define: {
     'import.meta.env.DEV': isDev,
-    'import.meta.env.VITE_POSTHOG_API_KEY': JSON.stringify(env.VITE_POSTHOG_API_KEY || process.env.VITE_POSTHOG_API_KEY || ''),
   },
 
   envDir: '../',
   envPrefix: 'VITE_',
-  };
 });

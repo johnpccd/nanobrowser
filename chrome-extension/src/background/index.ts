@@ -5,7 +5,6 @@ import {
   firewallStore,
   generalSettingsStore,
   llmProviderStore,
-  analyticsSettingsStore,
   chatHistoryStore,
 } from '@extension/storage';
 import { t } from '@extension/i18n';
@@ -19,7 +18,6 @@ import { DEFAULT_AGENT_OPTIONS } from './agent/types';
 import { SpeechToTextService } from './services/speechToText';
 import { formatSearchResultsForPrompt, searchSearxng } from './services/searxng';
 import { injectBuildDomTreeScripts, getMarkdownContent } from './browser/dom/service';
-import { analytics } from './services/analytics';
 import { HumanMessage, SystemMessage, AIMessage, ToolMessage } from '@langchain/core/messages';
 import { Actors } from '@extension/storage/lib/chat/types';
 import { DynamicStructuredTool } from '@langchain/core/tools';
@@ -137,18 +135,6 @@ chrome.tabs.onRemoved.addListener(tabId => {
 });
 
 logger.info('background loaded');
-
-// Initialize analytics
-analytics.init().catch(error => {
-  logger.error('Failed to initialize analytics:', error);
-});
-
-// Listen for analytics settings changes
-analyticsSettingsStore.subscribe(() => {
-  analytics.updateSettings().catch(error => {
-    logger.error('Failed to update analytics settings:', error);
-  });
-});
 
 // Listen for simple messages (e.g., from options page)
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {

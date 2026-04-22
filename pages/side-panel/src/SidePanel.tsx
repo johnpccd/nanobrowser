@@ -9,7 +9,6 @@ import {
   chatHistoryStore,
   agentModelStore,
   generalSettingsStore,
-  getTabMode,
   setTabMode,
   getTabActiveSession,
   setTabActiveSession,
@@ -205,10 +204,11 @@ const SidePanel = () => {
         streamingTabIdRef.current = tabId;
       }
 
-      // Load mode for this tab
-      const tabMode = await getTabMode(tabId);
+      // Keep the side panel in QA mode and sync per-tab mode storage.
+      const tabMode: TabMode = 'qa';
       setMode(tabMode);
       modeRef.current = tabMode;
+      await setTabMode(tabId, tabMode);
 
       // Load chat sessions for this tab
       const sessions = await chatHistoryStore.getSessionsMetadata(tabId);
@@ -1781,7 +1781,7 @@ const SidePanel = () => {
                 <select
                   value={mode}
                   onChange={e => handleModeChange(e.target.value as TabMode)}
-                  className={`header-icon ${isDarkMode ? 'text-sky-400 hover:text-sky-300 bg-slate-800' : 'text-sky-400 hover:text-sky-500 bg-white'} cursor-pointer border-0 rounded px-2 py-1 text-sm`}
+                  className={`header-icon hidden ${isDarkMode ? 'text-sky-400 hover:text-sky-300 bg-slate-800' : 'text-sky-400 hover:text-sky-500 bg-white'} cursor-pointer border-0 rounded px-2 py-1 text-sm`}
                   aria-label="Select mode">
                   <option value="automation">Automation Agent</option>
                   <option value="qa">QA Mode</option>

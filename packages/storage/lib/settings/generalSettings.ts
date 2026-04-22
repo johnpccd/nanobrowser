@@ -65,20 +65,51 @@ export const DEFAULT_GENERAL_SETTINGS: GeneralSettingsConfig = {
   searxngMaxResults: 5,
   jinaReaderApiKey: '',
   qaFontFamily: '',
-  qaChromeFontSize: 0,
-  qaInputFontSize: 0,
-  qaColorPanelBg: '',
-  qaColorChatBg: '',
-  qaColorMessageText: '',
-  qaColorHeadingText: '',
-  qaColorMutedText: '',
-  qaColorLink: '',
-  qaColorSeparator: '',
-  qaColorInputSurface: '',
-  qaColorInputBorder: '',
-  qaColorInputText: '',
-  qaColorAccent: '',
+  qaChromeFontSize: 13,
+  qaInputFontSize: 14,
+  qaColorPanelBg: '#0b1220',
+  qaColorChatBg: '#0f172a',
+  qaColorMessageText: '#f8fafc',
+  qaColorHeadingText: '#ffffff',
+  qaColorMutedText: '#94a3b8',
+  qaColorLink: '#60a5fa',
+  qaColorSeparator: '#334155',
+  qaColorInputSurface: '#111827',
+  qaColorInputBorder: '#334155',
+  qaColorInputText: '#f9fafb',
+  qaColorAccent: '#38bdf8',
 };
+
+function applyQaAppearanceDefaultsIfEmpty(settings: GeneralSettingsConfig): GeneralSettingsConfig {
+  const colorKeys: Array<keyof GeneralSettingsConfig> = [
+    'qaColorPanelBg',
+    'qaColorChatBg',
+    'qaColorMessageText',
+    'qaColorHeadingText',
+    'qaColorMutedText',
+    'qaColorLink',
+    'qaColorSeparator',
+    'qaColorInputSurface',
+    'qaColorInputBorder',
+    'qaColorInputText',
+    'qaColorAccent',
+  ];
+
+  for (const key of colorKeys) {
+    if (!settings[key]) {
+      Object.assign(settings, { [key]: DEFAULT_GENERAL_SETTINGS[key] });
+    }
+  }
+
+  if (!settings.qaChromeFontSize || settings.qaChromeFontSize <= 0) {
+    settings.qaChromeFontSize = DEFAULT_GENERAL_SETTINGS.qaChromeFontSize;
+  }
+  if (!settings.qaInputFontSize || settings.qaInputFontSize <= 0) {
+    settings.qaInputFontSize = DEFAULT_GENERAL_SETTINGS.qaInputFontSize;
+  }
+
+  return settings;
+}
 
 const storage = createStorage<GeneralSettingsConfig>('general-settings', DEFAULT_GENERAL_SETTINGS, {
   storageEnum: StorageEnum.Local,
@@ -148,10 +179,11 @@ export const generalSettingsStore: GeneralSettingsStorage = {
   },
   async getSettings() {
     const settings = await storage.get();
-    return {
+    const merged = {
       ...DEFAULT_GENERAL_SETTINGS,
       ...settings,
     };
+    return applyQaAppearanceDefaultsIfEmpty(merged);
   },
   async resetToDefaults() {
     await storage.set(DEFAULT_GENERAL_SETTINGS);

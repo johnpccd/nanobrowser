@@ -43,17 +43,19 @@ function ColorRow({
   labelKey,
   descKey,
   value,
+  defaultValue,
   onChange,
   isDarkMode,
 }: {
   labelKey: MessageKey;
   descKey: MessageKey;
   value: string;
+  defaultValue: string;
   onChange: (v: string) => void;
   isDarkMode: boolean;
 }) {
   const normalized = normalizeHexColor(value);
-  const pickerValue = normalized || '#7c7c7c';
+  const pickerValue = normalized || defaultValue;
 
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
@@ -74,7 +76,7 @@ function ColorRow({
         />
         <input
           type="text"
-          value={value}
+          value={value || defaultValue}
           onChange={e => onChange(e.target.value)}
           placeholder="#rrggbb"
           spellCheck={false}
@@ -116,7 +118,7 @@ export const QaAppearanceSettings = ({ isDarkMode = false }: QaAppearanceSetting
       qaInputFontSize: DEFAULT_GENERAL_SETTINGS.qaInputFontSize,
     };
     for (const { key } of COLOR_FIELDS) {
-      patch[key] = '' as GeneralSettingsConfig[ColorFieldKey];
+      patch[key] = DEFAULT_GENERAL_SETTINGS[key] as GeneralSettingsConfig[ColorFieldKey];
     }
     setSettings(prev => ({ ...prev, ...patch }));
     await generalSettingsStore.updateSettings(patch);
@@ -248,6 +250,7 @@ export const QaAppearanceSettings = ({ isDarkMode = false }: QaAppearanceSetting
                 labelKey={label}
                 descKey={desc}
                 value={settings[key]}
+                defaultValue={DEFAULT_GENERAL_SETTINGS[key]}
                 onChange={v => updateSetting(key, v)}
                 isDarkMode={isDarkMode}
               />

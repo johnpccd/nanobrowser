@@ -265,6 +265,20 @@ export default function ChatInput({
     ...(qaUiTheme?.inputSurface ? { backgroundColor: qaUiTheme.inputSurface } : {}),
   };
 
+  const neutralControlStyle: CSSProperties = {
+    ...(qaUiTheme?.inputSurface ? { backgroundColor: qaUiTheme.inputSurface } : {}),
+    ...(qaUiTheme?.inputBorder ? { borderColor: qaUiTheme.inputBorder } : {}),
+    ...(qaUiTheme?.inputText ? { color: qaUiTheme.inputText } : {}),
+    ...(qaUiTheme?.chromeFontSizePx ? { fontSize: `${Math.max(qaUiTheme.chromeFontSizePx - 1, 11)}px` } : {}),
+  };
+
+  const accentControlStyle: CSSProperties = {
+    ...(qaUiTheme?.accentColor ? { backgroundColor: qaUiTheme.accentColor } : {}),
+    ...(qaUiTheme?.inputBorder ? { borderColor: qaUiTheme.inputBorder } : {}),
+    ...(qaUiTheme?.inputText ? { color: qaUiTheme.inputText } : {}),
+    ...(qaUiTheme?.chromeFontSizePx ? { fontSize: `${Math.max(qaUiTheme.chromeFontSizePx - 1, 11)}px` } : {}),
+  };
+
   return (
     <form
       onSubmit={handleSubmit}
@@ -395,7 +409,8 @@ export default function ChatInput({
                   : isDarkMode
                     ? 'text-gray-400 hover:bg-slate-700 hover:text-gray-200'
                     : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
-              }`}>
+              }`}
+              style={neutralControlStyle}>
               <span className="text-lg">📎</span>
             </button>
 
@@ -431,7 +446,8 @@ export default function ChatInput({
                         : isDarkMode
                           ? 'text-gray-400 hover:bg-slate-700 hover:text-gray-200'
                           : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
-                  }`}>
+                  }`}
+                  style={isRecording ? undefined : neutralControlStyle}>
                   {isProcessingSpeech ? (
                     <AiOutlineLoading3Quarters className="size-4 animate-spin" />
                   ) : (
@@ -459,6 +475,7 @@ export default function ChatInput({
                             ? 'bg-slate-700 text-gray-200 hover:bg-slate-600 border border-slate-600'
                             : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
                       }`}
+                      style={neutralControlStyle}
                       aria-label="Select QA model">
                       {!currentQAModel && (
                         <option value="" disabled>
@@ -496,7 +513,8 @@ export default function ChatInput({
                               : isDarkMode
                                 ? 'bg-slate-700 text-gray-400 hover:bg-slate-600 border border-slate-600'
                                 : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-300'
-                        }`}>
+                        }`}
+                        style={includePageContent ? accentControlStyle : neutralControlStyle}>
                         {includePageContent ? (
                           <HiOutlineDocumentText className="size-4" />
                         ) : (
@@ -528,7 +546,8 @@ export default function ChatInput({
                               : isDarkMode
                                 ? 'bg-slate-700 text-gray-400 border border-slate-600 hover:bg-slate-600'
                                 : 'bg-gray-100 text-gray-500 border border-gray-300 hover:bg-gray-200'
-                        }`}>
+                        }`}
+                        style={enableWebSearch ? accentControlStyle : neutralControlStyle}>
                         <span className="hidden sm:inline">{enableWebSearch ? 'Web search on' : 'Web search off'}</span>
                         <span className="sm:hidden">{enableWebSearch ? 'Web' : 'No Web'}</span>
                       </button>
@@ -547,7 +566,8 @@ export default function ChatInput({
                             : isDarkMode
                               ? 'bg-slate-700 text-gray-200 hover:bg-slate-600 border border-slate-600'
                               : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
-                        }`}>
+                        }`}
+                        style={neutralControlStyle}>
                         {isCapturingImage ? (
                           <AiOutlineLoading3Quarters className="size-4 animate-spin" />
                         ) : (
@@ -566,7 +586,8 @@ export default function ChatInput({
             <button
               type="button"
               onClick={onStopTask}
-              className="rounded-md bg-red-500 px-3 py-1 text-white transition-colors hover:bg-red-600">
+              className="rounded-md bg-red-500 px-3 py-1 text-white transition-colors hover:bg-red-600"
+              style={qaUiTheme?.chromeFontSizePx ? { fontSize: `${qaUiTheme.chromeFontSizePx}px` } : undefined}>
               {t('chat_buttons_stop')}
             </button>
           ) : historicalSessionId ? (
@@ -575,7 +596,8 @@ export default function ChatInput({
               onClick={handleReplay}
               disabled={!historicalSessionId}
               aria-disabled={!historicalSessionId}
-              className={`rounded-md bg-green-500 px-3 py-1 text-white transition-colors hover:enabled:bg-green-600 ${!historicalSessionId ? 'cursor-not-allowed opacity-50' : ''}`}>
+              className={`rounded-md bg-green-500 px-3 py-1 text-white transition-colors hover:enabled:bg-green-600 ${!historicalSessionId ? 'cursor-not-allowed opacity-50' : ''}`}
+              style={qaUiTheme?.chromeFontSizePx ? { fontSize: `${qaUiTheme.chromeFontSizePx}px` } : undefined}>
               {t('chat_buttons_replay')}
             </button>
           ) : (
@@ -584,7 +606,10 @@ export default function ChatInput({
               disabled={isSendButtonDisabled}
               aria-disabled={isSendButtonDisabled}
               className={`rounded-md px-3 py-1 text-white transition-colors hover:enabled:opacity-90 ${qaUiTheme?.accentColor ? '' : 'bg-[#19C2FF] hover:enabled:bg-[#0073DC]'} ${isSendButtonDisabled ? 'cursor-not-allowed opacity-50' : ''}`}
-              style={qaUiTheme?.accentColor ? { backgroundColor: qaUiTheme.accentColor } : undefined}>
+              style={{
+                ...(qaUiTheme?.accentColor ? { backgroundColor: qaUiTheme.accentColor } : {}),
+                ...(qaUiTheme?.chromeFontSizePx ? { fontSize: `${qaUiTheme.chromeFontSizePx}px` } : {}),
+              }}>
               {t('chat_buttons_send')}
             </button>
           )}

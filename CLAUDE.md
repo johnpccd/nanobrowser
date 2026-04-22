@@ -260,8 +260,7 @@ Use Chrome i18n placeholder format with proper definitions:
 - **URL Validation**: Validate and restrict navigation to prevent malicious redirects
 - **Error Handling**: Avoid exposing sensitive information in error messages or logs
  - **Secrets/Config**: Use `.env.local` (git‑ignored) and prefix variables with `VITE_`.
-   Example: `VITE_POSTHOG_API_KEY`. Vite in `chrome-extension/vite.config.mts` loads
-   `VITE_*` from the parent directory.
+   Vite in `chrome-extension/vite.config.mts` loads `VITE_*` from the parent directory.
 
 ## Important Reminders
 
