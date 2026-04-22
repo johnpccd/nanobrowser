@@ -7,3 +7,4 @@ export * from './qaAppearance';
 export * from './firewall';
 export * from './speechToText';
 export * from './tabModes';
+export * from './mcpTools';

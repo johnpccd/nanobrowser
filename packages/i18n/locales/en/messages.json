@@ -256,8 +256,125 @@
   "options_tabs_firewall": {
     "message": "Firewall"
   },
+  "options_tabs_mcp": {
+    "message": "MCP Tools"
+  },
   "options_tabs_help": {
     "message": "Help"
+  },
+  "options_mcp_header": {
+    "message": "MCP Tools"
+  },
+  "options_mcp_desc": {
+    "message": "Configure remote MCP servers and expose their tools to QA mode."
+  },
+  "options_mcp_enable": {
+    "message": "Enable MCP tools in QA mode"
+  },
+  "options_mcp_enable_desc": {
+    "message": "When enabled, QA can call tools discovered from your active MCP servers."
+  },
+  "options_mcp_addServer": {
+    "message": "Add server"
+  },
+  "options_mcp_editServer": {
+    "message": "Edit server"
+  },
+  "options_mcp_name_placeholder": {
+    "message": "Server name"
+  },
+  "options_mcp_transport_streamableHttp": {
+    "message": "Streamable HTTP"
+  },
+  "options_mcp_transport_sse": {
+    "message": "SSE"
+  },
+  "options_mcp_endpoint_placeholder": {
+    "message": "Server endpoint (https://...)"
+  },
+  "options_mcp_sseMessageEndpoint_placeholder": {
+    "message": "SSE message endpoint (optional, https://...)"
+  },
+  "options_mcp_auth_none": {
+    "message": "No authentication"
+  },
+  "options_mcp_auth_bearer": {
+    "message": "Bearer token"
+  },
+  "options_mcp_authToken_placeholder": {
+    "message": "Bearer token"
+  },
+  "options_mcp_access_all": {
+    "message": "Allow all discovered tools"
+  },
+  "options_mcp_access_allowlist": {
+    "message": "Allow only listed tools"
+  },
+  "options_mcp_allowedTools_placeholder": {
+    "message": "Allowed tool names (comma separated)"
+  },
+  "options_mcp_addButton": {
+    "message": "Save server"
+  },
+  "options_mcp_saveChanges": {
+    "message": "Update server"
+  },
+  "options_mcp_cancelEdit": {
+    "message": "Cancel edit"
+  },
+  "options_mcp_servers": {
+    "message": "Configured servers"
+  },
+  "options_mcp_empty": {
+    "message": "No MCP servers configured yet."
+  },
+  "options_mcp_serverEnabled": {
+    "message": "Enabled"
+  },
+  "options_mcp_edit": {
+    "message": "Edit"
+  },
+  "options_mcp_discoverTools": {
+    "message": "Discover tools"
+  },
+  "options_mcp_discovering": {
+    "message": "Discovering..."
+  },
+  "options_mcp_remove": {
+    "message": "Remove"
+  },
+  "options_mcp_allowedTools_label": {
+    "message": "Allowed tools"
+  },
+  "options_mcp_errors_nameRequired": {
+    "message": "Server name is required."
+  },
+  "options_mcp_errors_endpointRequired": {
+    "message": "Server endpoint is required."
+  },
+  "options_mcp_errors_endpointProtocol": {
+    "message": "Server endpoint must use http or https."
+  },
+  "options_mcp_errors_endpointInvalid": {
+    "message": "Server endpoint is not a valid URL."
+  },
+  "options_mcp_errors_sseMessageProtocol": {
+    "message": "SSE message endpoint must use http or https."
+  },
+  "options_mcp_errors_sseMessageInvalid": {
+    "message": "SSE message endpoint is not a valid URL."
+  },
+  "options_mcp_errors_tokenRequired": {
+    "message": "Bearer token is required when bearer auth is selected."
+  },
+  "options_mcp_errors_allowlistRequired": {
+    "message": "Add at least one allowed tool when allowlist mode is selected."
+  },
+  "options_mcp_errors_discoveryFailed": {
+    "message": "Tool discovery failed."
+  },
+  "options_mcp_errors_discoveryEmpty": {
+    "message": "No tools were discovered from this server."
   },
   "options_general_header": {
     "message": "General"

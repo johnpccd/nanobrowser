@@ -3,16 +3,18 @@ import '@src/Options.css';
 import { Button } from '@extension/ui';
 import { withErrorBoundary, withSuspense } from '@extension/shared';
 import { t } from '@extension/i18n';
-import { FiSettings, FiCpu, FiShield, FiHelpCircle } from 'react-icons/fi';
+import { FiSettings, FiCpu, FiShield, FiHelpCircle, FiTool } from 'react-icons/fi';
 import { GeneralSettings } from './components/GeneralSettings';
 import { ModelSettings } from './components/ModelSettings';
 import { FirewallSettings } from './components/FirewallSettings';
-type TabTypes = 'general' | 'models' | 'firewall' | 'help';
+import { McpToolsSettings } from './components/McpToolsSettings';
+type TabTypes = 'general' | 'models' | 'firewall' | 'mcp' | 'help';
 
 const TABS: { id: TabTypes; icon: React.ComponentType<{ className?: string }>; label: string }[] = [
   { id: 'general', icon: FiSettings, label: t('options_tabs_general') },
   { id: 'models', icon: FiCpu, label: t('options_tabs_models') },
   { id: 'firewall', icon: FiShield, label: t('options_tabs_firewall') },
+  { id: 'mcp', icon: FiTool, label: t('options_tabs_mcp' as never) },
   { id: 'help', icon: FiHelpCircle, label: t('options_tabs_help') },
 ];
 
@@ -49,6 +51,8 @@ const Options = () => {
         return <ModelSettings isDarkMode={isDarkMode} />;
       case 'firewall':
         return <FirewallSettings isDarkMode={isDarkMode} />;
+      case 'mcp':
+        return <McpToolsSettings isDarkMode={isDarkMode} />;
       default:
         return null;
     }

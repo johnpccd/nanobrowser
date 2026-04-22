@@ -1,0 +1,423 @@
+import { useEffect, useMemo, useState } from 'react';
+import {
+  DEFAULT_MCP_TOOLS_SETTINGS,
+  mcpToolsSettingsStore,
+  type McpAuthType,
+  type McpServerConfig,
+  type McpToolAccessMode,
+  type McpToolsSettingsConfig,
+  type McpTransport,
+} from '@extension/storage/lib/settings/mcpTools';
+import { t } from '@extension/i18n';
+
+interface McpToolsSettingsProps {
+  isDarkMode?: boolean;
+}
+
+const EMPTY_SERVER_DRAFT: McpServerConfig = {
+  id: '',
+  name: '',
+  enabled: true,
+  transport: 'streamable_http',
+  endpoint: '',
+  sseMessageEndpoint: '',
+  authType: 'none',
+  authToken: '',
+  toolAccessMode: 'all',
+  allowedTools: [],
+};
+
+function parseAllowedTools(value: string): string[] {
+  return Array.from(
+    new Set(
+      value
+        .split(',')
+        .map(item => item.trim())
+        .filter(Boolean),
+    ),
+  );
+}
+
+function toAllowedToolsInput(tools: string[]): string {
+  return tools.join(', ');
+}
+
+function createServerId(name: string): string {
+  const normalized = name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-');
+  const uniqueSuffix = Math.random().toString(36).slice(2, 8);
+  return `${normalized || 'mcp-server'}-${uniqueSuffix}`;
+}
+
+export const McpToolsSettings = ({ isDarkMode = false }: McpToolsSettingsProps) => {
+  const tr = (key: string) => t(key as never);
+  const [settings, setSettings] = useState<McpToolsSettingsConfig>(DEFAULT_MCP_TOOLS_SETTINGS);
+  const [draft, setDraft] = useState<McpServerConfig>(EMPTY_SERVER_DRAFT);
+  const [allowedToolsInput, setAllowedToolsInput] = useState('');
+  const [editingServerId, setEditingServerId] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState('');
+  const [discoveringServerId, setDiscoveringServerId] = useState<string | null>(null);
+
+  const activeServers = useMemo(() => settings.servers, [settings.servers]);
+
+  useEffect(() => {
+    mcpToolsSettingsStore.getSettings().then(setSettings);
+  }, []);
+
+  const saveSettings = async (next: McpToolsSettingsConfig) => {
+    await mcpToolsSettingsStore.updateSettings(next);
+    const latest = await mcpToolsSettingsStore.getSettings();
+    setSettings(latest);
+  };
+
+  const validateDraft = (candidate: McpServerConfig): string => {
+    if (!candidate.name.trim()) {
+      return tr('options_mcp_errors_nameRequired');
+    }
+    if (!candidate.endpoint.trim()) {
+      return tr('options_mcp_errors_endpointRequired');
+    }
+    try {
+      const endpointUrl = new URL(candidate.endpoint);
+      if (!['http:', 'https:'].includes(endpointUrl.protocol)) {
+        return tr('options_mcp_errors_endpointProtocol');
+      }
+    } catch {
+      return tr('options_mcp_errors_endpointInvalid');
+    }
+    if (candidate.transport === 'sse' && candidate.sseMessageEndpoint?.trim()) {
+      try {
+        const messageUrl = new URL(candidate.sseMessageEndpoint);
+        if (!['http:', 'https:'].includes(messageUrl.protocol)) {
+          return tr('options_mcp_errors_sseMessageProtocol');
+        }
+      } catch {
+        return tr('options_mcp_errors_sseMessageInvalid');
+      }
+    }
+    if (candidate.authType === 'bearer' && !candidate.authToken.trim()) {
+      return tr('options_mcp_errors_tokenRequired');
+    }
+    if (candidate.toolAccessMode === 'allowlist' && candidate.allowedTools.length === 0) {
+      return tr('options_mcp_errors_allowlistRequired');
+    }
+    return '';
+  };
+
+  const handleGlobalEnabledChange = async (enabled: boolean) => {
+    await saveSettings({ ...settings, enabled });
+  };
+
+  const resetDraft = () => {
+    setDraft(EMPTY_SERVER_DRAFT);
+    setAllowedToolsInput('');
+    setEditingServerId(null);
+    setValidationError('');
+  };
+
+  const beginEdit = (server: McpServerConfig) => {
+    setDraft(server);
+    setAllowedToolsInput(toAllowedToolsInput(server.allowedTools));
+    setEditingServerId(server.id);
+    setValidationError('');
+  };
+
+  const submitDraft = async () => {
+    const candidate: McpServerConfig = {
+      ...draft,
+      id: editingServerId || createServerId(draft.name),
+      allowedTools: parseAllowedTools(allowedToolsInput),
+    };
+    const error = validateDraft(candidate);
+    if (error) {
+      setValidationError(error);
+      return;
+    }
+    await mcpToolsSettingsStore.upsertServer(candidate);
+    const latest = await mcpToolsSettingsStore.getSettings();
+    setSettings(latest);
+    resetDraft();
+  };
+
+  const removeServer = async (serverId: string) => {
+    await mcpToolsSettingsStore.removeServer(serverId);
+    const latest = await mcpToolsSettingsStore.getSettings();
+    setSettings(latest);
+    if (editingServerId === serverId) {
+      resetDraft();
+    }
+  };
+
+  const discoverTools = async (server: McpServerConfig) => {
+    setDiscoveringServerId(server.id);
+    setValidationError('');
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: 'mcp_discover_tools',
+        server,
+      });
+      if (!response?.ok) {
+        setValidationError(response?.error || tr('options_mcp_errors_discoveryFailed'));
+        return;
+      }
+      const discoveredTools = Array.isArray(response.tools) ? response.tools.map((name: unknown) => String(name)) : [];
+      if (discoveredTools.length === 0) {
+        setValidationError(tr('options_mcp_errors_discoveryEmpty'));
+        return;
+      }
+      const nextAllowedTools =
+        server.toolAccessMode === 'allowlist' ? Array.from(new Set([...server.allowedTools, ...discoveredTools])) : [];
+      await mcpToolsSettingsStore.upsertServer({
+        ...server,
+        allowedTools: nextAllowedTools,
+      });
+      const latest = await mcpToolsSettingsStore.getSettings();
+      setSettings(latest);
+      if (editingServerId === server.id && server.toolAccessMode === 'allowlist') {
+        setAllowedToolsInput(toAllowedToolsInput(nextAllowedTools));
+      }
+    } catch (error) {
+      setValidationError(error instanceof Error ? error.message : tr('options_mcp_errors_discoveryFailed'));
+    } finally {
+      setDiscoveringServerId(null);
+    }
+  };
+
+  const toggleServerEnabled = async (server: McpServerConfig, enabled: boolean) => {
+    await mcpToolsSettingsStore.upsertServer({ ...server, enabled });
+    const latest = await mcpToolsSettingsStore.getSettings();
+    setSettings(latest);
+  };
+
+  return (
+    <section className="space-y-6">
+      <div
+        className={`rounded-lg border ${isDarkMode ? 'border-slate-700 bg-slate-800' : 'border-blue-100 bg-white'} p-6 text-left shadow-sm`}>
+        <h2 className={`mb-1 text-left text-xl font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+          {tr('options_mcp_header')}
+        </h2>
+        <p className={`mb-6 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{tr('options_mcp_desc')}</p>
+
+        <div className="mb-6 flex items-center justify-between rounded-lg border border-dashed border-sky-300 p-4">
+          <div>
+            <h3 className={`text-base font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+              {tr('options_mcp_enable')}
+            </h3>
+            <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              {tr('options_mcp_enable_desc')}
+            </p>
+          </div>
+          <div className="relative inline-flex cursor-pointer items-center">
+            <input
+              id="mcpEnabled"
+              type="checkbox"
+              checked={settings.enabled}
+              onChange={e => handleGlobalEnabledChange(e.target.checked)}
+              className="peer sr-only"
+            />
+            <label
+              htmlFor="mcpEnabled"
+              className={`peer h-6 w-11 rounded-full ${isDarkMode ? 'bg-slate-600' : 'bg-gray-200'} after:absolute after:left-[2px] after:top-[2px] after:size-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300`}
+            />
+          </div>
+        </div>
+
+        <div className={`space-y-4 rounded-lg border ${isDarkMode ? 'border-slate-700' : 'border-gray-200'} p-4`}>
+          <h3 className={`text-base font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+            {editingServerId ? tr('options_mcp_editServer') : tr('options_mcp_addServer')}
+          </h3>
+
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <input
+              type="text"
+              value={draft.name}
+              onChange={e => setDraft(prev => ({ ...prev, name: e.target.value }))}
+              placeholder={tr('options_mcp_name_placeholder')}
+              className={`rounded-md border px-3 py-2 text-sm ${
+                isDarkMode ? 'border-slate-600 bg-slate-700 text-gray-200' : 'border-gray-300 bg-white text-gray-700'
+              }`}
+            />
+            <select
+              value={draft.transport}
+              onChange={e => setDraft(prev => ({ ...prev, transport: e.target.value as McpTransport }))}
+              className={`rounded-md border px-3 py-2 text-sm ${
+                isDarkMode ? 'border-slate-600 bg-slate-700 text-gray-200' : 'border-gray-300 bg-white text-gray-700'
+              }`}>
+              <option value="streamable_http">{tr('options_mcp_transport_streamableHttp')}</option>
+              <option value="sse">{tr('options_mcp_transport_sse')}</option>
+            </select>
+            <input
+              type="url"
+              value={draft.endpoint}
+              onChange={e => setDraft(prev => ({ ...prev, endpoint: e.target.value }))}
+              placeholder={tr('options_mcp_endpoint_placeholder')}
+              className={`rounded-md border px-3 py-2 text-sm ${
+                isDarkMode ? 'border-slate-600 bg-slate-700 text-gray-200' : 'border-gray-300 bg-white text-gray-700'
+              } md:col-span-2`}
+            />
+            {draft.transport === 'sse' && (
+              <input
+                type="url"
+                value={draft.sseMessageEndpoint ?? ''}
+                onChange={e => setDraft(prev => ({ ...prev, sseMessageEndpoint: e.target.value }))}
+                placeholder={tr('options_mcp_sseMessageEndpoint_placeholder')}
+                className={`rounded-md border px-3 py-2 text-sm ${
+                  isDarkMode ? 'border-slate-600 bg-slate-700 text-gray-200' : 'border-gray-300 bg-white text-gray-700'
+                } md:col-span-2`}
+              />
+            )}
+            <select
+              value={draft.authType}
+              onChange={e => setDraft(prev => ({ ...prev, authType: e.target.value as McpAuthType }))}
+              className={`rounded-md border px-3 py-2 text-sm ${
+                isDarkMode ? 'border-slate-600 bg-slate-700 text-gray-200' : 'border-gray-300 bg-white text-gray-700'
+              }`}>
+              <option value="none">{tr('options_mcp_auth_none')}</option>
+              <option value="bearer">{tr('options_mcp_auth_bearer')}</option>
+            </select>
+            <input
+              type="password"
+              value={draft.authToken}
+              onChange={e => setDraft(prev => ({ ...prev, authToken: e.target.value }))}
+              placeholder={tr('options_mcp_authToken_placeholder')}
+              disabled={draft.authType !== 'bearer'}
+              className={`rounded-md border px-3 py-2 text-sm ${
+                isDarkMode ? 'border-slate-600 bg-slate-700 text-gray-200' : 'border-gray-300 bg-white text-gray-700'
+              } disabled:opacity-50`}
+            />
+            <select
+              value={draft.toolAccessMode}
+              onChange={e => setDraft(prev => ({ ...prev, toolAccessMode: e.target.value as McpToolAccessMode }))}
+              className={`rounded-md border px-3 py-2 text-sm ${
+                isDarkMode ? 'border-slate-600 bg-slate-700 text-gray-200' : 'border-gray-300 bg-white text-gray-700'
+              }`}>
+              <option value="all">{tr('options_mcp_access_all')}</option>
+              <option value="allowlist">{tr('options_mcp_access_allowlist')}</option>
+            </select>
+            <input
+              type="text"
+              value={allowedToolsInput}
+              onChange={e => setAllowedToolsInput(e.target.value)}
+              disabled={draft.toolAccessMode !== 'allowlist'}
+              placeholder={tr('options_mcp_allowedTools_placeholder')}
+              className={`rounded-md border px-3 py-2 text-sm ${
+                isDarkMode ? 'border-slate-600 bg-slate-700 text-gray-200' : 'border-gray-300 bg-white text-gray-700'
+              } disabled:opacity-50`}
+            />
+          </div>
+
+          {validationError && (
+            <p className={`text-sm ${isDarkMode ? 'text-rose-300' : 'text-rose-600'}`}>{validationError}</p>
+          )}
+
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={submitDraft}
+              className={`rounded-md px-4 py-2 text-sm font-medium ${
+                isDarkMode ? 'bg-sky-600 text-white hover:bg-sky-500' : 'bg-sky-500 text-white hover:bg-sky-600'
+              }`}>
+              {editingServerId ? tr('options_mcp_saveChanges') : tr('options_mcp_addButton')}
+            </button>
+            {editingServerId && (
+              <button
+                type="button"
+                onClick={resetDraft}
+                className={`rounded-md px-4 py-2 text-sm font-medium ${
+                  isDarkMode
+                    ? 'bg-slate-700 text-gray-200 hover:bg-slate-600'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}>
+                {tr('options_mcp_cancelEdit')}
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-6 space-y-3">
+          <h3 className={`text-base font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+            {tr('options_mcp_servers')}
+          </h3>
+          {activeServers.length === 0 ? (
+            <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{tr('options_mcp_empty')}</p>
+          ) : (
+            activeServers.map(server => (
+              <div
+                key={server.id}
+                className={`rounded-md border p-3 ${isDarkMode ? 'border-slate-600 bg-slate-700/40' : 'border-gray-200 bg-gray-50'}`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className={`text-sm font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                      {server.name}
+                    </p>
+                    <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{server.endpoint}</p>
+                    <p className={`mt-1 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      {server.transport === 'streamable_http'
+                        ? tr('options_mcp_transport_streamableHttp')
+                        : tr('options_mcp_transport_sse')}
+                      {' • '}
+                      {server.toolAccessMode === 'all'
+                        ? tr('options_mcp_access_all')
+                        : tr('options_mcp_access_allowlist')}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                      <input
+                        type="checkbox"
+                        className="mr-1"
+                        checked={server.enabled}
+                        onChange={e => toggleServerEnabled(server, e.target.checked)}
+                      />
+                      <span>{tr('options_mcp_serverEnabled')}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => beginEdit(server)}
+                      className={`rounded px-2 py-1 text-xs ${
+                        isDarkMode
+                          ? 'bg-slate-600 text-gray-100 hover:bg-slate-500'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}>
+                      {tr('options_mcp_edit')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => discoverTools(server)}
+                      disabled={discoveringServerId === server.id}
+                      className={`rounded px-2 py-1 text-xs ${
+                        isDarkMode
+                          ? 'bg-sky-700 text-sky-100 hover:bg-sky-600'
+                          : 'bg-sky-100 text-sky-700 hover:bg-sky-200'
+                      } disabled:cursor-not-allowed disabled:opacity-60`}>
+                      {discoveringServerId === server.id
+                        ? tr('options_mcp_discovering')
+                        : tr('options_mcp_discoverTools')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeServer(server.id)}
+                      className={`rounded px-2 py-1 text-xs ${
+                        isDarkMode
+                          ? 'bg-rose-700 text-rose-100 hover:bg-rose-600'
+                          : 'bg-rose-100 text-rose-700 hover:bg-rose-200'
+                      }`}>
+                      {tr('options_mcp_remove')}
+                    </button>
+                  </div>
+                </div>
+                {server.toolAccessMode === 'allowlist' && server.allowedTools.length > 0 && (
+                  <p className={`mt-2 text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                    {tr('options_mcp_allowedTools_label')}: {server.allowedTools.join(', ')}
+                  </p>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </section>
+  );
+};

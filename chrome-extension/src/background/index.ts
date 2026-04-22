@@ -7,6 +7,7 @@ import {
   llmProviderStore,
   chatHistoryStore,
 } from '@extension/storage';
+import { mcpToolsSettingsStore, type McpServerConfig } from '@extension/storage/lib/settings/mcpTools';
 import { t } from '@extension/i18n';
 import BrowserContext from './browser/context';
 import { Executor } from './agent/executor';
@@ -23,6 +24,7 @@ import { Actors } from '@extension/storage/lib/chat/types';
 import { DynamicStructuredTool } from '@langchain/core/tools';
 import { z } from 'zod';
 import { readUrlWithJina } from './services/jinaReader';
+import { discoverMcpTools, executeMcpTool } from './services/mcpClient';
 
 const logger = createLogger('background');
 
@@ -40,6 +42,18 @@ const tabConnections = new Map<number, TabConnection>();
 
 const SIDE_PANEL_URL = chrome.runtime.getURL('side-panel/index.html');
 const MAX_QA_TOOL_CALLS = 3;
+const MAX_TOOL_EVENT_DETAIL_CHARS = 6000;
+
+function truncateToolDetail(value: string): string {
+  if (value.length <= MAX_TOOL_EVENT_DETAIL_CHARS) {
+    return value;
+  }
+  return `${value.slice(0, MAX_TOOL_EVENT_DETAIL_CHARS)}\n\n[truncated]`;
+}
+
+function normalizeMcpToolName(serverId: string, toolName: string): string {
+  return `mcp__${encodeURIComponent(serverId)}__${encodeURIComponent(toolName)}`;
+}
 
 function emitQAToolEvent(
   port: chrome.runtime.Port | undefined,
@@ -175,6 +189,30 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         sendResponse({
           ok: false,
           error: error instanceof Error ? error.message : 'Unknown SearXNG test failure',
+        });
+      }
+    })();
+
+    return true;
+  }
+
+  if (message?.type === 'mcp_discover_tools') {
+    (async () => {
+      try {
+        const server = message.server as McpServerConfig | undefined;
+        if (!server) {
+          sendResponse({ ok: false, error: 'No MCP server config provided.' });
+          return;
+        }
+        const tools = await discoverMcpTools(server);
+        sendResponse({
+          ok: true,
+          tools: tools.map(tool => tool.name),
+        });
+      } catch (error) {
+        sendResponse({
+          ok: false,
+          error: error instanceof Error ? error.message : 'MCP tool discovery failed.',
         });
       }
     })();
@@ -495,6 +533,7 @@ chrome.runtime.onConnect.addListener(port => {
 
                 // 3. Create LLM instance
                 const qaLLM = createChatModel(provider, qaModel);
+                const mcpSettings = await mcpToolsSettingsStore.getSettings();
                 const webSearchTool = new DynamicStructuredTool({
                   name: 'web_search',
                   description:
@@ -623,14 +662,97 @@ chrome.runtime.onConnect.addListener(port => {
                     }
                   },
                 });
+                const enabledMcpServers = mcpSettings.enabled
+                  ? mcpSettings.servers.filter(server => server.enabled && server.endpoint)
+                  : [];
+                const mcpToolsByName = new Map<
+                  string,
+                  {
+                    server: McpServerConfig;
+                    toolName: string;
+                  }
+                >();
+                const mcpDynamicTools: DynamicStructuredTool[] = [];
+
+                for (const server of enabledMcpServers) {
+                  try {
+                    const discoveredTools = await discoverMcpTools(server, {
+                      signal: abortController.signal,
+                    });
+                    for (const tool of discoveredTools) {
+                      if (!tool.name) {
+                        continue;
+                      }
+                      if (server.toolAccessMode === 'allowlist' && !server.allowedTools.includes(tool.name)) {
+                        continue;
+                      }
+                      const normalizedToolName = normalizeMcpToolName(server.id, tool.name);
+                      mcpToolsByName.set(normalizedToolName, {
+                        server,
+                        toolName: tool.name,
+                      });
+                      mcpDynamicTools.push(
+                        new DynamicStructuredTool({
+                          name: normalizedToolName,
+                          description:
+                            tool.description ||
+                            `Call MCP tool ${tool.name} on server ${server.name}. Use only for tasks requiring remote MCP capabilities.`,
+                          schema: z.record(z.unknown()),
+                          func: async args => {
+                            const safeArgs = (args || {}) as Record<string, unknown>;
+                            emitQAToolEvent(streamTabConn?.port, {
+                              sessionId,
+                              tabId,
+                              toolName: `mcp:${server.name}/${tool.name}`,
+                              kind: 'call',
+                              summary: `Calling MCP tool ${tool.name} on ${server.name}`,
+                              detail: truncateToolDetail(`Arguments: ${JSON.stringify(safeArgs, null, 2)}`),
+                              status: 'pending',
+                            });
+                            try {
+                              const result = await executeMcpTool(server, {
+                                toolName: tool.name,
+                                argumentsInput: safeArgs,
+                                signal: abortController.signal,
+                              });
+                              emitQAToolEvent(streamTabConn?.port, {
+                                sessionId,
+                                tabId,
+                                toolName: `mcp:${server.name}/${tool.name}`,
+                                kind: 'result',
+                                summary: 'MCP tool call succeeded',
+                                detail: truncateToolDetail(result.content),
+                                status: 'success',
+                              });
+                              return result.content;
+                            } catch (mcpError) {
+                              const errorMessage = mcpError instanceof Error ? mcpError.message : String(mcpError);
+                              emitQAToolEvent(streamTabConn?.port, {
+                                sessionId,
+                                tabId,
+                                toolName: `mcp:${server.name}/${tool.name}`,
+                                kind: 'result',
+                                summary: 'MCP tool call failed',
+                                detail: truncateToolDetail(errorMessage),
+                                status: 'error',
+                              });
+                              return `MCP tool call failed: ${errorMessage}`;
+                            }
+                          },
+                        }),
+                      );
+                    }
+                  } catch (error) {
+                    logger.warning('Failed to discover MCP tools', server.name, error);
+                  }
+                }
                 const qaLLMWithTools =
-                  enableWebSearch &&
-                  generalSettings.searxngBaseUrl &&
                   typeof (qaLLM as BaseChatModel & { bindTools?: (tools: unknown[]) => BaseChatModel }).bindTools ===
-                    'function'
+                    'function' &&
+                  ((enableWebSearch && generalSettings.searxngBaseUrl) || mcpDynamicTools.length > 0)
                     ? (qaLLM as BaseChatModel & { bindTools: (tools: unknown[]) => BaseChatModel }).bindTools([
-                        webSearchTool,
-                        fetchUrlTool,
+                        ...(enableWebSearch && generalSettings.searxngBaseUrl ? [webSearchTool, fetchUrlTool] : []),
+                        ...mcpDynamicTools,
                       ])
                     : null;
 
@@ -649,8 +771,9 @@ chrome.runtime.onConnect.addListener(port => {
                 }
 
                 if (qaLLMWithTools) {
-                  systemSections.push(
-                    [
+                  const promptHints: string[] = [];
+                  if (enableWebSearch && generalSettings.searxngBaseUrl) {
+                    promptHints.push(
                       'Web search is available as the `web_search` tool.',
                       'Readable page fetch is available as the `fetch_url` tool.',
                       'You decide whether to use it and what query to send.',
@@ -660,11 +783,19 @@ chrome.runtime.onConnect.addListener(port => {
                       `Use at most ${MAX_QA_TOOL_CALLS} web_search calls in one answer.`,
                       `Use at most ${MAX_QA_TOOL_CALLS} fetch_url calls in one answer.`,
                       'Cite URLs from search results when relying on them.',
-                    ].join(' '),
-                  );
-                } else if (enableWebSearch && generalSettings.searxngBaseUrl) {
+                    );
+                  }
+                  if (mcpDynamicTools.length > 0) {
+                    promptHints.push(
+                      'MCP tools are available as tool names prefixed with `mcp__`.',
+                      'Use MCP tools only when they are directly helpful to answer the user request.',
+                      `Use at most ${MAX_QA_TOOL_CALLS} MCP tool calls in one answer.`,
+                    );
+                  }
+                  systemSections.push(promptHints.join(' '));
+                } else if ((enableWebSearch && generalSettings.searxngBaseUrl) || mcpDynamicTools.length > 0) {
                   systemSections.push(
-                    'Web search is enabled, but this QA model does not support tool calling in this path. Do not claim to have searched the web unless you actually have.',
+                    'External tools are enabled, but this QA model does not support tool calling in this path. Do not claim to have used tools unless you actually have.',
                   );
                 }
 
@@ -764,7 +895,10 @@ chrome.runtime.onConnect.addListener(port => {
                       const toolCallId =
                         'id' in toolCall && typeof toolCall.id === 'string' ? toolCall.id : `tool-${Date.now()}`;
 
-                      if (toolName !== 'web_search' && toolName !== 'fetch_url') {
+                      const isBuiltInTool = toolName === 'web_search' || toolName === 'fetch_url';
+                      const mcpToolMeta = mcpToolsByName.get(toolName);
+
+                      if (!isBuiltInTool && !mcpToolMeta) {
                         toolConversationMessages.push(
                           new ToolMessage({
                             tool_call_id: toolCallId,
@@ -775,19 +909,62 @@ chrome.runtime.onConnect.addListener(port => {
                         continue;
                       }
 
-                      const toolResult =
-                        toolName === 'web_search'
-                          ? await webSearchTool.func({
-                              query: String(toolArgs.query || ''),
-                            })
-                          : await fetchUrlTool.func({
-                              url: String(toolArgs.url || ''),
-                            });
+                      let toolResult: string;
+                      if (isBuiltInTool) {
+                        toolResult =
+                          toolName === 'web_search'
+                            ? await webSearchTool.func({
+                                query: String(toolArgs.query || ''),
+                              })
+                            : await fetchUrlTool.func({
+                                url: String(toolArgs.url || ''),
+                              });
+                      } else {
+                        const prettyToolName = `mcp:${mcpToolMeta!.server.name}/${mcpToolMeta!.toolName}`;
+                        emitQAToolEvent(streamTabConn?.port, {
+                          sessionId,
+                          tabId,
+                          toolName: prettyToolName,
+                          kind: 'call',
+                          summary: `Calling MCP tool ${mcpToolMeta!.toolName} on ${mcpToolMeta!.server.name}`,
+                          detail: truncateToolDetail(`Arguments: ${JSON.stringify(toolArgs, null, 2)}`),
+                          status: 'pending',
+                        });
+                        try {
+                          const mcpResult = await executeMcpTool(mcpToolMeta!.server, {
+                            toolName: mcpToolMeta!.toolName,
+                            argumentsInput: toolArgs,
+                            signal: abortController.signal,
+                          });
+                          toolResult = mcpResult.content;
+                          emitQAToolEvent(streamTabConn?.port, {
+                            sessionId,
+                            tabId,
+                            toolName: prettyToolName,
+                            kind: 'result',
+                            summary: 'MCP tool call succeeded',
+                            detail: truncateToolDetail(mcpResult.content),
+                            status: 'success',
+                          });
+                        } catch (mcpError) {
+                          const errorMessage = mcpError instanceof Error ? mcpError.message : String(mcpError);
+                          emitQAToolEvent(streamTabConn?.port, {
+                            sessionId,
+                            tabId,
+                            toolName: prettyToolName,
+                            kind: 'result',
+                            summary: 'MCP tool call failed',
+                            detail: truncateToolDetail(errorMessage),
+                            status: 'error',
+                          });
+                          toolResult = `MCP tool call failed: ${errorMessage}`;
+                        }
+                      }
 
                       toolConversationMessages.push(
                         new ToolMessage({
                           tool_call_id: toolCallId,
-                          content: typeof toolResult === 'string' ? toolResult : JSON.stringify(toolResult),
+                          content: toolResult,
                         }),
                       );
                       toolCallCount += 1;
@@ -795,7 +972,7 @@ chrome.runtime.onConnect.addListener(port => {
                   }
 
                   if (directAnswerText.trim()) {
-                    const chunks = directAnswerText.match(/.{1,120}/gs) ?? [directAnswerText];
+                    const chunks = directAnswerText.match(/[\s\S]{1,120}/g) ?? [directAnswerText];
                     for (const content of chunks) {
                       if (streamTabConn?.port && !abortController.signal.aborted) {
                         streamTabConn.port.postMessage({
