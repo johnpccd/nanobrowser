@@ -196,6 +196,21 @@
   "chat_imageCapture_fullImage": {
     "message": "全尺寸截圖"
   },
+  "chat_pageContent_toggle": {
+    "message": "切換頁面內容"
+  },
+  "chat_pageContent_enabled": {
+    "message": "已包含頁面內容"
+  },
+  "chat_pageContent_disabled": {
+    "message": "一般聊天模式"
+  },
+  "chat_pageContent_tooltip_enabled": {
+    "message": "按一下以停用頁面內容，回覆將為不含頁面情境的一般 LLM 聊天"
+  },
+  "chat_pageContent_tooltip_disabled": {
+    "message": "按一下以啟用頁面內容，回覆將依目前頁面為準"
+  },
   "permissions_microphone_title": {
     "message": "啟用語音輸入"
   },
@@ -295,6 +310,12 @@
   "options_general_replayHistoricalTasks_desc": {
     "message": "啟用儲存與重播代理程式的步驟歷史紀錄 (此為實驗性功能，可能存在問題)"
   },
+  "options_general_includePageContent": {
+    "message": "在 QA 模式中包含頁面內容"
+  },
+  "options_general_includePageContent_desc": {
+    "message": "啟用時，QA 查詢會附上頁面內容以便情境式回答。關閉則為一般 LLM 聊天。"
+  },
   "options_general_fontSize": {
     "message": "聊天字體大小"
   },
@@ -306,6 +327,108 @@
   },
   "options_general_maxInputTokens_desc": {
     "message": "聊天歷史記錄中允許的最大 token 數。超過此限制時，較舊的訊息將被截斷。預設值：1,000,000 tokens。"
+  },
+  "options_qa_appearance_header": {
+    "message": "QA 模式外觀"
+  },
+  "options_qa_appearance_description": {
+    "message": "自訂選擇 QA 模式時側邊欄的字型與顏色。留空顏色則沿用預設亮/暗主題。變更在回到側邊欄後生效。"
+  },
+  "options_qa_fontFamily": {
+    "message": "字型家族"
+  },
+  "options_qa_fontFamily_desc": {
+    "message": "QA 聊天面板的 CSS 字型堆疊（例如 system-ui 或 \"Inter\", sans-serif）。留空則使用預設。"
+  },
+  "options_qa_chromeFontSize": {
+    "message": "介面字體大小"
+  },
+  "options_qa_chromeFontSize_desc": {
+    "message": "書籤、標籤與工具列的字體大小（像素，10–22）。0 表示 13px。"
+  },
+  "options_qa_inputFontSize": {
+    "message": "輸入框字體大小"
+  },
+  "options_qa_inputFontSize_desc": {
+    "message": "訊息輸入框字體大小（像素，10–28）。0 則與聊天訊息相同。"
+  },
+  "options_qa_reset": {
+    "message": "重設 QA 外觀"
+  },
+  "options_qa_reset_desc": {
+    "message": "清除 QA 模式的自訂字型與顏色。"
+  },
+  "options_qa_color_panel": {
+    "message": "面板背景"
+  },
+  "options_qa_color_panel_desc": {
+    "message": "最外層側邊欄背景（取代預設桌布或深色填色）。"
+  },
+  "options_qa_color_chat": {
+    "message": "聊天區背景"
+  },
+  "options_qa_color_chat_desc": {
+    "message": "訊息列表後方的背景。"
+  },
+  "options_qa_color_message": {
+    "message": "訊息文字"
+  },
+  "options_qa_color_message_desc": {
+    "message": "聊天內容的主要文字顏色。"
+  },
+  "options_qa_color_heading": {
+    "message": "角色／標題文字"
+  },
+  "options_qa_color_heading_desc": {
+    "message": "發話者名稱與區塊標題顏色。"
+  },
+  "options_qa_color_muted": {
+    "message": "次要文字"
+  },
+  "options_qa_color_muted_desc": {
+    "message": "時間戳與提示文字。"
+  },
+  "options_qa_color_link": {
+    "message": "連結"
+  },
+  "options_qa_color_link_desc": {
+    "message": "助理訊息中連結的顏色。"
+  },
+  "options_qa_color_separator": {
+    "message": "分隔線與邊框"
+  },
+  "options_qa_color_separator_desc": {
+    "message": "訊息分隔線與書籤卡片邊框。"
+  },
+  "options_qa_color_inputSurface": {
+    "message": "輸入區背景"
+  },
+  "options_qa_color_inputSurface_desc": {
+    "message": "撰寫訊息與附件列的背景。"
+  },
+  "options_qa_color_inputBorder": {
+    "message": "輸入框外框"
+  },
+  "options_qa_color_inputBorder_desc": {
+    "message": "撰寫區外框顏色。"
+  },
+  "options_qa_color_inputText": {
+    "message": "輸入文字"
+  },
+  "options_qa_color_inputText_desc": {
+    "message": "輸入訊息時的文字顏色。"
+  },
+  "options_qa_color_accent": {
+    "message": "強調色"
+  },
+  "options_qa_color_accent_desc": {
+    "message": "串流游標、等候動畫等強調。"
+  },
+  "options_qa_colors_section": {
+    "message": "顏色"
+  },
+  "options_qa_color_clear": {
+    "message": "清除"
   },
   "options_prompts_header": {
     "message": "快速開始提示"

@@ -2,6 +2,8 @@ export * from './types';
 export * from './llmProviders';
 export * from './agentModels';
 export * from './generalSettings';
+export * from './qaAppearanceUtils';
+export * from './qaAppearance';
 export * from './firewall';
 export * from './speechToText';
 export * from './analyticsSettings';

@@ -1,4 +1,4 @@
-import type { Message } from '@extension/storage';
+import type { Message, ResolvedQaUiTheme } from '@extension/storage';
 import { ACTOR_PROFILES } from '../types/message';
 import { memo, useState, useCallback } from 'react';
 import { t } from '@extension/i18n';
@@ -13,6 +13,7 @@ interface MessageListProps {
   streamingContent?: string;
   isWaitingForResponse?: boolean;
   fontSize?: number;
+  qaUiTheme?: ResolvedQaUiTheme | null;
 }
 
 export default memo(function MessageList({
@@ -21,6 +22,7 @@ export default memo(function MessageList({
   streamingContent,
   isWaitingForResponse = false,
   fontSize = 14,
+  qaUiTheme = null,
 }: MessageListProps) {
   // Check if last message is from SYSTEM actor for streaming continuation
   const lastMessage = messages[messages.length - 1];
@@ -35,11 +37,17 @@ export default memo(function MessageList({
           isSameActor={index > 0 ? messages[index - 1].actor === message.actor : false}
           isDarkMode={isDarkMode}
           fontSize={fontSize}
+          qaUiTheme={qaUiTheme}
         />
       ))}
       {/* Render waiting indicator while waiting for first response chunk */}
       {isWaitingForResponse && (!streamingContent || streamingContent.trim() === '') && (
-        <WaitingMessageBlock isDarkMode={isDarkMode} isSameActor={lastWasSystem} fontSize={fontSize} />
+        <WaitingMessageBlock
+          isDarkMode={isDarkMode}
+          isSameActor={lastWasSystem}
+          fontSize={fontSize}
+          qaUiTheme={qaUiTheme}
+        />
       )}
       {/* Render streaming content as a separate block */}
       {streamingContent && streamingContent.trim() !== '' && (
@@ -48,6 +56,7 @@ export default memo(function MessageList({
           isDarkMode={isDarkMode}
           isSameActor={lastWasSystem}
           fontSize={fontSize}
+          qaUiTheme={qaUiTheme}
         />
       )}
     </div>
@@ -59,9 +68,16 @@ interface MessageBlockProps {
   isSameActor: boolean;
   isDarkMode?: boolean;
   fontSize?: number;
+  qaUiTheme?: ResolvedQaUiTheme | null;
 }
 
-function MessageBlock({ message, isSameActor, isDarkMode = false, fontSize = 14 }: MessageBlockProps) {
+function MessageBlock({
+  message,
+  isSameActor,
+  isDarkMode = false,
+  fontSize = 14,
+  qaUiTheme = null,
+}: MessageBlockProps) {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
   const handleImageClick = useCallback(() => {
@@ -84,9 +100,12 @@ function MessageBlock({ message, isSameActor, isDarkMode = false, fontSize = 14 
       <div
         className={`flex max-w-full gap-3 ${
           !isSameActor
-            ? `mt-4 border-t ${isDarkMode ? 'border-sky-800/50' : 'border-sky-200/50'} pt-4 first:mt-0 first:border-t-0 first:pt-0`
+            ? `mt-4 border-t pt-4 first:mt-0 first:border-t-0 first:pt-0 ${
+                qaUiTheme?.separatorColor ? '' : isDarkMode ? 'border-sky-800/50' : 'border-sky-200/50'
+              }`
             : ''
-        }`}>
+        }`}
+        style={!isSameActor && qaUiTheme?.separatorColor ? { borderTopColor: qaUiTheme.separatorColor } : undefined}>
         {!isSameActor && (
           <div
             className="flex size-8 shrink-0 items-center justify-center rounded-full"
@@ -98,7 +117,9 @@ function MessageBlock({ message, isSameActor, isDarkMode = false, fontSize = 14 
 
         <div className="min-w-0 flex-1">
           {!isSameActor && (
-            <div className={`mb-1 text-sm font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-900'}`}>
+            <div
+              className={`mb-1 text-sm font-semibold ${qaUiTheme?.headingText ? '' : isDarkMode ? 'text-gray-200' : 'text-gray-900'}`}
+              style={qaUiTheme?.headingText ? { color: qaUiTheme.headingText } : undefined}>
               {actor.name}
             </div>
           )}
@@ -129,11 +150,17 @@ function MessageBlock({ message, isSameActor, isDarkMode = false, fontSize = 14 
               <ToolEventBlock toolEvent={message.toolEvent} isDarkMode={isDarkMode} fontSize={fontSize} />
             ) : (
               <div
-                className={`break-words ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}
-                style={{ fontSize: `${fontSize}px` }}>
+                className={`break-words ${qaUiTheme?.messageText ? '' : isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}
+                style={{
+                  fontSize: `${fontSize}px`,
+                  ...(qaUiTheme?.messageText ? { color: qaUiTheme.messageText } : {}),
+                }}>
                 {isProgress ? (
                   <div className={`h-1 overflow-hidden rounded ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
-                    <div className="h-full animate-progress bg-blue-500" />
+                    <div
+                      className="h-full animate-progress bg-blue-500"
+                      style={qaUiTheme?.accentColor ? { backgroundColor: qaUiTheme.accentColor } : undefined}
+                    />
                   </div>
                 ) : (
                   <ReactMarkdown
@@ -166,7 +193,8 @@ function MessageBlock({ message, isSameActor, isDarkMode = false, fontSize = 14 
                             href={href}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-blue-500 hover:underline">
+                            className={qaUiTheme?.linkColor ? 'hover:underline' : 'text-blue-500 hover:underline'}
+                            style={qaUiTheme?.linkColor ? { color: qaUiTheme.linkColor } : undefined}>
                             {children}
                           </a>
                         );
@@ -197,7 +225,9 @@ function MessageBlock({ message, isSameActor, isDarkMode = false, fontSize = 14 
               </div>
             )}
             {!isProgress && (
-              <div className={`text-right text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-300'}`}>
+              <div
+                className={`text-right text-xs ${qaUiTheme?.mutedText ? '' : isDarkMode ? 'text-gray-500' : 'text-gray-300'}`}
+                style={qaUiTheme?.mutedText ? { color: qaUiTheme.mutedText } : undefined}>
                 {formatTimestamp(message.timestamp)}
               </div>
             )}
@@ -298,6 +328,7 @@ interface StreamingMessageBlockProps {
   isDarkMode?: boolean;
   isSameActor?: boolean;
   fontSize?: number;
+  qaUiTheme?: ResolvedQaUiTheme | null;
 }
 
 function StreamingMessageBlock({
@@ -305,6 +336,7 @@ function StreamingMessageBlock({
   isDarkMode = false,
   isSameActor = false,
   fontSize = 14,
+  qaUiTheme = null,
 }: StreamingMessageBlockProps) {
   const actor = ACTOR_PROFILES['system'];
 
@@ -312,9 +344,12 @@ function StreamingMessageBlock({
     <div
       className={`flex max-w-full gap-3 ${
         !isSameActor
-          ? `mt-4 border-t ${isDarkMode ? 'border-sky-800/50' : 'border-sky-200/50'} pt-4 first:mt-0 first:border-t-0 first:pt-0`
+          ? `mt-4 border-t pt-4 first:mt-0 first:border-t-0 first:pt-0 ${
+              qaUiTheme?.separatorColor ? '' : isDarkMode ? 'border-sky-800/50' : 'border-sky-200/50'
+            }`
           : ''
-      }`}>
+      }`}
+      style={!isSameActor && qaUiTheme?.separatorColor ? { borderTopColor: qaUiTheme.separatorColor } : undefined}>
       {!isSameActor && (
         <div
           className="flex size-8 shrink-0 items-center justify-center rounded-full"
@@ -326,15 +361,20 @@ function StreamingMessageBlock({
 
       <div className="min-w-0 flex-1">
         {!isSameActor && (
-          <div className={`mb-1 text-sm font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-900'}`}>
+          <div
+            className={`mb-1 text-sm font-semibold ${qaUiTheme?.headingText ? '' : isDarkMode ? 'text-gray-200' : 'text-gray-900'}`}
+            style={qaUiTheme?.headingText ? { color: qaUiTheme.headingText } : undefined}>
             {actor.name}
           </div>
         )}
 
         <div className="space-y-0.5">
           <div
-            className={`break-words ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}
-            style={{ fontSize: `${fontSize}px` }}>
+            className={`break-words ${qaUiTheme?.messageText ? '' : isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}
+            style={{
+              fontSize: `${fontSize}px`,
+              ...(qaUiTheme?.messageText ? { color: qaUiTheme.messageText } : {}),
+            }}>
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               rehypePlugins={[rehypeHighlight]}
@@ -357,7 +397,12 @@ function StreamingMessageBlock({
                 },
                 a({ href, children }) {
                   return (
-                    <a href={href} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={qaUiTheme?.linkColor ? 'hover:underline' : 'text-blue-500 hover:underline'}
+                      style={qaUiTheme?.linkColor ? { color: qaUiTheme.linkColor } : undefined}>
                       {children}
                     </a>
                   );
@@ -384,7 +429,10 @@ function StreamingMessageBlock({
               }}>
               {content}
             </ReactMarkdown>
-            <span className="inline-block w-2 h-4 ml-1 bg-blue-500 animate-pulse" />
+            <span
+              className="inline-block w-2 h-4 ml-1 bg-blue-500 animate-pulse"
+              style={qaUiTheme?.accentColor ? { backgroundColor: qaUiTheme.accentColor } : undefined}
+            />
           </div>
         </div>
       </div>
@@ -396,18 +444,27 @@ interface WaitingMessageBlockProps {
   isDarkMode?: boolean;
   isSameActor?: boolean;
   fontSize?: number;
+  qaUiTheme?: ResolvedQaUiTheme | null;
 }
 
-function WaitingMessageBlock({ isDarkMode = false, isSameActor = false, fontSize = 14 }: WaitingMessageBlockProps) {
+function WaitingMessageBlock({
+  isDarkMode = false,
+  isSameActor = false,
+  fontSize: _fontSize = 14,
+  qaUiTheme = null,
+}: WaitingMessageBlockProps) {
   const actor = ACTOR_PROFILES['system'];
 
   return (
     <div
       className={`flex max-w-full gap-3 ${
         !isSameActor
-          ? `mt-4 border-t ${isDarkMode ? 'border-sky-800/50' : 'border-sky-200/50'} pt-4 first:mt-0 first:border-t-0 first:pt-0`
+          ? `mt-4 border-t pt-4 first:mt-0 first:border-t-0 first:pt-0 ${
+              qaUiTheme?.separatorColor ? '' : isDarkMode ? 'border-sky-800/50' : 'border-sky-200/50'
+            }`
           : ''
-      }`}>
+      }`}
+      style={!isSameActor && qaUiTheme?.separatorColor ? { borderTopColor: qaUiTheme.separatorColor } : undefined}>
       {!isSameActor && (
         <div
           className="flex size-8 shrink-0 items-center justify-center rounded-full"
@@ -419,17 +476,39 @@ function WaitingMessageBlock({ isDarkMode = false, isSameActor = false, fontSize
 
       <div className="min-w-0 flex-1">
         {!isSameActor && (
-          <div className={`mb-1 text-sm font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-900'}`}>
+          <div
+            className={`mb-1 text-sm font-semibold ${qaUiTheme?.headingText ? '' : isDarkMode ? 'text-gray-200' : 'text-gray-900'}`}
+            style={qaUiTheme?.headingText ? { color: qaUiTheme.headingText } : undefined}>
             {actor.name}
           </div>
         )}
 
         <div className="space-y-0.5">
-          <div className={`flex items-center gap-2 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+          <div
+            className={`flex items-center gap-2 text-sm ${qaUiTheme?.mutedText ? '' : isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}
+            style={qaUiTheme?.mutedText ? { color: qaUiTheme.mutedText } : undefined}>
             <div className="flex gap-1">
-              <span className="size-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '0ms' }} />
-              <span className="size-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '150ms' }} />
-              <span className="size-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '300ms' }} />
+              <span
+                className="size-2 rounded-full bg-blue-500 animate-bounce"
+                style={{
+                  animationDelay: '0ms',
+                  ...(qaUiTheme?.accentColor ? { backgroundColor: qaUiTheme.accentColor } : {}),
+                }}
+              />
+              <span
+                className="size-2 rounded-full bg-blue-500 animate-bounce"
+                style={{
+                  animationDelay: '150ms',
+                  ...(qaUiTheme?.accentColor ? { backgroundColor: qaUiTheme.accentColor } : {}),
+                }}
+              />
+              <span
+                className="size-2 rounded-full bg-blue-500 animate-bounce"
+                style={{
+                  animationDelay: '300ms',
+                  ...(qaUiTheme?.accentColor ? { backgroundColor: qaUiTheme.accentColor } : {}),
+                }}
+              />
             </div>
             <span>Thinking...</span>
           </div>

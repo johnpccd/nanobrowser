@@ -328,6 +328,108 @@
   "options_general_maxInputTokens_desc": {
     "message": "Maximum number of tokens allowed in the chat history context. When exceeded, older messages are trimmed. Default: 1,000,000 tokens."
   },
+  "options_qa_appearance_header": {
+    "message": "QA mode appearance"
+  },
+  "options_qa_appearance_description": {
+    "message": "Customize fonts and colors for the side panel when QA mode is selected. Leave a color empty to use the default light/dark theme. Changes apply after you return to the side panel."
+  },
+  "options_qa_fontFamily": {
+    "message": "Font family"
+  },
+  "options_qa_fontFamily_desc": {
+    "message": "CSS font stack for the QA chat panel (e.g. system-ui or \"Inter\", sans-serif). Leave empty for the default."
+  },
+  "options_qa_chromeFontSize": {
+    "message": "UI font size"
+  },
+  "options_qa_chromeFontSize_desc": {
+    "message": "Font size in pixels for bookmarks, labels, and toolbar controls (10–22). 0 uses 13px."
+  },
+  "options_qa_inputFontSize": {
+    "message": "Input font size"
+  },
+  "options_qa_inputFontSize_desc": {
+    "message": "Font size in pixels for the message box (10–28). 0 matches chat message size."
+  },
+  "options_qa_reset": {
+    "message": "Reset QA appearance"
+  },
+  "options_qa_reset_desc": {
+    "message": "Clear custom fonts and colors for QA mode."
+  },
+  "options_qa_color_panel": {
+    "message": "Panel background"
+  },
+  "options_qa_color_panel_desc": {
+    "message": "Outer side panel background (replaces default wallpaper or dark fill)."
+  },
+  "options_qa_color_chat": {
+    "message": "Chat area background"
+  },
+  "options_qa_color_chat_desc": {
+    "message": "Background behind the message list."
+  },
+  "options_qa_color_message": {
+    "message": "Message text"
+  },
+  "options_qa_color_message_desc": {
+    "message": "Main text color for chat content."
+  },
+  "options_qa_color_heading": {
+    "message": "Speaker / heading text"
+  },
+  "options_qa_color_heading_desc": {
+    "message": "Color for actor names and section headings in chat."
+  },
+  "options_qa_color_muted": {
+    "message": "Muted text"
+  },
+  "options_qa_color_muted_desc": {
+    "message": "Timestamps and secondary hints."
+  },
+  "options_qa_color_link": {
+    "message": "Links"
+  },
+  "options_qa_color_link_desc": {
+    "message": "Color for links inside assistant messages."
+  },
+  "options_qa_color_separator": {
+    "message": "Dividers & borders"
+  },
+  "options_qa_color_separator_desc": {
+    "message": "Message separators and bookmark card borders."
+  },
+  "options_qa_color_inputSurface": {
+    "message": "Input area background"
+  },
+  "options_qa_color_inputSurface_desc": {
+    "message": "Background for the compose box and attachment strip."
+  },
+  "options_qa_color_inputBorder": {
+    "message": "Input outline"
+  },
+  "options_qa_color_inputBorder_desc": {
+    "message": "Border around the compose box."
+  },
+  "options_qa_color_inputText": {
+    "message": "Input text"
+  },
+  "options_qa_color_inputText_desc": {
+    "message": "Text color while typing a message."
+  },
+  "options_qa_color_accent": {
+    "message": "Accent"
+  },
+  "options_qa_color_accent_desc": {
+    "message": "Highlights such as streaming cursor and waiting indicators."
+  },
+  "options_qa_colors_section": {
+    "message": "Colors"
+  },
+  "options_qa_color_clear": {
+    "message": "Clear"
+  },
   "options_prompts_header": {
     "message": "Quick Start Prompts"
   },

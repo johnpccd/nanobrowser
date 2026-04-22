@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo, type CSSProperties } from 'react';
 import { FiSettings } from 'react-icons/fi';
 import { PiPlusBold } from 'react-icons/pi';
 import { GrHistory } from 'react-icons/gr';
@@ -18,6 +18,9 @@ import {
   AgentNameEnum,
   ProviderTypeEnum,
   llmProviderModelNames,
+  DEFAULT_GENERAL_SETTINGS,
+  resolveQaUiTheme,
+  type GeneralSettingsConfig,
 } from '@extension/storage';
 import favoritesStorage, { type FavoritePrompt, favoritesBaseStorage } from '@extension/storage/lib/prompt/favorites';
 import { t } from '@extension/i18n';
@@ -73,6 +76,8 @@ const SidePanel = () => {
   const [enableWebSearch, setEnableWebSearch] = useState(false);
   // Font size state
   const [fontSize, setFontSize] = useState<number>(14);
+  const [generalSettingsSnapshot, setGeneralSettingsSnapshot] =
+    useState<GeneralSettingsConfig>(DEFAULT_GENERAL_SETTINGS);
   const sessionIdRef = useRef<string | null>(null);
   const isReplayingRef = useRef<boolean>(false);
   const portRef = useRef<chrome.runtime.Port | null>(null);
@@ -129,18 +134,25 @@ const SidePanel = () => {
   const loadGeneralSettings = useCallback(async () => {
     try {
       const settings = await generalSettingsStore.getSettings();
+      setGeneralSettingsSnapshot(settings);
       setReplayEnabled(settings.replayHistoricalTasks);
       setIncludePageContent(settings.includePageContent);
       setEnableWebSearch(settings.enableWebSearch);
       setFontSize(settings.fontSize);
     } catch (error) {
       console.error('Error loading general settings:', error);
+      setGeneralSettingsSnapshot(DEFAULT_GENERAL_SETTINGS);
       setReplayEnabled(false);
       setIncludePageContent(true);
       setEnableWebSearch(false);
       setFontSize(14);
     }
   }, []);
+
+  const qaUiTheme = useMemo(
+    () => (mode === 'qa' ? resolveQaUiTheme(generalSettingsSnapshot) : null),
+    [mode, generalSettingsSnapshot],
+  );
 
   // Load current tab and its state
   const loadCurrentTabState = useCallback(async () => {
@@ -1739,10 +1751,16 @@ const SidePanel = () => {
     }
   };
 
+  const panelShellStyle: CSSProperties | undefined =
+    mode === 'qa' && qaUiTheme?.panelBg ? { backgroundColor: qaUiTheme.panelBg, backgroundImage: 'none' } : undefined;
+  const panelFontStyle: CSSProperties | undefined =
+    mode === 'qa' && qaUiTheme?.fontFamily ? { fontFamily: qaUiTheme.fontFamily } : undefined;
+
   return (
     <div>
       <div
-        className={`flex h-screen flex-col ${isDarkMode ? 'bg-slate-900' : "bg-[url('/bg.jpg')] bg-cover bg-no-repeat"} overflow-hidden border ${isDarkMode ? 'border-sky-800' : 'border-[rgb(186,230,253)]'} rounded-2xl`}>
+        className={`flex h-screen flex-col ${isDarkMode ? 'bg-slate-900' : "bg-[url('/bg.jpg')] bg-cover bg-no-repeat"} overflow-hidden border ${isDarkMode ? 'border-sky-800' : 'border-[rgb(186,230,253)]'} rounded-2xl`}
+        style={{ ...panelShellStyle, ...panelFontStyle }}>
         <header className="header relative">
           <div className="header-logo">
             {showHistory ? (
@@ -1897,6 +1915,7 @@ const SidePanel = () => {
                         onToggleIncludePageContent={mode === 'qa' ? handleToggleIncludePageContent : undefined}
                         enableWebSearch={enableWebSearch}
                         onToggleEnableWebSearch={mode === 'qa' ? handleToggleEnableWebSearch : undefined}
+                        qaUiTheme={mode === 'qa' ? qaUiTheme : null}
                       />
                     </div>
                     <div className="flex-1 overflow-y-auto">
@@ -1907,19 +1926,24 @@ const SidePanel = () => {
                         onBookmarkDelete={handleBookmarkDelete}
                         onBookmarkReorder={handleBookmarkReorder}
                         isDarkMode={isDarkMode}
+                        qaUiTheme={mode === 'qa' ? qaUiTheme : null}
                       />
                     </div>
                   </>
                 )}
                 {(messages.length > 0 || isQaStreaming || isWaitingForQaResponse) && (
                   <div
-                    className={`scrollbar-gutter-stable flex-1 overflow-x-hidden overflow-y-scroll scroll-smooth p-2 ${isDarkMode ? 'bg-slate-900/80' : ''}`}>
+                    className={`scrollbar-gutter-stable flex-1 overflow-x-hidden overflow-y-scroll scroll-smooth p-2 ${
+                      isDarkMode && !(mode === 'qa' && qaUiTheme?.chatBg) ? 'bg-slate-900/80' : ''
+                    }`}
+                    style={mode === 'qa' && qaUiTheme?.chatBg ? { backgroundColor: qaUiTheme.chatBg } : undefined}>
                     <MessageList
                       messages={messages}
                       isDarkMode={isDarkMode}
                       streamingContent={isQaStreaming ? qaResponseBuffer : undefined}
                       isWaitingForResponse={isWaitingForQaResponse}
                       fontSize={fontSize}
+                      qaUiTheme={mode === 'qa' ? qaUiTheme : null}
                     />
                     <div ref={messagesEndRef} />
                   </div>
@@ -1956,6 +1980,7 @@ const SidePanel = () => {
                       onToggleIncludePageContent={mode === 'qa' ? handleToggleIncludePageContent : undefined}
                       enableWebSearch={enableWebSearch}
                       onToggleEnableWebSearch={mode === 'qa' ? handleToggleEnableWebSearch : undefined}
+                      qaUiTheme={mode === 'qa' ? qaUiTheme : null}
                     />
                   </div>
                 )}

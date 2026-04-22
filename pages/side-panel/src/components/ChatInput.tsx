@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo, type CSSProperties } from 'react';
+import type { ResolvedQaUiTheme } from '@extension/storage';
 import { FaMicrophone } from 'react-icons/fa';
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import { HiOutlineCamera, HiOutlineDocumentText, HiOutlineChat } from 'react-icons/hi';
@@ -42,6 +43,7 @@ interface ChatInputProps {
   // Web search toggle for QA mode
   enableWebSearch?: boolean;
   onToggleEnableWebSearch?: () => void;
+  qaUiTheme?: ResolvedQaUiTheme | null;
 }
 
 // File attachment interface
@@ -76,6 +78,7 @@ export default function ChatInput({
   onToggleIncludePageContent,
   enableWebSearch = false,
   onToggleEnableWebSearch,
+  qaUiTheme = null,
 }: ChatInputProps) {
   const [text, setText] = useState('');
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
@@ -247,18 +250,39 @@ export default function ChatInput({
     setAttachedFiles(prev => prev.filter((_, i) => i !== index));
   }, []);
 
+  const formStyle: CSSProperties = {
+    ...(qaUiTheme?.inputBorder ? { borderColor: qaUiTheme.inputBorder } : {}),
+  };
+
+  const textareaStyle: CSSProperties = {
+    fontSize: qaUiTheme ? `${qaUiTheme.inputFontSizePx}px` : undefined,
+    ...(qaUiTheme?.inputSurface ? { backgroundColor: qaUiTheme.inputSurface } : {}),
+    ...(qaUiTheme?.inputText ? { color: qaUiTheme.inputText } : {}),
+  };
+
+  const toolbarStyle: CSSProperties = {
+    ...(qaUiTheme?.chromeFontSizePx ? { fontSize: `${qaUiTheme.chromeFontSizePx}px` } : {}),
+    ...(qaUiTheme?.inputSurface ? { backgroundColor: qaUiTheme.inputSurface } : {}),
+  };
+
   return (
     <form
       onSubmit={handleSubmit}
-      className={`overflow-hidden rounded-lg border transition-colors ${disabled ? 'cursor-not-allowed' : 'focus-within:border-sky-400 hover:border-sky-400'} ${isDarkMode ? 'border-slate-700' : ''}`}
+      className={`overflow-hidden rounded-lg border transition-colors ${disabled ? 'cursor-not-allowed' : 'focus-within:border-sky-400 hover:border-sky-400'} ${qaUiTheme?.inputBorder ? '' : isDarkMode ? 'border-slate-700' : ''}`}
+      style={formStyle}
       aria-label={t('chat_input_form')}>
       <div className="flex flex-col">
         {/* File attachments and captured image display */}
         {(attachedFiles.length > 0 || capturedImage) && (
           <div
             className={`flex flex-wrap gap-2 border-b p-2 ${
-              isDarkMode ? 'border-slate-700 bg-slate-800' : 'border-gray-200 bg-gray-50'
-            }`}>
+              qaUiTheme?.inputSurface ? '' : isDarkMode ? 'border-slate-700 bg-slate-800' : 'border-gray-200 bg-gray-50'
+            }`}
+            style={
+              qaUiTheme?.inputSurface
+                ? { backgroundColor: qaUiTheme.inputSurface, borderBottomColor: qaUiTheme.inputBorder }
+                : undefined
+            }>
             {/* Captured image preview */}
             {capturedImage && (
               <div
@@ -327,22 +351,36 @@ export default function ChatInput({
           aria-disabled={disabled}
           rows={5}
           className={`w-full resize-none border-none p-2 focus:outline-none ${
-            disabled
-              ? isDarkMode
-                ? 'cursor-not-allowed bg-slate-800 text-gray-400'
-                : 'cursor-not-allowed bg-gray-100 text-gray-500'
-              : isDarkMode
-                ? 'bg-slate-800 text-gray-200'
-                : 'bg-white'
+            qaUiTheme?.inputSurface || qaUiTheme?.inputText
+              ? disabled
+                ? 'cursor-not-allowed opacity-70'
+                : ''
+              : disabled
+                ? isDarkMode
+                  ? 'cursor-not-allowed bg-slate-800 text-gray-400'
+                  : 'cursor-not-allowed bg-gray-100 text-gray-500'
+                : isDarkMode
+                  ? 'bg-slate-800 text-gray-200'
+                  : 'bg-white'
           }`}
+          style={textareaStyle}
           placeholder={attachedFiles.length > 0 ? 'Add a message (optional)...' : t('chat_input_placeholder')}
           aria-label={t('chat_input_editor')}
         />
 
         <div
           className={`flex items-center justify-between px-2 py-1.5 ${
-            disabled ? (isDarkMode ? 'bg-slate-800' : 'bg-gray-100') : isDarkMode ? 'bg-slate-800' : 'bg-white'
-          }`}>
+            qaUiTheme?.inputSurface
+              ? ''
+              : disabled
+                ? isDarkMode
+                  ? 'bg-slate-800'
+                  : 'bg-gray-100'
+                : isDarkMode
+                  ? 'bg-slate-800'
+                  : 'bg-white'
+          }`}
+          style={toolbarStyle}>
           <div className="flex gap-2 text-gray-500">
             {/* File attachment button */}
             <button
@@ -545,7 +583,8 @@ export default function ChatInput({
               type="submit"
               disabled={isSendButtonDisabled}
               aria-disabled={isSendButtonDisabled}
-              className={`rounded-md bg-[#19C2FF] px-3 py-1 text-white transition-colors hover:enabled:bg-[#0073DC] ${isSendButtonDisabled ? 'cursor-not-allowed opacity-50' : ''}`}>
+              className={`rounded-md px-3 py-1 text-white transition-colors hover:enabled:opacity-90 ${qaUiTheme?.accentColor ? '' : 'bg-[#19C2FF] hover:enabled:bg-[#0073DC]'} ${isSendButtonDisabled ? 'cursor-not-allowed opacity-50' : ''}`}
+              style={qaUiTheme?.accentColor ? { backgroundColor: qaUiTheme.accentColor } : undefined}>
               {t('chat_buttons_send')}
             </button>
           )}

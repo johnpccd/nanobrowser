@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { FaTrash, FaPen, FaCheck, FaTimes } from 'react-icons/fa';
 import { t } from '@extension/i18n';
+import type { ResolvedQaUiTheme } from '@extension/storage';
 
 interface Bookmark {
   id: number;
@@ -16,6 +17,7 @@ interface BookmarkListProps {
   onBookmarkDelete?: (id: number) => void;
   onBookmarkReorder?: (draggedId: number, targetId: number) => void;
   isDarkMode?: boolean;
+  qaUiTheme?: ResolvedQaUiTheme | null;
 }
 
 const BookmarkList: React.FC<BookmarkListProps> = ({
@@ -25,6 +27,7 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
   onBookmarkDelete,
   onBookmarkReorder,
   isDarkMode = false,
+  qaUiTheme = null,
 }) => {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState<string>('');
@@ -82,7 +85,12 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
 
   return (
     <div className="p-2">
-      <h3 className={`mb-3 text-sm font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+      <h3
+        className={`mb-3 font-medium ${qaUiTheme?.chromeFontSizePx ? '' : 'text-sm'} ${qaUiTheme?.headingText ? '' : isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}
+        style={{
+          ...(qaUiTheme?.chromeFontSizePx ? { fontSize: `${qaUiTheme.chromeFontSizePx}px` } : {}),
+          ...(qaUiTheme?.headingText ? { color: qaUiTheme.headingText } : {}),
+        }}>
         {t('chat_bookmarks_header')}
       </h3>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -94,9 +102,12 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
             onDragEnd={handleDragEnd}
             onDragOver={handleDragOver}
             onDrop={e => handleDrop(e, bookmark.id)}
-            className={`group relative rounded-lg p-3 ${
-              isDarkMode ? 'bg-slate-800 hover:bg-slate-700' : 'bg-white hover:bg-sky-50'
-            } border ${isDarkMode ? 'border-slate-700' : 'border-sky-100'}`}>
+            className={`group relative rounded-lg border p-3 ${
+              isDarkMode
+                ? 'border-slate-700 bg-slate-800 hover:bg-slate-700'
+                : 'border-sky-100 bg-white hover:bg-sky-50'
+            }`}
+            style={qaUiTheme?.separatorColor ? { borderColor: qaUiTheme.separatorColor } : undefined}>
             {editingId === bookmark.id ? (
               <div className="flex items-center">
                 <input
@@ -145,7 +156,11 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
                   aria-label={bookmark.title}>
                   <div className="flex h-full items-center p-3">
                     <div
-                      className={`truncate pr-10 text-sm font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+                      className={`truncate pr-10 font-medium ${qaUiTheme?.chromeFontSizePx ? '' : 'text-sm'} ${qaUiTheme?.messageText ? '' : isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}
+                      style={{
+                        ...(qaUiTheme?.chromeFontSizePx ? { fontSize: `${qaUiTheme.chromeFontSizePx}px` } : {}),
+                        ...(qaUiTheme?.messageText ? { color: qaUiTheme.messageText } : {}),
+                      }}>
                       {bookmark.title}
                     </div>
                   </div>

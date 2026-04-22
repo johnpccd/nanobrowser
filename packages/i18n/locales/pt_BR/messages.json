@@ -196,6 +196,21 @@
   "chat_imageCapture_fullImage": {
     "message": "Captura de tela em tamanho real"
   },
+  "chat_pageContent_toggle": {
+    "message": "Alternar conteúdo da página"
+  },
+  "chat_pageContent_enabled": {
+    "message": "Conteúdo da página incluído"
+  },
+  "chat_pageContent_disabled": {
+    "message": "Modo de chat genérico"
+  },
+  "chat_pageContent_tooltip_enabled": {
+    "message": "Clique para desativar o conteúdo da página — respostas serão chat LLM genérico sem contexto da página"
+  },
+  "chat_pageContent_tooltip_disabled": {
+    "message": "Clique para ativar o conteúdo da página — respostas usarão a página atual"
+  },
   "permissions_microphone_title": {
     "message": "Ativar Entrada de Voz"
   },
@@ -295,6 +310,12 @@
   "options_general_replayHistoricalTasks_desc": {
     "message": "Ativar o armazenamento e a reprodução do histórico de passos do agente (experimental, pode ter problemas)"
   },
+  "options_general_includePageContent": {
+    "message": "Incluir conteúdo da página no modo QA"
+  },
+  "options_general_includePageContent_desc": {
+    "message": "Quando ativado, o conteúdo da página é enviado com as consultas QA para respostas com contexto. Desative para chat genérico com o LLM."
+  },
   "options_general_fontSize": {
     "message": "Tamanho da Fonte do Chat"
   },
@@ -306,6 +327,108 @@
   },
   "options_general_maxInputTokens_desc": {
     "message": "Número máximo de tokens permitidos no histórico do chat. Quando excedido, mensagens mais antigas são cortadas. Padrão: 1.000.000 de tokens."
+  },
+  "options_qa_appearance_header": {
+    "message": "Aparência do modo QA"
+  },
+  "options_qa_appearance_description": {
+    "message": "Personalize fontes e cores do painel lateral quando o modo QA está selecionado. Deixe uma cor vazia para usar o tema claro/escuro padrão. As alterações aplicam ao voltar ao painel."
+  },
+  "options_qa_fontFamily": {
+    "message": "Família da fonte"
+  },
+  "options_qa_fontFamily_desc": {
+    "message": "Pilha CSS de fontes do painel de chat QA (ex.: system-ui ou \"Inter\", sans-serif). Vazio usa o padrão."
+  },
+  "options_qa_chromeFontSize": {
+    "message": "Tamanho da fonte da interface"
+  },
+  "options_qa_chromeFontSize_desc": {
+    "message": "Tamanho em pixels para favoritos, rótulos e barra de ferramentas (10–22). 0 usa 13px."
+  },
+  "options_qa_inputFontSize": {
+    "message": "Tamanho da fonte da entrada"
+  },
+  "options_qa_inputFontSize_desc": {
+    "message": "Tamanho em pixels da caixa de mensagem (10–28). 0 iguala ao tamanho do chat."
+  },
+  "options_qa_reset": {
+    "message": "Redefinir aparência QA"
+  },
+  "options_qa_reset_desc": {
+    "message": "Limpar fontes e cores personalizadas do modo QA."
+  },
+  "options_qa_color_panel": {
+    "message": "Fundo do painel"
+  },
+  "options_qa_color_panel_desc": {
+    "message": "Fundo externo do painel lateral (substitui o papel de parede padrão ou o preenchimento escuro)."
+  },
+  "options_qa_color_chat": {
+    "message": "Fundo da área de chat"
+  },
+  "options_qa_color_chat_desc": {
+    "message": "Fundo atrás da lista de mensagens."
+  },
+  "options_qa_color_message": {
+    "message": "Texto das mensagens"
+  },
+  "options_qa_color_message_desc": {
+    "message": "Cor principal do texto do chat."
+  },
+  "options_qa_color_heading": {
+    "message": "Texto de cabeçalho / autor"
+  },
+  "options_qa_color_heading_desc": {
+    "message": "Cor dos nomes de atores e cabeçalhos na conversa."
+  },
+  "options_qa_color_muted": {
+    "message": "Texto secundário"
+  },
+  "options_qa_color_muted_desc": {
+    "message": "Carimbos de data/hora e dicas secundárias."
+  },
+  "options_qa_color_link": {
+    "message": "Links"
+  },
+  "options_qa_color_link_desc": {
+    "message": "Cor dos links nas mensagens do assistente."
+  },
+  "options_qa_color_separator": {
+    "message": "Divisores e bordas"
+  },
+  "options_qa_color_separator_desc": {
+    "message": "Separadores entre mensagens e bordas dos cartões de favoritos."
+  },
+  "options_qa_color_inputSurface": {
+    "message": "Fundo da área de entrada"
+  },
+  "options_qa_color_inputSurface_desc": {
+    "message": "Fundo da caixa de composição e da faixa de anexos."
+  },
+  "options_qa_color_inputBorder": {
+    "message": "Contorno da entrada"
+  },
+  "options_qa_color_inputBorder_desc": {
+    "message": "Borda ao redor da caixa de composição."
+  },
+  "options_qa_color_inputText": {
+    "message": "Texto digitado"
+  },
+  "options_qa_color_inputText_desc": {
+    "message": "Cor do texto ao digitar uma mensagem."
+  },
+  "options_qa_color_accent": {
+    "message": "Cor de destaque"
+  },
+  "options_qa_color_accent_desc": {
+    "message": "Destaques como cursor de streaming e indicadores de espera."
+  },
+  "options_qa_colors_section": {
+    "message": "Cores"
+  },
+  "options_qa_color_clear": {
+    "message": "Limpar"
   },
   "options_prompts_header": {
     "message": "Prompts de Início Rápido"

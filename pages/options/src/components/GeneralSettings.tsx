@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { type GeneralSettingsConfig, generalSettingsStore, DEFAULT_GENERAL_SETTINGS } from '@extension/storage';
 import { t } from '@extension/i18n';
 import { QuickStartPromptsSettings } from './QuickStartPromptsSettings';
+import { QaAppearanceSettings } from './QaAppearanceSettings';
 
 interface GeneralSettingsProps {
   isDarkMode?: boolean;
@@ -467,33 +468,6 @@ export const GeneralSettings = ({ isDarkMode = false }: GeneralSettingsProps) =>
           <div className="flex items-center justify-between">
             <div>
               <h3 className={`text-base font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                {t('options_general_fontSize')}
-              </h3>
-              <p className={`text-sm font-normal ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                {t('options_general_fontSize_desc')}
-              </p>
-            </div>
-            <div className="flex items-center space-x-2">
-              <label htmlFor="fontSize" className="sr-only">
-                {t('options_general_fontSize')}
-              </label>
-              <input
-                id="fontSize"
-                type="number"
-                min={10}
-                max={24}
-                step={1}
-                value={settings.fontSize}
-                onChange={e => updateSetting('fontSize', Number.parseInt(e.target.value, 10))}
-                className={`w-20 rounded-md border ${isDarkMode ? 'border-slate-600 bg-slate-700 text-gray-200' : 'border-gray-300 bg-white text-gray-700'} px-3 py-2`}
-              />
-              <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>px</span>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className={`text-base font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                 {t('options_general_maxInputTokens')}
               </h3>
               <p className={`text-sm font-normal ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -519,6 +493,8 @@ export const GeneralSettings = ({ isDarkMode = false }: GeneralSettingsProps) =>
           </div>
         </div>
       </div>
+
+      <QaAppearanceSettings isDarkMode={isDarkMode} />
 
       {/* Quick Start Prompts Settings */}
       <QuickStartPromptsSettings isDarkMode={isDarkMode} />

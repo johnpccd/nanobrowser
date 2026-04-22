@@ -1,6 +1,7 @@
 import { StorageEnum } from '../base/enums';
 import { createStorage } from '../base/base';
 import type { BaseStorage } from '../base/types';
+import { clampOptionalFontSize, normalizeHexColor, sanitizeQaFontFamily } from './qaAppearanceUtils';
 
 // Interface for general settings configuration
 export interface GeneralSettingsConfig {
@@ -21,6 +22,21 @@ export interface GeneralSettingsConfig {
   searxngApiKey: string;
   searxngMaxResults: number;
   jinaReaderApiKey: string;
+  /** QA / chat panel typography & colors (side panel QA mode). */
+  qaFontFamily: string;
+  qaChromeFontSize: number;
+  qaInputFontSize: number;
+  qaColorPanelBg: string;
+  qaColorChatBg: string;
+  qaColorMessageText: string;
+  qaColorHeadingText: string;
+  qaColorMutedText: string;
+  qaColorLink: string;
+  qaColorSeparator: string;
+  qaColorInputSurface: string;
+  qaColorInputBorder: string;
+  qaColorInputText: string;
+  qaColorAccent: string;
 }
 
 export type GeneralSettingsStorage = BaseStorage<GeneralSettingsConfig> & {
@@ -48,6 +64,20 @@ export const DEFAULT_GENERAL_SETTINGS: GeneralSettingsConfig = {
   searxngApiKey: '',
   searxngMaxResults: 5,
   jinaReaderApiKey: '',
+  qaFontFamily: '',
+  qaChromeFontSize: 0,
+  qaInputFontSize: 0,
+  qaColorPanelBg: '',
+  qaColorChatBg: '',
+  qaColorMessageText: '',
+  qaColorHeadingText: '',
+  qaColorMutedText: '',
+  qaColorLink: '',
+  qaColorSeparator: '',
+  qaColorInputSurface: '',
+  qaColorInputBorder: '',
+  qaColorInputText: '',
+  qaColorAccent: '',
 };
 
 const storage = createStorage<GeneralSettingsConfig>('general-settings', DEFAULT_GENERAL_SETTINGS, {
@@ -74,6 +104,39 @@ export const generalSettingsStore: GeneralSettingsStorage = {
 
     if (typeof updatedSettings.searxngMaxResults === 'number') {
       updatedSettings.searxngMaxResults = Math.min(10, Math.max(1, Math.round(updatedSettings.searxngMaxResults)));
+    }
+
+    if (typeof updatedSettings.qaFontFamily === 'string') {
+      updatedSettings.qaFontFamily = sanitizeQaFontFamily(updatedSettings.qaFontFamily);
+    }
+
+    if (typeof updatedSettings.qaChromeFontSize === 'number') {
+      updatedSettings.qaChromeFontSize = clampOptionalFontSize(updatedSettings.qaChromeFontSize, 10, 22);
+    }
+
+    if (typeof updatedSettings.qaInputFontSize === 'number') {
+      updatedSettings.qaInputFontSize = clampOptionalFontSize(updatedSettings.qaInputFontSize, 10, 28);
+    }
+
+    const qaColorKeys = [
+      'qaColorPanelBg',
+      'qaColorChatBg',
+      'qaColorMessageText',
+      'qaColorHeadingText',
+      'qaColorMutedText',
+      'qaColorLink',
+      'qaColorSeparator',
+      'qaColorInputSurface',
+      'qaColorInputBorder',
+      'qaColorInputText',
+      'qaColorAccent',
+    ] as (keyof GeneralSettingsConfig)[];
+
+    for (const key of qaColorKeys) {
+      const v = updatedSettings[key];
+      if (typeof v === 'string') {
+        Object.assign(updatedSettings, { [key]: normalizeHexColor(v) });
+      }
     }
 
     // If useVision is true, displayHighlights must also be true

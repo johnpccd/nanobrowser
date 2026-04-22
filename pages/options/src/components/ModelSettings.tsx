@@ -170,6 +170,7 @@ export const ModelSettings = ({ isDarkMode = false }: ModelSettingsProps) => {
         const models: Record<AgentNameEnum, string> = {
           [AgentNameEnum.Planner]: '',
           [AgentNameEnum.Navigator]: '',
+          [AgentNameEnum.QA]: '',
         };
 
         for (const agent of Object.values(AgentNameEnum)) {
