@@ -152,7 +152,7 @@ function createOpenAIChatModel(
   return new ChatOpenAI(args);
 }
 
-// Function to extract instance name from Azure endpoint URL
+// Function to extract instance name from Azure endpoint URL (resource.openai.azure.com)
 function extractInstanceNameFromUrl(url: string): string | null {
   try {
     const parsedUrl = new URL(url);
@@ -161,6 +161,17 @@ function extractInstanceNameFromUrl(url: string): string | null {
     if (hostnameParts.length >= 4 && hostnameParts[1] === 'openai' && hostnameParts[2] === 'azure') {
       return hostnameParts[0];
     }
+  } catch (e) {
+    console.error('Error parsing Azure endpoint URL:', e);
+  }
+  return null;
+}
+
+// Normalize Azure endpoints so users can paste the resource root or a full API URL.
+function normalizeAzureEndpoint(url: string): string | null {
+  try {
+    const parsedUrl = new URL(url);
+    return `${parsedUrl.origin}/`;
   } catch (e) {
     console.error('Error parsing Azure endpoint URL:', e);
   }
@@ -202,11 +213,19 @@ function createAzureChatModel(providerConfig: ProviderConfig, modelConfig: Model
     );
   }
 
-  // Extract instance name from the endpoint URL
+  // Extract instance name from classic Azure OpenAI host, or fall back to full endpoint URL
+  // (e.g. Cognitive Services: https://<resource>.cognitiveservices.azure.com/)
   const instanceName = extractInstanceNameFromUrl(providerConfig.baseUrl);
-  if (!instanceName) {
+  const azureEndpoint = normalizeAzureEndpoint(providerConfig.baseUrl);
+  const azureAuth =
+    instanceName != null
+      ? { azureOpenAIApiInstanceName: instanceName }
+      : azureEndpoint != null
+        ? { azureOpenAIEndpoint: azureEndpoint }
+        : null;
+  if (!azureAuth) {
     throw new Error(
-      `Could not extract Instance Name from Azure Endpoint URL: ${providerConfig.baseUrl}. Expected format like https://<your-instance-name>.openai.azure.com/`,
+      `Could not parse Azure Endpoint URL: ${providerConfig.baseUrl}. Expected a valid Azure resource URL such as https://<your-resource>.openai.azure.com/ or https://<your-resource>.cognitiveservices.azure.com/.`,
     );
   }
 
@@ -215,7 +234,7 @@ function createAzureChatModel(providerConfig: ProviderConfig, modelConfig: Model
 
   // Use AzureChatOpenAI with specific parameters
   const args = {
-    azureOpenAIApiInstanceName: instanceName, // Derived from endpoint
+    ...azureAuth,
     azureOpenAIApiDeploymentName: deploymentName,
     azureOpenAIApiKey: providerConfig.apiKey,
     azureOpenAIApiVersion: providerConfig.azureApiVersion,

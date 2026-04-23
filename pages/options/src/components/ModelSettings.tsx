@@ -450,6 +450,19 @@ export const ModelSettings = ({ isDarkMode = false }: ModelSettingsProps) => {
     }
   };
 
+  const getPendingAzureDeployment = (provider: string) => newModelInputs[provider]?.trim() || '';
+
+  const getEffectiveAzureDeploymentNames = (provider: string) => {
+    const deploymentNames = providers[provider]?.azureDeploymentNames || [];
+    const pendingDeployment = getPendingAzureDeployment(provider);
+
+    if (!pendingDeployment || deploymentNames.includes(pendingDeployment)) {
+      return deploymentNames;
+    }
+
+    return [...deploymentNames, pendingDeployment];
+  };
+
   const getButtonProps = (provider: string) => {
     const isInStorage = providersFromStorage.has(provider);
     const isModified = modifiedProviders.has(provider);
@@ -478,7 +491,7 @@ export const ModelSettings = ({ isDarkMode = false }: ModelSettingsProps) => {
       hasInput =
         Boolean(config?.apiKey?.trim()) &&
         Boolean(config?.baseUrl?.trim()) &&
-        Boolean(config?.azureDeploymentNames?.length) &&
+        Boolean(getEffectiveAzureDeploymentNames(provider).length) &&
         Boolean(config?.azureApiVersion?.trim());
     } else if (providerType === ProviderTypeEnum.OpenRouter) {
       // OpenRouter needs API Key and optionally Base URL (has default)
@@ -501,8 +514,17 @@ export const ModelSettings = ({ isDarkMode = false }: ModelSettingsProps) => {
 
   const handleSave = async (provider: string) => {
     try {
+      const pendingAzureDeployment = getPendingAzureDeployment(provider);
+      const providerConfig =
+        providers[provider].type === ProviderTypeEnum.AzureOpenAI && pendingAzureDeployment
+          ? {
+              ...providers[provider],
+              azureDeploymentNames: getEffectiveAzureDeploymentNames(provider),
+            }
+          : providers[provider];
+
       // Check if name contains spaces for custom providers
-      if (providers[provider].type === ProviderTypeEnum.CustomOpenAI && providers[provider].name?.includes(' ')) {
+      if (providerConfig.type === ProviderTypeEnum.CustomOpenAI && providerConfig.name?.includes(' ')) {
         setNameErrors(prev => ({
           ...prev,
           [provider]: t('options_models_providers_errors_spacesNotAllowed'),
@@ -513,49 +535,53 @@ export const ModelSettings = ({ isDarkMode = false }: ModelSettingsProps) => {
       // Check if base URL is required but missing for custom_openai, ollama, azure_openai or openrouter
       // Note: Groq and Cerebras do not require base URL as they use the default endpoint
       if (
-        (providers[provider].type === ProviderTypeEnum.CustomOpenAI ||
-          providers[provider].type === ProviderTypeEnum.Ollama ||
-          providers[provider].type === ProviderTypeEnum.AzureOpenAI ||
-          providers[provider].type === ProviderTypeEnum.OpenRouter ||
-          providers[provider].type === ProviderTypeEnum.Llama) &&
-        (!providers[provider].baseUrl || !providers[provider].baseUrl.trim())
+        (providerConfig.type === ProviderTypeEnum.CustomOpenAI ||
+          providerConfig.type === ProviderTypeEnum.Ollama ||
+          providerConfig.type === ProviderTypeEnum.AzureOpenAI ||
+          providerConfig.type === ProviderTypeEnum.OpenRouter ||
+          providerConfig.type === ProviderTypeEnum.Llama) &&
+        (!providerConfig.baseUrl || !providerConfig.baseUrl.trim())
       ) {
         alert(t('options_models_providers_errors_baseUrlRequired', getDefaultDisplayNameFromProviderId(provider)));
         return;
       }
 
-      // Ensure modelNames is provided
-      let modelNames = providers[provider].modelNames;
-      if (!modelNames) {
-        // Use default model names if not explicitly set
-        modelNames = [...(llmProviderModelNames[provider as keyof typeof llmProviderModelNames] || [])];
-      }
-
       // Prepare data for saving using the correctly typed config from state
       // We can directly pass the relevant parts of the state config
       // Create a copy to avoid modifying state directly if needed, though setProvider likely handles it
-      const configToSave: Partial<ProviderConfig> = { ...providers[provider] }; // Use Partial to allow deleting modelNames
+      const configToSave: Partial<ProviderConfig> = { ...providerConfig }; // Use Partial to allow deleting modelNames
 
       // Explicitly set required fields that might be missing in partial state updates (though unlikely now)
-      configToSave.apiKey = providers[provider].apiKey || '';
-      configToSave.name = providers[provider].name || getDefaultDisplayNameFromProviderId(provider);
-      configToSave.type = providers[provider].type;
-      configToSave.createdAt = providers[provider].createdAt || Date.now();
+      configToSave.apiKey = providerConfig.apiKey || '';
+      configToSave.name = providerConfig.name || getDefaultDisplayNameFromProviderId(provider);
+      configToSave.type = providerConfig.type;
+      configToSave.createdAt = providerConfig.createdAt || Date.now();
       // baseUrl, azureDeploymentName, azureApiVersion should be correctly set by handlers
 
-      if (providers[provider].type === ProviderTypeEnum.AzureOpenAI) {
+      if (providerConfig.type === ProviderTypeEnum.AzureOpenAI) {
         // Ensure modelNames is NOT included for Azure
         configToSave.modelNames = undefined;
       } else {
         // Ensure modelNames IS included for non-Azure
         // Use existing modelNames from state, or default if somehow missing
         configToSave.modelNames =
-          providers[provider].modelNames || llmProviderModelNames[provider as keyof typeof llmProviderModelNames] || [];
+          providerConfig.modelNames || llmProviderModelNames[provider as keyof typeof llmProviderModelNames] || [];
       }
 
       // Pass the cleaned config to setProvider
       // Cast to ProviderConfig as we've ensured necessary fields based on type
       await llmProviderStore.setProvider(provider, configToSave as ProviderConfig);
+
+      if (providerConfig.type === ProviderTypeEnum.AzureOpenAI && pendingAzureDeployment) {
+        setProviders(prev => ({
+          ...prev,
+          [provider]: configToSave as ProviderConfig,
+        }));
+        setNewModelInputs(prev => ({
+          ...prev,
+          [provider]: '',
+        }));
+      }
 
       // Clear any name errors on successful save
       setNameErrors(prev => {
