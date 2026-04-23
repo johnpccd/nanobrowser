@@ -2,6 +2,7 @@ import type { McpServerConfig } from '@extension/storage';
 
 const DEFAULT_TIMEOUT_MS = 12000;
 const MAX_TOOL_RESULT_CHARS = 12000;
+const MCP_SESSION_HEADER = 'Mcp-Session-Id';
 
 interface JsonRpcRequest {
   jsonrpc: '2.0';
@@ -71,12 +72,110 @@ function resolvePostEndpoint(server: McpServerConfig): string {
   return `${server.endpoint.replace(/\/+$/, '')}/messages`;
 }
 
-async function postJsonRpc(
+/** Parse SSE `data:` payloads as JSON values (MCP may stream JSON-RPC over SSE). */
+function parseSseDataJsonObjects(sseBody: string): unknown[] {
+  const out: unknown[] = [];
+  const dataLines: string[] = [];
+
+  const flush = () => {
+    if (dataLines.length === 0) {
+      return;
+    }
+    const raw = dataLines.join('\n').trim();
+    dataLines.length = 0;
+    if (!raw) {
+      return;
+    }
+    try {
+      out.push(JSON.parse(raw));
+    } catch {
+      // ignore non-JSON segments
+    }
+  };
+
+  for (const line of sseBody.split(/\r?\n/)) {
+    if (line.startsWith('data:')) {
+      dataLines.push(line.slice(5).trimStart());
+    } else if (line === '') {
+      flush();
+    }
+  }
+  flush();
+  return out;
+}
+
+function flattenJsonRpcCandidates(messages: unknown[]): unknown[] {
+  const out: unknown[] = [];
+  for (const m of messages) {
+    if (Array.isArray(m)) {
+      out.push(...flattenJsonRpcCandidates(m));
+    } else {
+      out.push(m);
+    }
+  }
+  return out;
+}
+
+function findJsonRpcResponseForId(messages: unknown[], requestId: string): JsonRpcResponse | null {
+  const flat = flattenJsonRpcCandidates(messages);
+  for (const item of flat) {
+    if (!item || typeof item !== 'object') {
+      continue;
+    }
+    const msg = item as Record<string, unknown>;
+    if (msg.jsonrpc !== '2.0' || !('id' in msg)) {
+      continue;
+    }
+    if (String(msg.id) !== String(requestId)) {
+      continue;
+    }
+    if (!('result' in msg) && !('error' in msg)) {
+      continue;
+    }
+    return msg as JsonRpcResponse;
+  }
+  return null;
+}
+
+function readSessionFromResponse(response: Response, previous: string | undefined): string | undefined {
+  const headerVal = response.headers.get(MCP_SESSION_HEADER)?.trim();
+  if (headerVal) {
+    return headerVal;
+  }
+  return previous;
+}
+
+async function sendInitializedNotification(
+  server: McpServerConfig,
+  signal: AbortSignal,
+  sessionId: string | undefined,
+): Promise<void> {
+  const headers = buildHeaders(server);
+  if (sessionId) {
+    headers.set(MCP_SESSION_HEADER, sessionId);
+  }
+  const response = await fetch(resolvePostEndpoint(server), {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }),
+    signal,
+  });
+  if (response.status === 202) {
+    return;
+  }
+  if (response.ok) {
+    return;
+  }
+  throw new Error(`MCP notifications/initialized failed (${response.status}) ${response.statusText}`);
+}
+
+async function postJsonRpcRequest(
   server: McpServerConfig,
   method: string,
   params: Record<string, unknown> | undefined,
   signal: AbortSignal,
-): Promise<unknown> {
+  sessionId: string | undefined,
+): Promise<{ result: unknown; sessionId: string | undefined }> {
   const requestId = `${method}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const payload: JsonRpcRequest = {
     jsonrpc: '2.0',
@@ -85,21 +184,71 @@ async function postJsonRpc(
     params,
   };
   const endpoint = resolvePostEndpoint(server);
+  const headers = buildHeaders(server);
+  if (sessionId) {
+    headers.set(MCP_SESSION_HEADER, sessionId);
+  }
+
   const response = await fetch(endpoint, {
     method: 'POST',
-    headers: buildHeaders(server),
+    headers,
     body: JSON.stringify(payload),
     signal,
   });
 
+  let nextSession = readSessionFromResponse(response, sessionId);
+
+  if (response.status === 202) {
+    return { result: undefined, sessionId: nextSession };
+  }
+
   if (!response.ok) {
-    throw new Error(`MCP request failed (${response.status}) ${response.statusText}`);
+    const errText = await response.text().catch(() => '');
+    throw new Error(
+      `MCP request failed (${response.status}) ${response.statusText}${errText ? `: ${errText.slice(0, 280)}` : ''}`,
+    );
   }
-  const body = (await response.json()) as JsonRpcResponse;
-  if (body.error) {
-    throw new Error(body.error.message || `MCP method "${method}" failed`);
+
+  const contentType = response.headers.get('content-type') || '';
+
+  const parseSseJsonRpcResult = (raw: string): unknown => {
+    const messages = parseSseDataJsonObjects(raw);
+    const reply = findJsonRpcResponseForId(messages, requestId);
+    if (!reply) {
+      throw new Error(
+        'MCP server returned an SSE stream but no JSON-RPC response matching this request. Is the endpoint correct?',
+      );
+    }
+    if (reply.error) {
+      throw new Error(reply.error.message || `MCP method "${method}" failed`);
+    }
+    return reply.result;
+  };
+
+  const text = await response.text();
+
+  if (contentType.includes('text/event-stream')) {
+    const result = parseSseJsonRpcResult(text);
+    return { result, sessionId: nextSession };
   }
-  return body.result;
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text) as JsonRpcResponse | JsonRpcResponse[];
+  } catch {
+    const result = parseSseJsonRpcResult(text);
+    return { result, sessionId: nextSession };
+  }
+
+  const asArray = Array.isArray(parsed) ? parsed : [parsed];
+  const reply = findJsonRpcResponseForId(asArray, requestId);
+  if (!reply) {
+    throw new Error('MCP server returned JSON without a matching JSON-RPC response id');
+  }
+  if (reply.error) {
+    throw new Error(reply.error.message || `MCP method "${method}" failed`);
+  }
+  return { result: reply.result, sessionId: nextSession };
 }
 
 function withTimeout(signal: AbortSignal | undefined, timeoutMs = DEFAULT_TIMEOUT_MS): AbortSignal {
@@ -118,13 +267,8 @@ function withTimeout(signal: AbortSignal | undefined, timeoutMs = DEFAULT_TIMEOU
   return timeoutController.signal;
 }
 
-function toDiscoveredTools(result: unknown): McpDiscoveredTool[] {
-  if (!result || typeof result !== 'object') {
-    return [];
-  }
-  const maybeTools = (result as { tools?: unknown[] }).tools;
-  const tools: unknown[] = Array.isArray(maybeTools) ? maybeTools : [];
-  return tools
+function normalizeToolRecords(raw: unknown[]): McpDiscoveredTool[] {
+  return raw
     .filter((tool: unknown) => Boolean(tool && typeof tool === 'object'))
     .map((tool: unknown) => {
       const toolRecord = tool as Record<string, unknown>;
@@ -137,6 +281,22 @@ function toDiscoveredTools(result: unknown): McpDiscoveredTool[] {
     .filter((tool: McpDiscoveredTool) => Boolean(tool.name));
 }
 
+function toDiscoveredTools(result: unknown): McpDiscoveredTool[] {
+  if (result == null) {
+    return [];
+  }
+  if (Array.isArray(result)) {
+    return normalizeToolRecords(result);
+  }
+  if (typeof result === 'object') {
+    const o = result as Record<string, unknown>;
+    if (Array.isArray(o.tools)) {
+      return normalizeToolRecords(o.tools);
+    }
+  }
+  return [];
+}
+
 export async function discoverMcpTools(
   server: McpServerConfig,
   options?: {
@@ -145,7 +305,9 @@ export async function discoverMcpTools(
   },
 ): Promise<McpDiscoveredTool[]> {
   const signal = withTimeout(options?.signal, options?.timeoutMs);
-  await postJsonRpc(
+  let sessionId: string | undefined;
+
+  const init = await postJsonRpcRequest(
     server,
     'initialize',
     {
@@ -154,9 +316,16 @@ export async function discoverMcpTools(
       clientInfo: { name: 'nanobrowser', version: '0.1.0' },
     },
     signal,
+    undefined,
   );
-  const result = await postJsonRpc(server, 'tools/list', {}, signal);
-  return toDiscoveredTools(result);
+  sessionId = init.sessionId;
+
+  await sendInitializedNotification(server, signal, sessionId);
+
+  const listed = await postJsonRpcRequest(server, 'tools/list', {}, signal, sessionId);
+  sessionId = listed.sessionId ?? sessionId;
+
+  return toDiscoveredTools(listed.result);
 }
 
 export async function executeMcpTool(
@@ -169,7 +338,9 @@ export async function executeMcpTool(
   },
 ): Promise<McpCallToolResult> {
   const signal = withTimeout(params.signal, params.timeoutMs);
-  await postJsonRpc(
+  let sessionId: string | undefined;
+
+  const init = await postJsonRpcRequest(
     server,
     'initialize',
     {
@@ -178,8 +349,13 @@ export async function executeMcpTool(
       clientInfo: { name: 'nanobrowser', version: '0.1.0' },
     },
     signal,
+    undefined,
   );
-  const result = await postJsonRpc(
+  sessionId = init.sessionId;
+
+  await sendInitializedNotification(server, signal, sessionId);
+
+  const called = await postJsonRpcRequest(
     server,
     'tools/call',
     {
@@ -187,7 +363,10 @@ export async function executeMcpTool(
       arguments: params.argumentsInput,
     },
     signal,
+    sessionId,
   );
+
+  const result = called.result;
   const serialized = stringifySafe(result);
   const truncatedResult = truncate(serialized, MAX_TOOL_RESULT_CHARS);
   return {

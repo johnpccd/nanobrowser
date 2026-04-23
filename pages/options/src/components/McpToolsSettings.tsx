@@ -59,6 +59,7 @@ export const McpToolsSettings = ({ isDarkMode = false }: McpToolsSettingsProps) 
   const [editingServerId, setEditingServerId] = useState<string | null>(null);
   const [validationError, setValidationError] = useState('');
   const [discoveringServerId, setDiscoveringServerId] = useState<string | null>(null);
+  const [discoverySuccess, setDiscoverySuccess] = useState<{ serverId: string; tools: string[] } | null>(null);
 
   const activeServers = useMemo(() => settings.servers, [settings.servers]);
 
@@ -153,13 +154,18 @@ export const McpToolsSettings = ({ isDarkMode = false }: McpToolsSettingsProps) 
   const discoverTools = async (server: McpServerConfig) => {
     setDiscoveringServerId(server.id);
     setValidationError('');
+    setDiscoverySuccess(null);
     try {
       const response = await chrome.runtime.sendMessage({
         type: 'mcp_discover_tools',
         server,
       });
-      if (!response?.ok) {
-        setValidationError(response?.error || tr('options_mcp_errors_discoveryFailed'));
+      if (response === undefined) {
+        setValidationError(tr('options_mcp_errors_bgUnreachable'));
+        return;
+      }
+      if (!response.ok) {
+        setValidationError(response.error || tr('options_mcp_errors_discoveryFailed'));
         return;
       }
       const discoveredTools = Array.isArray(response.tools) ? response.tools.map((name: unknown) => String(name)) : [];
@@ -167,16 +173,19 @@ export const McpToolsSettings = ({ isDarkMode = false }: McpToolsSettingsProps) 
         setValidationError(tr('options_mcp_errors_discoveryEmpty'));
         return;
       }
-      const nextAllowedTools =
-        server.toolAccessMode === 'allowlist' ? Array.from(new Set([...server.allowedTools, ...discoveredTools])) : [];
-      await mcpToolsSettingsStore.upsertServer({
-        ...server,
-        allowedTools: nextAllowedTools,
-      });
-      const latest = await mcpToolsSettingsStore.getSettings();
-      setSettings(latest);
-      if (editingServerId === server.id && server.toolAccessMode === 'allowlist') {
-        setAllowedToolsInput(toAllowedToolsInput(nextAllowedTools));
+      setDiscoverySuccess({ serverId: server.id, tools: discoveredTools });
+
+      if (server.toolAccessMode === 'allowlist') {
+        const nextAllowedTools = Array.from(new Set([...server.allowedTools, ...discoveredTools]));
+        await mcpToolsSettingsStore.upsertServer({
+          ...server,
+          allowedTools: nextAllowedTools,
+        });
+        const latest = await mcpToolsSettingsStore.getSettings();
+        setSettings(latest);
+        if (editingServerId === server.id) {
+          setAllowedToolsInput(toAllowedToolsInput(nextAllowedTools));
+        }
       }
     } catch (error) {
       setValidationError(error instanceof Error ? error.message : tr('options_mcp_errors_discoveryFailed'));
@@ -408,6 +417,31 @@ export const McpToolsSettings = ({ isDarkMode = false }: McpToolsSettingsProps) 
                     </button>
                   </div>
                 </div>
+                {discoverySuccess?.serverId === server.id && discoverySuccess.tools.length > 0 && (
+                  <div
+                    className={`mt-3 rounded-md border px-3 py-2 text-xs ${
+                      isDarkMode
+                        ? 'border-emerald-700/60 bg-emerald-950/35 text-emerald-100'
+                        : 'border-emerald-200 bg-emerald-50 text-emerald-900'
+                    }`}>
+                    <p className="font-medium">
+                      {t('options_mcp_discover_success' as never, [String(discoverySuccess.tools.length)] as never)}
+                    </p>
+                    <ul
+                      className={`mt-1 list-inside list-disc space-y-0.5 ${isDarkMode ? 'text-emerald-200/95' : 'text-emerald-900'}`}>
+                      {discoverySuccess.tools.map(name => (
+                        <li key={name} className="font-mono">
+                          {name}
+                        </li>
+                      ))}
+                    </ul>
+                    {server.toolAccessMode === 'allowlist' && (
+                      <p className={`mt-2 ${isDarkMode ? 'text-emerald-300/90' : 'text-emerald-800'}`}>
+                        {tr('options_mcp_discover_allowlistHint')}
+                      </p>
+                    )}
+                  </div>
+                )}
                 {server.toolAccessMode === 'allowlist' && server.allowedTools.length > 0 && (
                   <p className={`mt-2 text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                     {tr('options_mcp_allowedTools_label')}: {server.allowedTools.join(', ')}

@@ -376,6 +376,21 @@
   "options_mcp_errors_discoveryEmpty": {
     "message": "No tools were discovered from this server."
   },
+  "options_mcp_discover_success": {
+    "message": "Discovered $COUNT$ tool(s) on this server.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "5"
+      }
+    }
+  },
+  "options_mcp_discover_allowlistHint": {
+    "message": "Allowlist mode: names were added to your allowed-tools field (save the server if you are editing)."
+  },
+  "options_mcp_errors_bgUnreachable": {
+    "message": "Could not reach the extension background. Open chrome://extensions, reload this extension, then try again."
+  },
   "options_general_header": {
     "message": "General"
   },

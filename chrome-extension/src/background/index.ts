@@ -51,8 +51,70 @@ function truncateToolDetail(value: string): string {
   return `${value.slice(0, MAX_TOOL_EVENT_DETAIL_CHARS)}\n\n[truncated]`;
 }
 
+/** LLM providers typically require tool names like ^[a-zA-Z0-9_-]+$ and length caps (~64). */
+const MAX_MCP_BOUND_TOOL_NAME_LEN = 64;
+
+function hashMcpToolKey(serverId: string, toolName: string): string {
+  let hash = 0x811c9dc5;
+  const s = `${serverId}\0${toolName}`;
+  for (let i = 0; i < s.length; i++) {
+    hash ^= s.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(16).padStart(8, '0');
+}
+
 function normalizeMcpToolName(serverId: string, toolName: string): string {
-  return `mcp__${encodeURIComponent(serverId)}__${encodeURIComponent(toolName)}`;
+  const idPart = hashMcpToolKey(serverId, toolName).slice(0, 12);
+  const safeTool = toolName
+    .replace(/[^a-zA-Z0-9_]/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '');
+  const tail = safeTool || 'tool';
+  const base = `mcp_${idPart}_${tail}`;
+  if (base.length <= MAX_MCP_BOUND_TOOL_NAME_LEN) {
+    return base;
+  }
+  const budget = MAX_MCP_BOUND_TOOL_NAME_LEN - `mcp_${idPart}_`.length;
+  return `mcp_${idPart}_${tail.slice(0, Math.max(1, budget))}`;
+}
+
+function formatMcpInputSchemaHint(inputSchema: unknown): string {
+  if (inputSchema === null || inputSchema === undefined) {
+    return '';
+  }
+  try {
+    const s = JSON.stringify(inputSchema);
+    if (s.length > 450) {
+      return `\nExpected arguments (JSON Schema, truncated): ${s.slice(0, 450)}…`;
+    }
+    return s.length > 2 ? `\nExpected arguments (JSON Schema): ${s}` : '';
+  } catch {
+    return '';
+  }
+}
+
+/** Map model tool args to MCP `tools/call` arguments (handles `arguments_json` string). */
+function coerceMcpToolCallArgs(toolArgs: Record<string, unknown>): Record<string, unknown> {
+  const raw = toolArgs.arguments_json;
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim();
+    if (!trimmed) {
+      return {};
+    }
+    try {
+      const parsed = JSON.parse(trimmed) as unknown;
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return parsed as Record<string, unknown>;
+      }
+    } catch {
+      return {};
+    }
+    return {};
+  }
+  const rest = { ...toolArgs };
+  delete rest.arguments_json;
+  return rest;
 }
 
 function emitQAToolEvent(
@@ -691,15 +753,38 @@ chrome.runtime.onConnect.addListener(port => {
                         server,
                         toolName: tool.name,
                       });
+                      const mcpDescription = [
+                        tool.description ||
+                          `Call MCP tool "${tool.name}" on server "${server.name}" when it directly helps the user.`,
+                        'Pass arguments as a single JSON object string in `arguments_json` (e.g. `{}` or `{"query":"hello"}`).',
+                        formatMcpInputSchemaHint(tool.inputSchema),
+                      ]
+                        .filter(Boolean)
+                        .join(' ');
                       mcpDynamicTools.push(
                         new DynamicStructuredTool({
                           name: normalizedToolName,
-                          description:
-                            tool.description ||
-                            `Call MCP tool ${tool.name} on server ${server.name}. Use only for tasks requiring remote MCP capabilities.`,
-                          schema: z.record(z.unknown()),
-                          func: async args => {
-                            const safeArgs = (args || {}) as Record<string, unknown>;
+                          description: mcpDescription,
+                          schema: z.object({
+                            arguments_json: z
+                              .string()
+                              .describe(
+                                'JSON object as a string of named arguments for this MCP tool. Use "{}" if none. Example: {"path":"/tmp"}',
+                              ),
+                          }),
+                          func: async ({ arguments_json }) => {
+                            let safeArgs: Record<string, unknown> = {};
+                            const raw = arguments_json?.trim() ?? '';
+                            if (raw) {
+                              try {
+                                const parsed = JSON.parse(raw) as unknown;
+                                if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                                  safeArgs = parsed as Record<string, unknown>;
+                                }
+                              } catch {
+                                safeArgs = {};
+                              }
+                            }
                             emitQAToolEvent(streamTabConn?.port, {
                               sessionId,
                               tabId,
@@ -787,7 +872,8 @@ chrome.runtime.onConnect.addListener(port => {
                   }
                   if (mcpDynamicTools.length > 0) {
                     promptHints.push(
-                      'MCP tools are available as tool names prefixed with `mcp__`.',
+                      'MCP tools are registered under short names starting with `mcp_`.',
+                      'For every MCP tool call you must pass `arguments_json`: a string containing a JSON object of named parameters (use "{}" if the tool needs no arguments).',
                       'Use MCP tools only when they are directly helpful to answer the user request.',
                       `Use at most ${MAX_QA_TOOL_CALLS} MCP tool calls in one answer.`,
                     );
@@ -921,19 +1007,20 @@ chrome.runtime.onConnect.addListener(port => {
                               });
                       } else {
                         const prettyToolName = `mcp:${mcpToolMeta!.server.name}/${mcpToolMeta!.toolName}`;
+                        const mcpCallArgs = coerceMcpToolCallArgs(toolArgs);
                         emitQAToolEvent(streamTabConn?.port, {
                           sessionId,
                           tabId,
                           toolName: prettyToolName,
                           kind: 'call',
                           summary: `Calling MCP tool ${mcpToolMeta!.toolName} on ${mcpToolMeta!.server.name}`,
-                          detail: truncateToolDetail(`Arguments: ${JSON.stringify(toolArgs, null, 2)}`),
+                          detail: truncateToolDetail(`Arguments: ${JSON.stringify(mcpCallArgs, null, 2)}`),
                           status: 'pending',
                         });
                         try {
                           const mcpResult = await executeMcpTool(mcpToolMeta!.server, {
                             toolName: mcpToolMeta!.toolName,
-                            argumentsInput: toolArgs,
+                            argumentsInput: mcpCallArgs,
                             signal: abortController.signal,
                           });
                           toolResult = mcpResult.content;

@@ -279,12 +279,8 @@ export default function ChatInput({
     ...(qaUiTheme?.chromeFontSizePx ? { fontSize: `${Math.max(qaUiTheme.chromeFontSizePx - 1, 11)}px` } : {}),
   };
 
-  const webOnControlStyle: CSSProperties = {
-    ...(qaUiTheme?.linkColor ? { backgroundColor: qaUiTheme.linkColor } : {}),
-    ...(qaUiTheme?.inputBorder ? { borderColor: qaUiTheme.inputBorder } : {}),
-    ...(qaUiTheme?.inputText ? { color: qaUiTheme.inputText } : {}),
-    ...(qaUiTheme?.chromeFontSizePx ? { fontSize: `${Math.max(qaUiTheme.chromeFontSizePx - 1, 11)}px` } : {}),
-  };
+  /** Same “ON” treatment as page-content toggle so both read clearly as active. */
+  const toggleOnControlStyle = accentControlStyle;
 
   return (
     <form
@@ -521,7 +517,7 @@ export default function ChatInput({
                                 ? 'bg-slate-700 text-gray-400 hover:bg-slate-600 border border-slate-600'
                                 : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-300'
                         }`}
-                        style={includePageContent ? accentControlStyle : neutralControlStyle}>
+                        style={includePageContent ? toggleOnControlStyle : neutralControlStyle}>
                         {includePageContent ? (
                           <HiOutlineDocumentText className="size-4" />
                         ) : (
@@ -554,7 +550,7 @@ export default function ChatInput({
                                 ? 'bg-slate-700 text-gray-400 border border-slate-600 hover:bg-slate-600'
                                 : 'bg-gray-100 text-gray-500 border border-gray-300 hover:bg-gray-200'
                         }`}
-                        style={enableWebSearch ? webOnControlStyle : neutralControlStyle}>
+                        style={enableWebSearch ? toggleOnControlStyle : neutralControlStyle}>
                         <span className="hidden sm:inline">{enableWebSearch ? 'Web search on' : 'Web search off'}</span>
                         <span className="sm:hidden">{enableWebSearch ? 'Web' : 'No Web'}</span>
                       </button>
