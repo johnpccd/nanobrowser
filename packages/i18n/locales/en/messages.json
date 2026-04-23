@@ -266,7 +266,7 @@
     "message": "MCP Tools"
   },
   "options_mcp_desc": {
-    "message": "Configure remote MCP servers and expose their tools to QA mode."
+    "message": "Configure remote MCP servers and expose their tools to QA mode. Streamable HTTP uses one POST URL. Legacy SSE uses a GET SSE URL plus a separate JSON-RPC POST URL (or the stream’s endpoint event)."
   },
   "options_mcp_enable": {
     "message": "Enable MCP tools in QA mode"
@@ -289,11 +289,17 @@
   "options_mcp_transport_sse": {
     "message": "SSE"
   },
-  "options_mcp_endpoint_placeholder": {
-    "message": "Server endpoint (https://...)"
+  "options_mcp_endpoint_placeholder_streamable": {
+    "message": "POST endpoint (e.g. https://host/mcp)"
+  },
+  "options_mcp_endpoint_placeholder_sse": {
+    "message": "SSE stream URL — GET only (e.g. https://host/sse)"
   },
   "options_mcp_sseMessageEndpoint_placeholder": {
-    "message": "SSE message endpoint (optional, https://...)"
+    "message": "JSON-RPC POST URL if not sent in stream (e.g. https://host/messages)"
+  },
+  "options_mcp_sse_hint": {
+    "message": "Do not POST to the SSE URL — that causes 405. The extension opens the stream here and sends RPC to the message URL (or the URL from the endpoint event)."
   },
   "options_mcp_auth_none": {
     "message": "No authentication"

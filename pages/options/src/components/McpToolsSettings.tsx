@@ -261,21 +261,33 @@ export const McpToolsSettings = ({ isDarkMode = false }: McpToolsSettingsProps) 
               type="url"
               value={draft.endpoint}
               onChange={e => setDraft(prev => ({ ...prev, endpoint: e.target.value }))}
-              placeholder={tr('options_mcp_endpoint_placeholder')}
+              placeholder={
+                draft.transport === 'sse'
+                  ? tr('options_mcp_endpoint_placeholder_sse')
+                  : tr('options_mcp_endpoint_placeholder_streamable')
+              }
               className={`rounded-md border px-3 py-2 text-sm ${
                 isDarkMode ? 'border-slate-600 bg-slate-700 text-gray-200' : 'border-gray-300 bg-white text-gray-700'
               } md:col-span-2`}
             />
             {draft.transport === 'sse' && (
-              <input
-                type="url"
-                value={draft.sseMessageEndpoint ?? ''}
-                onChange={e => setDraft(prev => ({ ...prev, sseMessageEndpoint: e.target.value }))}
-                placeholder={tr('options_mcp_sseMessageEndpoint_placeholder')}
-                className={`rounded-md border px-3 py-2 text-sm ${
-                  isDarkMode ? 'border-slate-600 bg-slate-700 text-gray-200' : 'border-gray-300 bg-white text-gray-700'
-                } md:col-span-2`}
-              />
+              <>
+                <input
+                  type="url"
+                  value={draft.sseMessageEndpoint ?? ''}
+                  onChange={e => setDraft(prev => ({ ...prev, sseMessageEndpoint: e.target.value }))}
+                  placeholder={tr('options_mcp_sseMessageEndpoint_placeholder')}
+                  className={`rounded-md border px-3 py-2 text-sm ${
+                    isDarkMode
+                      ? 'border-slate-600 bg-slate-700 text-gray-200'
+                      : 'border-gray-300 bg-white text-gray-700'
+                  } md:col-span-2`}
+                />
+                <p
+                  className={`text-xs leading-relaxed md:col-span-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  {tr('options_mcp_sse_hint')}
+                </p>
+              </>
             )}
             <select
               value={draft.authType}
