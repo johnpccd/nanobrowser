@@ -245,9 +245,10 @@ const SidePanel = () => {
           setMessages([]);
           // Reset follow-up mode when there's no active session
           setIsFollowUpMode(false);
-          // For new tabs/sessions in QA mode, enable page content by default
+          // Respect global QA preference (avoid racing loadGeneralSettings and overwriting with true)
           if (tabMode === 'qa') {
-            setIncludePageContent(true);
+            const g = await generalSettingsStore.getSettings();
+            setIncludePageContent(g.includePageContent);
           }
         }
       }
@@ -280,9 +281,14 @@ const SidePanel = () => {
         setMessages([]);
         await saveCurrentTabActiveSession(null);
       }
-      // For new sessions in QA mode, enable page content by default
+      // Sync page-content toggle with saved preference when starting fresh in QA mode
       if (newMode === 'qa' && !currentSessionId) {
-        setIncludePageContent(true);
+        try {
+          const g = await generalSettingsStore.getSettings();
+          setIncludePageContent(g.includePageContent);
+        } catch {
+          setIncludePageContent(DEFAULT_GENERAL_SETTINGS.includePageContent);
+        }
       }
     },
     [currentTabId, currentSessionId, saveCurrentTabActiveSession],
@@ -1306,8 +1312,13 @@ const SidePanel = () => {
       await setTabMode(currentTabId, 'qa');
     }
 
-    // Enable page content by default for new chats in QA mode
-    setIncludePageContent(true);
+    // Match page-content toggle to saved general setting for new chats
+    try {
+      const g = await generalSettingsStore.getSettings();
+      setIncludePageContent(g.includePageContent);
+    } catch {
+      setIncludePageContent(DEFAULT_GENERAL_SETTINGS.includePageContent);
+    }
 
     // Clear active session for current tab
     await saveCurrentTabActiveSession(null);
