@@ -1858,7 +1858,7 @@ const SidePanel = () => {
                     }`}>
                     {t('welcome_openSettings')}
                   </button>
-                  <div className="mt-4 text-sm opacity-75">
+                  {/* <div className="mt-4 text-sm opacity-75">
                     <a
                       href="https://github.com/nanobrowser/nanobrowser?tab=readme-ov-file#-quick-start"
                       target="_blank"
@@ -1874,7 +1874,7 @@ const SidePanel = () => {
                       className={`${isDarkMode ? 'text-sky-400 hover:text-sky-300' : 'text-sky-700 hover:text-sky-600'}`}>
                       {t('welcome_joinCommunity')}
                     </a>
-                  </div>
+                  </div> */}
                 </div>
               </div>
             )}
