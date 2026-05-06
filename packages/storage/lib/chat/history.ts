@@ -204,6 +204,33 @@ export function createChatHistoryStorage(): ChatHistoryStorage {
       return newMessage;
     },
 
+    updateMessage: async (sessionId: string, messageId: string, patch: Partial<Message>): Promise<ChatMessage | null> => {
+      const messagesStorage = getSessionMessagesStorage(sessionId);
+      let updated: ChatMessage | null = null;
+
+      await messagesStorage.set(prevMessages =>
+        prevMessages.map(msg => {
+          if (msg.id !== messageId) {
+            return msg;
+          }
+          updated = { ...msg, ...patch } as ChatMessage;
+          return updated;
+        }),
+      );
+
+      if (!updated) {
+        return null;
+      }
+
+      await chatSessionsMetaStorage.set(prevSessions =>
+        prevSessions.map(session =>
+          session.id === sessionId ? { ...session, updatedAt: getCurrentTimestamp() } : session,
+        ),
+      );
+
+      return updated;
+    },
+
     deleteMessage: async (sessionId: string, messageId: string): Promise<void> => {
       // Get the messages storage for this session
       const messagesStorage = getSessionMessagesStorage(sessionId);

@@ -73,6 +73,12 @@
   "chat_input_editor": {
     "message": "Entrada de mensagem"
   },
+  "chat_attach_files_button": {
+    "message": "Anexar"
+  },
+  "chat_attach_files_tooltip": {
+    "message": "Anexar arquivos de texto: txt, md, json, csv, log, xml, yaml (máx. 1 MB cada)"
+  },
   "chat_history_title": {
     "message": "Histórico de Chat"
   },
@@ -258,6 +264,15 @@
   },
   "options_tabs_help": {
     "message": "Ajuda"
+  },
+  "options_tabs_about": {
+    "message": "Sobre"
+  },
+  "options_about_header": {
+    "message": "Sobre"
+  },
+  "options_about_buildSha": {
+    "message": "SHA-1 da compilação"
   },
   "options_general_header": {
     "message": "Geral"

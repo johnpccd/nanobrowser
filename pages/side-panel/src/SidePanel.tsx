@@ -20,6 +20,9 @@ import {
   DEFAULT_GENERAL_SETTINGS,
   resolveQaUiTheme,
   type GeneralSettingsConfig,
+  personasStore,
+  DEFAULT_PERSONA_ID,
+  type Persona,
 } from '@extension/storage';
 import favoritesStorage, { type FavoritePrompt, favoritesBaseStorage } from '@extension/storage/lib/prompt/favorites';
 import { t } from '@extension/i18n';
@@ -34,7 +37,29 @@ import './SidePanel.css';
 declare global {
   interface Window {
     chrome: typeof chrome;
+    SpeechRecognition?: BrowserSpeechRecognitionConstructor;
+    webkitSpeechRecognition?: BrowserSpeechRecognitionConstructor;
   }
+}
+
+type BrowserSpeechRecognitionConstructor = new () => BrowserSpeechRecognition;
+
+interface BrowserSpeechRecognition {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onresult: ((event: BrowserSpeechRecognitionEvent) => void) | null;
+  onerror: ((event: { error?: string }) => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+}
+
+interface BrowserSpeechRecognitionEvent {
+  results: ArrayLike<{
+    isFinal: boolean;
+    0: { transcript: string };
+  }>;
 }
 
 // Track streaming state per tab (allows streaming to continue in background when switching tabs)
@@ -54,7 +79,8 @@ const SidePanel = () => {
   const [chatSessions, setChatSessions] = useState<Array<{ id: string; title: string; createdAt: number }>>([]);
   const [isFollowUpMode, setIsFollowUpMode] = useState(false);
   const [isHistoricalSession, setIsHistoricalSession] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  /** Side panel uses a Cursor-style dark IDE theme by default (not OS `prefers-color-scheme`). */
+  const [isDarkMode] = useState(true);
   const [favoritePrompts, setFavoritePrompts] = useState<FavoritePrompt[]>([]);
   const [hasConfiguredModels, setHasConfiguredModels] = useState<boolean | null>(null); // null = loading, false = no models, true = has models
   const [isRecording, setIsRecording] = useState(false);
@@ -95,25 +121,16 @@ const SidePanel = () => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<number | null>(null);
+  const speechRecognitionRef = useRef<BrowserSpeechRecognition | null>(null);
+  const recordingModeRef = useRef<'browser' | 'legacy' | null>(null);
   // QA model selection state
   const [availableModels, setAvailableModels] = useState<
     Array<{ provider: string; providerName: string; model: string; displayName: string }>
   >([]);
   const [currentQAModel, setCurrentQAModel] = useState<string>('');
   const [openRouterModels, setOpenRouterModels] = useState<Array<{ id: string; name: string }>>([]);
-
-  // Check for dark mode preference
-  useEffect(() => {
-    const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    setIsDarkMode(darkModeMediaQuery.matches);
-
-    const handleChange = (e: MediaQueryListEvent) => {
-      setIsDarkMode(e.matches);
-    };
-
-    darkModeMediaQuery.addEventListener('change', handleChange);
-    return () => darkModeMediaQuery.removeEventListener('change', handleChange);
-  }, []);
+  const [personas, setPersonas] = useState<Persona[]>([]);
+  const [activePersonaId, setActivePersonaId] = useState<string>(DEFAULT_PERSONA_ID);
 
   // Check if models are configured
   const checkModelConfiguration = useCallback(async () => {
@@ -151,6 +168,10 @@ const SidePanel = () => {
   const qaUiTheme = useMemo(
     () => (mode === 'qa' ? resolveQaUiTheme(generalSettingsSnapshot) : null),
     [mode, generalSettingsSnapshot],
+  );
+  const activePersona = useMemo(
+    () => personas.find(persona => persona.id === activePersonaId) ?? personas[0] ?? null,
+    [personas, activePersonaId],
   );
 
   // Load current tab and its state
@@ -392,6 +413,27 @@ const SidePanel = () => {
     }
   }, []);
 
+  const loadPersonas = useCallback(async () => {
+    try {
+      const settings = await personasStore.getSettings();
+      setPersonas(settings.personas);
+      setActivePersonaId(settings.activePersonaId);
+    } catch (error) {
+      console.error('Error loading personas:', error);
+      setPersonas([]);
+      setActivePersonaId(DEFAULT_PERSONA_ID);
+    }
+  }, []);
+
+  const handlePersonaChange = useCallback(async (personaId: string) => {
+    try {
+      await personasStore.setActivePersona(personaId);
+      setActivePersonaId(personaId);
+    } catch (error) {
+      console.error('Error updating active persona:', error);
+    }
+  }, []);
+
   // Handle QA model change
   const handleQAModelChange = useCallback(
     async (provider: string, model: string) => {
@@ -450,6 +492,10 @@ const SidePanel = () => {
   useEffect(() => {
     loadCurrentQAModel();
   }, [loadCurrentQAModel]);
+
+  useEffect(() => {
+    loadPersonas();
+  }, [loadPersonas]);
 
   // Check model configuration on mount
   useEffect(() => {
@@ -516,6 +562,13 @@ const SidePanel = () => {
       unsubscribe();
     };
   }, [loadGeneralSettings]);
+
+  useEffect(() => {
+    const unsubscribe = personasStore.subscribe(() => {
+      void loadPersonas();
+    });
+    return () => unsubscribe();
+  }, [loadPersonas]);
 
   useEffect(() => {
     sessionIdRef.current = currentSessionId;
@@ -753,14 +806,75 @@ const SidePanel = () => {
           const msgTabId = message.tabId;
           const msgSessionId = message.sessionId;
           const toolMessage = message.toolMessage as Message | undefined;
+          const te = toolMessage?.toolEvent;
 
-          if (msgTabId !== null && msgTabId !== undefined && msgSessionId && toolMessage) {
-            chatHistoryStore.addMessage(msgSessionId, toolMessage).catch(err => {
-              console.error('Failed to save tool event to history:', err);
-            });
+          if (msgTabId !== null && msgTabId !== undefined && msgSessionId && toolMessage && te) {
+            const isActiveView = msgSessionId === sessionIdRef.current && msgTabId === currentTabIdRef.current;
+            const isToolCompletion =
+              Boolean(te.toolRunId) &&
+              te.kind === 'result' &&
+              (te.status === 'success' || te.status === 'error');
+            const isToolPending = Boolean(te.toolRunId) && te.kind === 'call' && te.status === 'pending';
 
-            if (msgSessionId === sessionIdRef.current && msgTabId === currentTabIdRef.current) {
-              setMessages(prev => [...prev, toolMessage]);
+            const findMessageIdForToolRun = async (): Promise<string | undefined> => {
+              const session = await chatHistoryStore.getSession(msgSessionId);
+              if (!session) {
+                return undefined;
+              }
+              for (let i = session.messages.length - 1; i >= 0; i -= 1) {
+                if (session.messages[i].toolEvent?.toolRunId === te.toolRunId) {
+                  return session.messages[i].id;
+                }
+              }
+              return undefined;
+            };
+
+            if (isToolCompletion) {
+              void (async () => {
+                try {
+                  const messageId = await findMessageIdForToolRun();
+                  if (messageId) {
+                    const updated = await chatHistoryStore.updateMessage(msgSessionId, messageId, {
+                      toolEvent: te,
+                      timestamp: toolMessage.timestamp ?? Date.now(),
+                    });
+                    if (isActiveView && updated) {
+                      setMessages(prev =>
+                        prev.map(m => ('id' in m && m.id === messageId ? { ...m, ...updated } : m)),
+                      );
+                    }
+                  } else {
+                    const saved = await chatHistoryStore.addMessage(msgSessionId, toolMessage);
+                    if (isActiveView) {
+                      setMessages(prev => [...prev, saved]);
+                    }
+                  }
+                } catch (err) {
+                  console.error('Failed to persist tool completion:', err);
+                }
+              })();
+            } else if (isToolPending) {
+              void chatHistoryStore
+                .addMessage(msgSessionId, toolMessage)
+                .then(saved => {
+                  if (isActiveView) {
+                    setMessages(prev => [...prev, saved]);
+                  }
+                })
+                .catch(err => {
+                  console.error('Failed to save tool event to history:', err);
+                });
+            } else {
+              void chatHistoryStore
+                .addMessage(msgSessionId, toolMessage)
+                .then(saved => {
+                  if (isActiveView) {
+                    setMessages(prev => [...prev, saved]);
+                  }
+                })
+                .catch(err => {
+                  console.error('Failed to save tool event to history:', err);
+                });
             }
           }
         } else if (message && message.type === 'qa_response_complete') {
@@ -1204,6 +1318,8 @@ const SidePanel = () => {
           imageData, // Include image in the message to background
           includePageContent, // Whether to include page content in the query
           enableWebSearch, // Whether to include web search in the query
+          personaSystemPrompt: activePersona?.systemPrompt || undefined,
+          personaName: activePersona?.name || undefined,
         });
         console.log(
           'qa_query sent',
@@ -1334,7 +1450,7 @@ const SidePanel = () => {
     } catch (error) {
       console.error('Failed to load chat sessions:', error);
     }
-  }, []);
+  }, [currentTabId]);
 
   const handleLoadHistory = async () => {
     await loadChatSessions();
@@ -1476,6 +1592,10 @@ const SidePanel = () => {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      if (speechRecognitionRef.current) {
+        speechRecognitionRef.current.stop();
+        speechRecognitionRef.current = null;
+      }
       // Stop recording if active
       if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
         mediaRecorderRef.current.stop();
@@ -1600,8 +1720,10 @@ const SidePanel = () => {
 
   const handleMicClick = async () => {
     if (isRecording) {
-      // Stop recording
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      if (recordingModeRef.current === 'browser' && speechRecognitionRef.current) {
+        speechRecognitionRef.current.stop();
+      }
+      if (recordingModeRef.current === 'legacy' && mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
         mediaRecorderRef.current.stop();
       }
       // Clear the timer
@@ -1614,6 +1736,60 @@ const SidePanel = () => {
     }
 
     try {
+      const speechRecognitionConstructor = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (mode === 'qa' && speechRecognitionConstructor) {
+        const recognition = new speechRecognitionConstructor();
+        speechRecognitionRef.current = recognition;
+        recordingModeRef.current = 'browser';
+
+        recognition.lang = navigator.language || 'en-US';
+        recognition.continuous = false;
+        recognition.interimResults = true;
+
+        let finalTranscript = '';
+
+        recognition.onresult = event => {
+          let interimTranscript = '';
+          for (let i = 0; i < event.results.length; i += 1) {
+            const result = event.results[i];
+            const transcript = result[0]?.transcript ?? '';
+            if (result.isFinal) {
+              finalTranscript += transcript;
+            } else {
+              interimTranscript += transcript;
+            }
+          }
+
+          if (setInputTextRef.current) {
+            setInputTextRef.current((finalTranscript + interimTranscript).trim());
+          }
+        };
+
+        recognition.onerror = event => {
+          appendMessage({
+            actor: Actors.SYSTEM,
+            content: event.error || t('chat_stt_recognitionFailed'),
+            timestamp: Date.now(),
+          });
+          setIsRecording(false);
+          speechRecognitionRef.current = null;
+          recordingModeRef.current = null;
+        };
+
+        recognition.onend = () => {
+          setIsRecording(false);
+          speechRecognitionRef.current = null;
+          recordingModeRef.current = null;
+          if (setInputTextRef.current && finalTranscript.trim()) {
+            setInputTextRef.current(finalTranscript.trim());
+          }
+        };
+
+        recognition.start();
+        setIsRecording(true);
+        return;
+      }
+
       // First check if permission is already granted
       const permissionStatus = await navigator.permissions.query({ name: 'microphone' as PermissionName });
 
@@ -1669,6 +1845,7 @@ const SidePanel = () => {
 
       // Permission granted - proceed with recording
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      recordingModeRef.current = 'legacy';
 
       // Clear previous audio chunks
       audioChunksRef.current = [];
@@ -1719,10 +1896,12 @@ const SidePanel = () => {
               });
               setIsRecording(false);
               setIsProcessingSpeech(false);
+              recordingModeRef.current = null;
             }
           };
           reader.readAsDataURL(audioBlob);
         }
+        recordingModeRef.current = null;
       };
 
       // Set up 2-minute duration limit
@@ -1759,6 +1938,7 @@ const SidePanel = () => {
         timestamp: Date.now(),
       });
       setIsRecording(false);
+      recordingModeRef.current = null;
     }
   };
 
@@ -1770,7 +1950,7 @@ const SidePanel = () => {
   return (
     <div>
       <div
-        className={`flex h-screen flex-col ${isDarkMode ? 'bg-slate-900' : "bg-[url('/bg.jpg')] bg-cover bg-no-repeat"} overflow-hidden border ${isDarkMode ? 'border-sky-800' : 'border-[rgb(186,230,253)]'} rounded-2xl`}
+        className={`flex h-screen flex-col ${isDarkMode ? 'bg-[#1e1e2e]' : "bg-[url('/bg.jpg')] bg-cover bg-no-repeat"} overflow-hidden border ${isDarkMode ? 'border-[#333344]' : 'border-[rgb(186,230,253)]'} rounded-2xl`}
         style={{ ...panelShellStyle, ...panelFontStyle }}>
         <header className="header relative">
           <div className="header-logo">
@@ -1778,7 +1958,7 @@ const SidePanel = () => {
               <button
                 type="button"
                 onClick={() => handleBackToChat(false)}
-                className={`${isDarkMode ? 'text-sky-400 hover:text-sky-300' : 'text-sky-400 hover:text-sky-500'} cursor-pointer`}
+                className={`${isDarkMode ? 'text-[#a1a1b5] hover:text-[#e4e4ef]' : 'text-sky-400 hover:text-sky-500'} cursor-pointer`}
                 aria-label={t('nav_back_a11y')}>
                 {t('nav_back')}
               </button>
@@ -1792,7 +1972,7 @@ const SidePanel = () => {
                 <select
                   value={mode}
                   onChange={e => handleModeChange(e.target.value as TabMode)}
-                  className={`header-icon hidden ${isDarkMode ? 'text-sky-400 hover:text-sky-300 bg-slate-800' : 'text-sky-400 hover:text-sky-500 bg-white'} cursor-pointer border-0 rounded px-2 py-1 text-sm`}
+                  className={`header-icon hidden ${isDarkMode ? 'bg-[#252535] text-[#a1a1b5] hover:text-[#e4e4ef]' : 'bg-white text-sky-400 hover:text-sky-500'} cursor-pointer rounded border-0 px-2 py-1 text-sm`}
                   aria-label="Select mode">
                   <option value="automation">Automation Agent</option>
                   <option value="qa">QA Mode</option>
@@ -1801,7 +1981,7 @@ const SidePanel = () => {
                   type="button"
                   onClick={handleNewChat}
                   onKeyDown={e => e.key === 'Enter' && handleNewChat()}
-                  className={`header-icon ${isDarkMode ? 'text-sky-400 hover:text-sky-300' : 'text-sky-400 hover:text-sky-500'} cursor-pointer`}
+                  className={`header-icon ${isDarkMode ? 'text-[#a1a1b5] hover:text-[#e4e4ef]' : 'text-sky-400 hover:text-sky-500'} cursor-pointer`}
                   aria-label={t('nav_newChat_a11y')}
                   tabIndex={0}>
                   <PiPlusBold size={20} />
@@ -1810,7 +1990,7 @@ const SidePanel = () => {
                   type="button"
                   onClick={handleLoadHistory}
                   onKeyDown={e => e.key === 'Enter' && handleLoadHistory()}
-                  className={`header-icon ${isDarkMode ? 'text-sky-400 hover:text-sky-300' : 'text-sky-400 hover:text-sky-500'} cursor-pointer`}
+                  className={`header-icon ${isDarkMode ? 'text-[#a1a1b5] hover:text-[#e4e4ef]' : 'text-sky-400 hover:text-sky-500'} cursor-pointer`}
                   aria-label={t('nav_loadHistory_a11y')}
                   tabIndex={0}>
                   <GrHistory size={20} />
@@ -1821,7 +2001,7 @@ const SidePanel = () => {
               type="button"
               onClick={() => chrome.runtime.openOptionsPage()}
               onKeyDown={e => e.key === 'Enter' && chrome.runtime.openOptionsPage()}
-              className={`header-icon ${isDarkMode ? 'text-sky-400 hover:text-sky-300' : 'text-sky-400 hover:text-sky-500'} cursor-pointer`}
+              className={`header-icon ${isDarkMode ? 'text-[#a1a1b5] hover:text-[#e4e4ef]' : 'text-sky-400 hover:text-sky-500'} cursor-pointer`}
               aria-label={t('nav_settings_a11y')}
               tabIndex={0}>
               <FiSettings size={20} />
@@ -1896,7 +2076,7 @@ const SidePanel = () => {
                 {messages.length === 0 && (
                   <>
                     <div
-                      className={`border-t ${isDarkMode ? 'border-sky-900' : 'border-sky-100'} mb-2 p-2 shadow-sm backdrop-blur-sm`}>
+                      className={`border-t ${isDarkMode ? 'border-[#333344]' : 'border-sky-100'} mb-2 p-2 shadow-sm backdrop-blur-sm`}>
                       <ChatInput
                         onSendMessage={handleSendMessage}
                         onStopTask={handleStopTask}
@@ -1915,6 +2095,9 @@ const SidePanel = () => {
                         availableModels={availableModels}
                         currentQAModel={currentQAModel}
                         onQAModelChange={handleQAModelChange}
+                        personas={personas.map(persona => ({ id: persona.id, name: persona.name }))}
+                        currentPersonaId={activePersonaId}
+                        onPersonaChange={handlePersonaChange}
                         setTextareaRef={ref => {
                           textareaRef.current = ref;
                         }}
@@ -1944,8 +2127,8 @@ const SidePanel = () => {
                 )}
                 {(messages.length > 0 || isQaStreaming || isWaitingForQaResponse) && (
                   <div
-                    className={`scrollbar-gutter-stable flex-1 overflow-x-hidden overflow-y-scroll scroll-smooth p-2 ${
-                      isDarkMode && !(mode === 'qa' && qaUiTheme?.chatBg) ? 'bg-slate-900/80' : ''
+                    className={`scrollbar-gutter-stable flex-1 overflow-x-hidden overflow-y-scroll scroll-smooth p-3 ${
+                      isDarkMode && !(mode === 'qa' && qaUiTheme?.chatBg) ? 'bg-[#181825]' : ''
                     }`}
                     style={mode === 'qa' && qaUiTheme?.chatBg ? { backgroundColor: qaUiTheme.chatBg } : undefined}>
                     <MessageList
@@ -1961,7 +2144,7 @@ const SidePanel = () => {
                 )}
                 {messages.length > 0 && (
                   <div
-                    className={`border-t ${isDarkMode ? 'border-sky-900' : 'border-sky-100'} p-2 shadow-sm backdrop-blur-sm`}>
+                    className={`border-t ${isDarkMode ? 'border-[#333344]' : 'border-sky-100'} p-2 shadow-sm backdrop-blur-sm`}>
                     <ChatInput
                       onSendMessage={handleSendMessage}
                       onStopTask={handleStopTask}
@@ -1980,6 +2163,9 @@ const SidePanel = () => {
                       availableModels={availableModels}
                       currentQAModel={currentQAModel}
                       onQAModelChange={handleQAModelChange}
+                      personas={personas.map(persona => ({ id: persona.id, name: persona.name }))}
+                      currentPersonaId={activePersonaId}
+                      onPersonaChange={handlePersonaChange}
                       setTextareaRef={ref => {
                         textareaRef.current = ref;
                       }}

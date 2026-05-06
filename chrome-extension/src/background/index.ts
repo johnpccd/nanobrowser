@@ -42,6 +42,10 @@ const tabConnections = new Map<number, TabConnection>();
 
 const SIDE_PANEL_URL = chrome.runtime.getURL('side-panel/index.html');
 const MAX_QA_TOOL_CALLS = 3;
+/** Reasoning steps via `thinking` tool; separate cap so web/MCP budget stays usable. */
+const MAX_QA_THINKING_CALLS = 5;
+/** Upper bound on tool-calling round-trips (each round: one model invoke). */
+const MAX_QA_TOOL_ROUNDS = 16;
 const MAX_TOOL_EVENT_DETAIL_CHARS = 6000;
 
 function truncateToolDetail(value: string): string {
@@ -126,6 +130,8 @@ function emitQAToolEvent(
     kind: 'call' | 'result';
     summary: string;
     detail?: string;
+    requestDetail?: string;
+    toolRunId?: string;
     status?: 'pending' | 'success' | 'error';
   },
 ) {
@@ -146,6 +152,8 @@ function emitQAToolEvent(
         toolName: params.toolName,
         summary: params.summary,
         detail: params.detail,
+        requestDetail: params.requestDetail,
+        toolRunId: params.toolRunId,
         status: params.status,
       },
     },
@@ -532,6 +540,8 @@ chrome.runtime.onConnect.addListener(port => {
             const sessionId = message.sessionId;
             const imageData = message.imageData as string | undefined;
             const includePageContent = message.includePageContent !== false; // Default to true
+            const personaSystemPrompt = typeof message.personaSystemPrompt === 'string' ? message.personaSystemPrompt : '';
+            const personaName = typeof message.personaName === 'string' ? message.personaName : 'Default';
 
             // Get or create tab connection
             let tabConn = tabConnections.get(tabId);
@@ -596,6 +606,34 @@ chrome.runtime.onConnect.addListener(port => {
                 // 3. Create LLM instance
                 const qaLLM = createChatModel(provider, qaModel);
                 const mcpSettings = await mcpToolsSettingsStore.getSettings();
+
+                const thinkingTool = new DynamicStructuredTool({
+                  name: 'thinking',
+                  description:
+                    'Use for deliberate step-by-step reasoning before you answer: clarify the question, list assumptions, weigh tradeoffs, outline a plan, or note what evidence you still need. Does not fetch facts from the web or page; call web_search, fetch_url, or MCP tools when you need external data. You may call this multiple times in one turn if it helps.',
+                  schema: z.object({
+                    thought: z
+                      .string()
+                      .min(1)
+                      .describe('Your reasoning: analysis, plan, uncertainties, or intermediate conclusions in plain text.'),
+                  }),
+                  func: async ({ thought }) => {
+                    const requestDetail = thought.trim();
+                    // One emit: call+result races async `addMessage` and duplicated the row in the side panel.
+                    emitQAToolEvent(streamTabConn?.port, {
+                      sessionId,
+                      tabId,
+                      toolName: 'thinking',
+                      kind: 'result',
+                      summary: 'Reasoning',
+                      requestDetail,
+                      detail: '',
+                      status: 'success',
+                    });
+                    return '';
+                  },
+                });
+
                 const webSearchTool = new DynamicStructuredTool({
                   name: 'web_search',
                   description:
@@ -610,14 +648,17 @@ chrome.runtime.onConnect.addListener(port => {
                   }),
                   func: async ({ query }) => {
                     const normalizedQuery = query.trim();
+                    const requestDetail = `Query: ${normalizedQuery}\nBase URL: ${generalSettings.searxngBaseUrl}`;
+                    const toolRunId = crypto.randomUUID();
 
                     emitQAToolEvent(streamTabConn?.port, {
                       sessionId,
                       tabId,
                       toolName: 'web_search',
                       kind: 'call',
-                      summary: `Searching the web for "${normalizedQuery}"`,
-                      detail: `Query: ${normalizedQuery}\nBase URL: ${generalSettings.searxngBaseUrl}`,
+                      summary: 'Searching…',
+                      requestDetail,
+                      toolRunId,
                       status: 'pending',
                     });
 
@@ -640,7 +681,9 @@ chrome.runtime.onConnect.addListener(port => {
                         toolName: 'web_search',
                         kind: 'result',
                         summary: `Retrieved ${webSearchResults.length} search result(s)`,
+                        requestDetail,
                         detail: formattedResults || 'No formatted snippets were produced.',
+                        toolRunId,
                         status: 'success',
                       });
 
@@ -653,7 +696,9 @@ chrome.runtime.onConnect.addListener(port => {
                         toolName: 'web_search',
                         kind: 'result',
                         summary: 'Search failed',
+                        requestDetail,
                         detail: errorMessage,
+                        toolRunId,
                         status: 'error',
                       });
                       return `Search failed: ${errorMessage}`;
@@ -669,14 +714,17 @@ chrome.runtime.onConnect.addListener(port => {
                   }),
                   func: async ({ url }) => {
                     const normalizedUrl = url.trim();
+                    const requestDetail = `URL: ${normalizedUrl}`;
+                    const toolRunId = crypto.randomUUID();
 
                     emitQAToolEvent(streamTabConn?.port, {
                       sessionId,
                       tabId,
                       toolName: 'fetch_url',
                       kind: 'call',
-                      summary: `Fetching readable content for ${normalizedUrl}`,
-                      detail: `URL: ${normalizedUrl}`,
+                      summary: 'Fetching…',
+                      requestDetail,
+                      toolRunId,
                       status: 'pending',
                     });
 
@@ -704,7 +752,9 @@ chrome.runtime.onConnect.addListener(port => {
                         toolName: 'fetch_url',
                         kind: 'result',
                         summary: 'Fetched readable page content',
+                        requestDetail,
                         detail,
+                        toolRunId,
                         status: 'success',
                       });
 
@@ -717,7 +767,9 @@ chrome.runtime.onConnect.addListener(port => {
                         toolName: 'fetch_url',
                         kind: 'result',
                         summary: 'Fetch failed',
+                        requestDetail,
                         detail: errorMessage,
+                        toolRunId,
                         status: 'error',
                       });
                       return `Fetch failed: ${errorMessage}`;
@@ -785,13 +837,16 @@ chrome.runtime.onConnect.addListener(port => {
                                 safeArgs = {};
                               }
                             }
+                            const requestDetail = truncateToolDetail(`Arguments: ${JSON.stringify(safeArgs, null, 2)}`);
+                            const toolRunId = crypto.randomUUID();
                             emitQAToolEvent(streamTabConn?.port, {
                               sessionId,
                               tabId,
                               toolName: `mcp:${server.name}/${tool.name}`,
                               kind: 'call',
-                              summary: `Calling MCP tool ${tool.name} on ${server.name}`,
-                              detail: truncateToolDetail(`Arguments: ${JSON.stringify(safeArgs, null, 2)}`),
+                              summary: 'Calling MCP…',
+                              requestDetail,
+                              toolRunId,
                               status: 'pending',
                             });
                             try {
@@ -806,7 +861,9 @@ chrome.runtime.onConnect.addListener(port => {
                                 toolName: `mcp:${server.name}/${tool.name}`,
                                 kind: 'result',
                                 summary: 'MCP tool call succeeded',
+                                requestDetail,
                                 detail: truncateToolDetail(result.content),
+                                toolRunId,
                                 status: 'success',
                               });
                               return result.content;
@@ -818,7 +875,9 @@ chrome.runtime.onConnect.addListener(port => {
                                 toolName: `mcp:${server.name}/${tool.name}`,
                                 kind: 'result',
                                 summary: 'MCP tool call failed',
+                                requestDetail,
                                 detail: truncateToolDetail(errorMessage),
+                                toolRunId,
                                 status: 'error',
                               });
                               return `MCP tool call failed: ${errorMessage}`;
@@ -831,14 +890,17 @@ chrome.runtime.onConnect.addListener(port => {
                     logger.warning('Failed to discover MCP tools', server.name, error);
                   }
                 }
+
+                const qaTools: DynamicStructuredTool[] = [thinkingTool];
+                if (enableWebSearch && generalSettings.searxngBaseUrl) {
+                  qaTools.push(webSearchTool, fetchUrlTool);
+                }
+                qaTools.push(...mcpDynamicTools);
+
                 const qaLLMWithTools =
                   typeof (qaLLM as BaseChatModel & { bindTools?: (tools: unknown[]) => BaseChatModel }).bindTools ===
-                    'function' &&
-                  ((enableWebSearch && generalSettings.searxngBaseUrl) || mcpDynamicTools.length > 0)
-                    ? (qaLLM as BaseChatModel & { bindTools: (tools: unknown[]) => BaseChatModel }).bindTools([
-                        ...(enableWebSearch && generalSettings.searxngBaseUrl ? [webSearchTool, fetchUrlTool] : []),
-                        ...mcpDynamicTools,
-                      ])
+                  'function'
+                    ? (qaLLM as BaseChatModel & { bindTools: (tools: unknown[]) => BaseChatModel }).bindTools(qaTools)
                     : null;
 
                 // 4. Load chat history for this session and build conversation
@@ -846,17 +908,23 @@ chrome.runtime.onConnect.addListener(port => {
 
                 // Add system message - different prompts based on whether page content is included
                 const systemSections: string[] = [
-                  includePageContent && pageContent
-                    ? 'You are a helpful assistant. Answer questions based on the provided page content and any web search results. Be concise and accurate.'
-                    : 'You are a helpful, knowledgeable, and friendly AI assistant. Provide clear, accurate, and helpful responses to the user. Be concise but thorough.',
+                  (personaSystemPrompt || '').trim() ||
+                    (includePageContent && pageContent
+                      ? 'You are a helpful assistant. Answer questions based on the provided page content and any web search results. Be concise and accurate.'
+                      : 'You are a helpful, knowledgeable, and friendly AI assistant. Provide clear, accurate, and helpful responses to the user. Be concise but thorough.'),
                 ];
+
+                systemSections.push(`Active persona: ${personaName}`);
 
                 if (includePageContent && pageContent) {
                   systemSections.push(`Current page content:\n${pageContent}`);
                 }
 
                 if (qaLLMWithTools) {
-                  const promptHints: string[] = [];
+                  const promptHints: string[] = [
+                    'The `thinking` tool is available: call it to work through logic, planning, or ambiguity before you commit to an answer. It only records your reasoning for this turn; it does not load new information.',
+                    `Use at most ${MAX_QA_THINKING_CALLS} thinking calls per answer; then finalize or use other tools.`,
+                  ];
                   if (enableWebSearch && generalSettings.searxngBaseUrl) {
                     promptHints.push(
                       'Web search is available as the `web_search` tool.',
@@ -950,9 +1018,15 @@ chrome.runtime.onConnect.addListener(port => {
                 if (qaLLMWithTools) {
                   const toolConversationMessages = [...conversationMessages];
                   let toolCallCount = 0;
+                  let thinkingCallCount = 0;
                   let directAnswerText = '';
 
-                  while (toolCallCount < MAX_QA_TOOL_CALLS) {
+                  let toolRounds = 0;
+                  while (
+                    toolRounds < MAX_QA_TOOL_ROUNDS &&
+                    (toolCallCount < MAX_QA_TOOL_CALLS || thinkingCallCount < MAX_QA_THINKING_CALLS)
+                  ) {
+                    toolRounds += 1;
                     const toolResponse = await qaLLMWithTools.invoke(toolConversationMessages, {
                       signal: abortController.signal,
                     });
@@ -969,10 +1043,6 @@ chrome.runtime.onConnect.addListener(port => {
                     toolConversationMessages.push(toolResponse);
 
                     for (const toolCall of toolCalls) {
-                      if (toolCallCount >= MAX_QA_TOOL_CALLS) {
-                        break;
-                      }
-
                       const toolName = 'name' in toolCall ? String(toolCall.name || '') : '';
                       const toolArgs =
                         'args' in toolCall && toolCall.args && typeof toolCall.args === 'object'
@@ -981,10 +1051,11 @@ chrome.runtime.onConnect.addListener(port => {
                       const toolCallId =
                         'id' in toolCall && typeof toolCall.id === 'string' ? toolCall.id : `tool-${Date.now()}`;
 
-                      const isBuiltInTool = toolName === 'web_search' || toolName === 'fetch_url';
+                      const isThinkingTool = toolName === 'thinking';
+                      const isBuiltInWebTool = toolName === 'web_search' || toolName === 'fetch_url';
                       const mcpToolMeta = mcpToolsByName.get(toolName);
 
-                      if (!isBuiltInTool && !mcpToolMeta) {
+                      if (!isThinkingTool && !isBuiltInWebTool && !mcpToolMeta) {
                         toolConversationMessages.push(
                           new ToolMessage({
                             tool_call_id: toolCallId,
@@ -996,7 +1067,32 @@ chrome.runtime.onConnect.addListener(port => {
                       }
 
                       let toolResult: string;
-                      if (isBuiltInTool) {
+
+                      if (isThinkingTool) {
+                        if (thinkingCallCount >= MAX_QA_THINKING_CALLS) {
+                          toolConversationMessages.push(
+                            new ToolMessage({
+                              tool_call_id: toolCallId,
+                              content: `You have reached the thinking-step limit (${MAX_QA_THINKING_CALLS}) for this answer. Continue with web or MCP tools if you need facts, then give the user a clear final answer without calling thinking again.`,
+                            }),
+                          );
+                          continue;
+                        }
+                        thinkingCallCount += 1;
+                        toolResult = await thinkingTool.func({
+                          thought: String(toolArgs.thought ?? ''),
+                        });
+                      } else if (isBuiltInWebTool) {
+                        if (toolCallCount >= MAX_QA_TOOL_CALLS) {
+                          toolConversationMessages.push(
+                            new ToolMessage({
+                              tool_call_id: toolCallId,
+                              content: `Non-thinking tool budget exhausted (${MAX_QA_TOOL_CALLS} per answer). Answer with the context you already have.`,
+                            }),
+                          );
+                          continue;
+                        }
+                        toolCallCount += 1;
                         toolResult =
                           toolName === 'web_search'
                             ? await webSearchTool.func({
@@ -1006,15 +1102,28 @@ chrome.runtime.onConnect.addListener(port => {
                                 url: String(toolArgs.url || ''),
                               });
                       } else {
+                        if (toolCallCount >= MAX_QA_TOOL_CALLS) {
+                          toolConversationMessages.push(
+                            new ToolMessage({
+                              tool_call_id: toolCallId,
+                              content: `Non-thinking tool budget exhausted (${MAX_QA_TOOL_CALLS} per answer). Answer with the context you already have.`,
+                            }),
+                          );
+                          continue;
+                        }
+                        toolCallCount += 1;
                         const prettyToolName = `mcp:${mcpToolMeta!.server.name}/${mcpToolMeta!.toolName}`;
                         const mcpCallArgs = coerceMcpToolCallArgs(toolArgs);
+                        const requestDetail = truncateToolDetail(`Arguments: ${JSON.stringify(mcpCallArgs, null, 2)}`);
+                        const toolRunId = crypto.randomUUID();
                         emitQAToolEvent(streamTabConn?.port, {
                           sessionId,
                           tabId,
                           toolName: prettyToolName,
                           kind: 'call',
-                          summary: `Calling MCP tool ${mcpToolMeta!.toolName} on ${mcpToolMeta!.server.name}`,
-                          detail: truncateToolDetail(`Arguments: ${JSON.stringify(mcpCallArgs, null, 2)}`),
+                          summary: 'Calling MCP…',
+                          requestDetail,
+                          toolRunId,
                           status: 'pending',
                         });
                         try {
@@ -1030,7 +1139,9 @@ chrome.runtime.onConnect.addListener(port => {
                             toolName: prettyToolName,
                             kind: 'result',
                             summary: 'MCP tool call succeeded',
+                            requestDetail,
                             detail: truncateToolDetail(mcpResult.content),
+                            toolRunId,
                             status: 'success',
                           });
                         } catch (mcpError) {
@@ -1041,7 +1152,9 @@ chrome.runtime.onConnect.addListener(port => {
                             toolName: prettyToolName,
                             kind: 'result',
                             summary: 'MCP tool call failed',
+                            requestDetail,
                             detail: truncateToolDetail(errorMessage),
+                            toolRunId,
                             status: 'error',
                           });
                           toolResult = `MCP tool call failed: ${errorMessage}`;
@@ -1054,7 +1167,6 @@ chrome.runtime.onConnect.addListener(port => {
                           content: toolResult,
                         }),
                       );
-                      toolCallCount += 1;
                     }
                   }
 

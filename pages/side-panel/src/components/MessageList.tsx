@@ -1,11 +1,117 @@
-import type { Message, ResolvedQaUiTheme } from '@extension/storage';
+import type { ChatMessage, Message, ResolvedQaUiTheme } from '@extension/storage';
+import { Actors } from '@extension/storage';
 import { ACTOR_PROFILES } from '../types/message';
-import { memo, useState, useCallback } from 'react';
+import { memo, useState, useCallback, useMemo, useEffect } from 'react';
 import { t } from '@extension/i18n';
 import ReactMarkdown from 'react-markdown';
+import type { Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import 'highlight.js/styles/github-dark.css';
+
+/** Cursor-style meta line when the model leads with "Thought for …". */
+function partitionThoughtPrefix(raw: string): { thoughtLine: string | null; body: string } {
+  const trimmed = raw.replace(/^\uFEFF?\s*/, '');
+  const m = trimmed.match(/^([Tt]hought for [^\n]+)\n+([\s\S]*)$/);
+  if (m) return { thoughtLine: m[1], body: m[2] };
+  return { thoughtLine: null, body: raw };
+}
+
+function createMarkdownComponents({
+  isDarkMode,
+  qaUiTheme,
+}: {
+  isDarkMode: boolean;
+  qaUiTheme: ResolvedQaUiTheme | null;
+}): Components {
+  const linkCol = qaUiTheme?.linkColor ?? (isDarkMode ? '#7aa2f7' : '#2563eb');
+  const inlineCodeBg = isDarkMode ? '#2a2a3a' : '#f0f2f5';
+  const inlineCodeBorder = isDarkMode ? 'rgba(51,51,68,0.7)' : '#e2e8f0';
+  const preBg = isDarkMode ? '#12121a' : '#f8fafc';
+  const preBorder = isDarkMode ? '#333344' : '#e2e8f0';
+
+  return {
+    code({ className, children, ...props }) {
+      const match = /language-(\w+)/.exec(className || '');
+      const isInline = !match && !className;
+      if (isInline) {
+        return (
+          <code
+            className="rounded px-1.5 py-0.5 font-mono text-[0.92em]"
+            style={{ backgroundColor: inlineCodeBg, border: `1px solid ${inlineCodeBorder}` }}
+            {...props}>
+            {children}
+          </code>
+        );
+      }
+      return (
+        <code className={className} {...props}>
+          {children}
+        </code>
+      );
+    },
+    pre({ children }) {
+      return (
+        <pre
+          className="my-3 overflow-x-auto rounded-lg p-3 font-mono text-[13px] leading-relaxed"
+          style={{ backgroundColor: preBg, border: `1px solid ${preBorder}` }}>
+          {children}
+        </pre>
+      );
+    },
+    a({ href, children }) {
+      return (
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={
+            qaUiTheme?.linkColor
+              ? 'underline underline-offset-2 hover:opacity-90'
+              : isDarkMode
+                ? 'underline decoration-white/15 underline-offset-2 hover:decoration-white/35'
+                : 'underline decoration-gray-400/40 underline-offset-2 hover:decoration-gray-500/70'
+          }
+          style={{ color: linkCol }}>
+          {children}
+        </a>
+      );
+    },
+    table({ children }) {
+      return (
+        <div className="my-4 overflow-x-auto">
+          <table className="w-full border-collapse text-left text-[13px]">{children}</table>
+        </div>
+      );
+    },
+    thead({ children }) {
+      return <thead className={isDarkMode ? 'bg-[#252535]' : 'bg-gray-100'}>{children}</thead>;
+    },
+    th({ children }) {
+      return (
+        <th
+          className={`border-b px-3 py-2.5 text-left font-semibold first:pl-0 last:pr-0 ${
+            isDarkMode ? 'border-[#333344] text-[#e4e4ef]' : 'border-gray-200 text-gray-900'
+          }`}>
+          {children}
+        </th>
+      );
+    },
+    td({ children }) {
+      return (
+        <td
+          className={`border-b px-3 py-2.5 align-top first:pl-0 last:pr-0 ${
+            isDarkMode ? 'border-[#2e2e3d]' : 'border-gray-100'
+          }`}>
+          {children}
+        </td>
+      );
+    },
+    hr() {
+      return <hr className={`my-6 h-px border-0 ${isDarkMode ? 'bg-[#333344]' : 'bg-gray-200'}`} />;
+    },
+  };
+}
 
 interface MessageListProps {
   messages: Message[];
@@ -24,20 +130,31 @@ export default memo(function MessageList({
   fontSize = 14,
   qaUiTheme = null,
 }: MessageListProps) {
+  const displayMessages = useMemo(() => mergeAdjacentToolCallResultPairs(messages), [messages]);
+  const markdownComponents = useMemo(
+    () => createMarkdownComponents({ isDarkMode, qaUiTheme }),
+    [isDarkMode, qaUiTheme],
+  );
+
   // Check if last message is from SYSTEM actor for streaming continuation
-  const lastMessage = messages[messages.length - 1];
+  const lastMessage = displayMessages[displayMessages.length - 1];
   const lastWasSystem = lastMessage?.actor === 'system';
 
   return (
-    <div className="max-w-full space-y-4">
-      {messages.map((message, index) => (
+    <div className="max-w-full space-y-3">
+      {displayMessages.map((message, index) => (
         <MessageBlock
-          key={`${message.actor}-${message.timestamp}-${index}`}
+          key={
+            'id' in message && typeof (message as ChatMessage).id === 'string'
+              ? (message as ChatMessage).id
+              : `${message.actor}-${message.timestamp}-${index}`
+          }
           message={message}
-          isSameActor={index > 0 ? messages[index - 1].actor === message.actor : false}
+          isSameActor={index > 0 ? displayMessages[index - 1].actor === message.actor : false}
           isDarkMode={isDarkMode}
           fontSize={fontSize}
           qaUiTheme={qaUiTheme}
+          markdownComponents={markdownComponents}
         />
       ))}
       {/* Render waiting indicator while waiting for first response chunk */}
@@ -57,6 +174,7 @@ export default memo(function MessageList({
           isSameActor={lastWasSystem}
           fontSize={fontSize}
           qaUiTheme={qaUiTheme}
+          markdownComponents={markdownComponents}
         />
       )}
     </div>
@@ -69,6 +187,7 @@ interface MessageBlockProps {
   isDarkMode?: boolean;
   fontSize?: number;
   qaUiTheme?: ResolvedQaUiTheme | null;
+  markdownComponents: Components;
 }
 
 function MessageBlock({
@@ -77,6 +196,7 @@ function MessageBlock({
   isDarkMode = false,
   fontSize = 14,
   qaUiTheme = null,
+  markdownComponents,
 }: MessageBlockProps) {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
@@ -94,14 +214,21 @@ function MessageBlock({
   }
   const actor = ACTOR_PROFILES[message.actor as keyof typeof ACTOR_PROFILES];
   const isProgress = message.content === 'Showing progress...';
+  const isUser = message.actor === Actors.USER;
+  const { thoughtLine, body: bodyAfterThought } = partitionThoughtPrefix(message.content);
+
+  const messageColor = qaUiTheme?.messageText ?? (isDarkMode ? '#d1d1d1' : '#374151');
+  const mdWrapClass = `max-w-none [&_p]:mb-3 [&_p:last-child]:mb-0 [&_li>p]:mb-0 [&_li>p]:inline [&_ul]:my-2 [&_ol]:my-2 [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-5 [&_ol]:pl-5 [&_li]:my-0.5 [&_h1]:mt-6 [&_h1]:mb-2 [&_h1]:text-lg [&_h1]:font-semibold [&_h2]:mt-5 [&_h2]:mb-2 [&_h2]:text-base [&_h2]:font-semibold [&_h3]:mt-4 [&_h3]:mb-1.5 [&_h3]:text-sm [&_h3]:font-semibold [&_strong]:font-semibold [&_blockquote]:my-3 [&_blockquote]:border-l-2 [&_blockquote]:pl-3 ${
+    isDarkMode ? '[&_blockquote]:border-[#4a4a5c] [&_blockquote]:text-[#b8b8c8]' : '[&_blockquote]:border-gray-300 [&_blockquote]:text-gray-600'
+  }`;
 
   return (
     <>
       <div
         className={`flex max-w-full gap-3 ${
           !isSameActor
-            ? `mt-4 border-t pt-4 first:mt-0 first:border-t-0 first:pt-0 ${
-                qaUiTheme?.separatorColor ? '' : isDarkMode ? 'border-sky-800/50' : 'border-sky-200/50'
+            ? `mt-3 border-t pt-3 first:mt-0 first:border-t-0 first:pt-0 ${
+                qaUiTheme?.separatorColor ? '' : isDarkMode ? 'border-[#333344]/90' : 'border-sky-200/50'
               }`
             : ''
         }`}
@@ -118,28 +245,30 @@ function MessageBlock({
         <div className="min-w-0 flex-1">
           {!isSameActor && (
             <div
-              className={`mb-1 text-sm font-semibold ${qaUiTheme?.headingText ? '' : isDarkMode ? 'text-gray-200' : 'text-gray-900'}`}
+              className={`mb-1 text-[13px] font-medium ${
+                qaUiTheme?.headingText ? '' : isDarkMode ? 'text-[#9b9bb0]' : 'text-gray-600'
+              }`}
               style={qaUiTheme?.headingText ? { color: qaUiTheme.headingText } : undefined}>
               {actor.name}
             </div>
           )}
 
-          <div className="space-y-0.5">
+          <div className="space-y-1">
             {/* Display attached image thumbnail if present */}
             {message.imageData && (
               <div className="mb-2">
                 <button
                   type="button"
                   onClick={handleImageClick}
-                  className="group relative block overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 hover:border-blue-400 transition-colors"
+                  className="group relative block overflow-hidden rounded-lg border border-gray-200 transition-colors hover:border-[#5b7cff]/60 dark:border-[#333344]"
                   aria-label={t('chat_imageCapture_viewFull')}>
                   <img
                     src={`data:image/jpeg;base64,${message.imageData}`}
                     alt={t('chat_imageCapture_attached')}
                     className="h-auto max-h-32 w-full max-w-full object-cover"
                   />
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/20 transition-colors">
-                    <span className="text-white opacity-0 group-hover:opacity-100 text-xs bg-black/50 px-2 py-1 rounded">
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
+                    <span className="rounded bg-black/50 px-2 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
                       {t('chat_imageCapture_clickToExpand')}
                     </span>
                   </div>
@@ -150,83 +279,54 @@ function MessageBlock({
               <ToolEventBlock toolEvent={message.toolEvent} isDarkMode={isDarkMode} fontSize={fontSize} />
             ) : (
               <div
-                className={`break-words ${qaUiTheme?.messageText ? '' : isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}
+                className={`break-words ${qaUiTheme?.messageText ? '' : isDarkMode ? 'text-[#d1d1d1]' : 'text-gray-700'}`}
                 style={{
                   fontSize: `${fontSize}px`,
                   ...(qaUiTheme?.messageText ? { color: qaUiTheme.messageText } : {}),
                 }}>
                 {isProgress ? (
-                  <div className={`h-1 overflow-hidden rounded ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                  <div className={`h-1 overflow-hidden rounded ${isDarkMode ? 'bg-[#2a2a3a]' : 'bg-gray-200'}`}>
                     <div
                       className="h-full animate-progress bg-blue-500"
                       style={qaUiTheme?.accentColor ? { backgroundColor: qaUiTheme.accentColor } : undefined}
                     />
                   </div>
                 ) : (
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    rehypePlugins={[rehypeHighlight]}
-                    components={{
-                      code({ node, className, children, ...props }) {
-                        const match = /language-(\w+)/.exec(className || '');
-                        const isInline = !match && !className;
-                        return isInline ? (
-                          <code
-                            className="px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-sm font-mono"
-                            {...props}>
-                            {children}
-                          </code>
-                        ) : (
-                          <code className={className} {...props}>
-                            {children}
-                          </code>
-                        );
-                      },
-                      pre({ children }) {
-                        return (
-                          <pre className="p-4 overflow-x-auto rounded-lg bg-gray-100 dark:bg-gray-800">{children}</pre>
-                        );
-                      },
-                      a({ href, children }) {
-                        return (
-                          <a
-                            href={href}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={qaUiTheme?.linkColor ? 'hover:underline' : 'text-blue-500 hover:underline'}
-                            style={qaUiTheme?.linkColor ? { color: qaUiTheme.linkColor } : undefined}>
-                            {children}
-                          </a>
-                        );
-                      },
-                      table({ children }) {
-                        return (
-                          <div className="overflow-x-auto">
-                            <table className="min-w-full border-collapse border border-gray-300 dark:border-gray-600">
-                              {children}
-                            </table>
-                          </div>
-                        );
-                      },
-                      th({ children }) {
-                        return (
-                          <th className="border border-gray-300 dark:border-gray-600 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-left font-semibold">
-                            {children}
-                          </th>
-                        );
-                      },
-                      td({ children }) {
-                        return <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{children}</td>;
-                      },
-                    }}>
-                    {message.content}
-                  </ReactMarkdown>
+                  <>
+                    {thoughtLine ? (
+                      <p
+                        className={`mb-2 text-[13px] leading-snug ${
+                          qaUiTheme?.mutedText ? '' : isDarkMode ? 'text-[#888888]' : 'text-gray-500'
+                        }`}
+                        style={qaUiTheme?.mutedText ? { color: qaUiTheme.mutedText } : undefined}>
+                        {thoughtLine}
+                      </p>
+                    ) : null}
+                    <div
+                      className={
+                        isUser
+                          ? `rounded-lg border px-3 py-2 ${isDarkMode ? 'border-[#333344] bg-[#252535]' : 'border-gray-200 bg-gray-50'}`
+                          : ''
+                      }
+                      style={!isUser ? { color: messageColor } : { color: messageColor }}>
+                      <div className={mdWrapClass}>
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          rehypePlugins={[rehypeHighlight]}
+                          components={markdownComponents}>
+                          {bodyAfterThought}
+                        </ReactMarkdown>
+                      </div>
+                    </div>
+                  </>
                 )}
               </div>
             )}
             {!isProgress && (
               <div
-                className={`text-right text-xs ${qaUiTheme?.mutedText ? '' : isDarkMode ? 'text-gray-500' : 'text-gray-300'}`}
+                className={`text-right text-[11px] tabular-nums ${
+                  qaUiTheme?.mutedText ? '' : isDarkMode ? 'text-[#6b6b7e]' : 'text-gray-400'
+                }`}
                 style={qaUiTheme?.mutedText ? { color: qaUiTheme.mutedText } : undefined}>
                 {formatTimestamp(message.timestamp)}
               </div>
@@ -241,6 +341,40 @@ function MessageBlock({
   );
 }
 
+/** Legacy QA tool UI emitted separate `call` then `result` messages; collapse to one row with full request + response. */
+function mergeAdjacentToolCallResultPairs(messages: Message[]): Message[] {
+  const out: Message[] = [];
+  let i = 0;
+  while (i < messages.length) {
+    const m = messages[i];
+    const next = messages[i + 1];
+    const te = m.toolEvent;
+    const nte = next?.toolEvent;
+    if (
+      te?.kind === 'call' &&
+      nte?.kind === 'result' &&
+      te.toolName === nte.toolName &&
+      m.actor === next.actor &&
+      nte.requestDetail === undefined &&
+      !te.toolRunId &&
+      !nte.toolRunId
+    ) {
+      out.push({
+        ...next,
+        toolEvent: {
+          ...nte,
+          requestDetail: te.detail ?? '',
+        },
+      });
+      i += 2;
+    } else {
+      out.push(m);
+      i += 1;
+    }
+  }
+  return out;
+}
+
 interface ToolEventBlockProps {
   toolEvent: NonNullable<Message['toolEvent']>;
   isDarkMode?: boolean;
@@ -248,43 +382,99 @@ interface ToolEventBlockProps {
 }
 
 function ToolEventBlock({ toolEvent, isDarkMode = false, fontSize = 14 }: ToolEventBlockProps) {
-  const statusClasses =
-    toolEvent.status === 'error'
+  const accentRing =
+    toolEvent.status === 'pending'
       ? isDarkMode
-        ? 'border-rose-700 bg-rose-950/30 text-rose-300'
-        : 'border-rose-200 bg-rose-50 text-rose-700'
-      : toolEvent.status === 'success'
+        ? 'ring-1 ring-amber-500/35'
+        : 'ring-1 ring-amber-400/50'
+      : toolEvent.status === 'error'
         ? isDarkMode
-          ? 'border-emerald-700 bg-emerald-950/30 text-emerald-300'
-          : 'border-emerald-200 bg-emerald-50 text-emerald-700'
-        : isDarkMode
-          ? 'border-slate-600 bg-slate-800 text-slate-200'
-          : 'border-slate-200 bg-slate-50 text-slate-700';
+          ? 'ring-1 ring-rose-500/35'
+          : 'ring-1 ring-rose-400/45'
+        : toolEvent.status === 'success'
+          ? isDarkMode
+            ? 'ring-1 ring-emerald-500/25'
+            : 'ring-1 ring-emerald-400/40'
+          : '';
+
+  const shell = isDarkMode
+    ? `rounded-lg border border-[#333344] bg-[#252535] text-[#d1d1d1] ${accentRing}`
+    : `rounded-lg border border-gray-200 bg-gray-50 text-gray-800 ${accentRing}`;
+
+  const hasRequest = toolEvent.requestDetail !== undefined;
+  const isPendingWithRequest = toolEvent.status === 'pending' && hasRequest;
+  const isCombinedExchange = hasRequest && (toolEvent.kind === 'result' || isPendingWithRequest);
+  const monoSize = Math.max(10, fontSize - 3);
+
+  const preClass = `whitespace-pre-wrap break-words font-mono leading-snug max-h-[min(50vh,24rem)] overflow-y-auto overflow-x-auto ${
+    isDarkMode ? 'text-[#c9d1d9]' : 'text-slate-800'
+  }`;
+
+  const labelClass = `mb-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+    isDarkMode ? 'text-[#888888]' : 'text-gray-500'
+  }`;
 
   return (
-    <details className={`rounded-lg border ${statusClasses}`} open={false}>
-      <summary className="cursor-pointer list-none px-3 py-2">
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <div className="text-[11px] uppercase tracking-wide opacity-70">
-              {toolEvent.kind === 'call' ? 'Tool Call' : 'Tool Response'}
-            </div>
-            <div className="truncate font-medium" style={{ fontSize: `${fontSize}px` }}>
-              {toolEvent.toolName}: {toolEvent.summary}
-            </div>
+    <details className={`ide-details text-left ${shell}`} open={false}>
+      <summary className="cursor-pointer select-none px-2.5 py-2 marker:content-none [&::-webkit-details-marker]:hidden">
+        <div className="flex items-center gap-2">
+          <span
+            className="ide-details-chevron inline-flex size-5 shrink-0 items-center justify-center text-[15px] font-semibold leading-none text-[#888888] transition-transform duration-150"
+            aria-hidden>
+            ▸
+          </span>
+          <div
+            className="min-w-0 flex-1 truncate font-mono text-[12px] font-medium leading-tight"
+            style={{ fontSize: `${Math.min(fontSize - 1, 12)}px` }}>
+            <span className={isDarkMode ? 'text-[#b4b4c8]' : 'text-gray-700'}>{toolEvent.toolName}</span>
+            {toolEvent.summary ? (
+              <span className={`font-normal ${isDarkMode ? 'text-[#8f8f9d]' : 'text-gray-500'}`}>
+                {' '}
+                · {toolEvent.summary}
+              </span>
+            ) : null}
           </div>
-          <div className="shrink-0 text-xs opacity-70">Expand</div>
         </div>
       </summary>
-      {toolEvent.detail && (
-        <div className={`border-t px-3 py-3 ${isDarkMode ? 'border-slate-700' : 'border-slate-200'}`}>
-          <pre
-            className={`whitespace-pre-wrap break-words font-sans ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}
-            style={{ fontSize: `${fontSize - 1}px` }}>
-            {toolEvent.detail}
-          </pre>
-        </div>
-      )}
+      <div className={`space-y-2 border-t px-2.5 py-2 ${isDarkMode ? 'border-[#333344]' : 'border-gray-200'}`}>
+        {isCombinedExchange ? (
+          <>
+            <div>
+              <div className={labelClass}>Request</div>
+              <pre className={preClass} style={{ fontSize: `${monoSize}px` }}>
+                {toolEvent.requestDetail ?? ''}
+              </pre>
+            </div>
+            <div>
+              <div className={labelClass}>Response</div>
+              {isPendingWithRequest ? (
+                <div
+                  className={`rounded-md border border-dashed px-2 py-1.5 text-[11px] italic ${
+                    isDarkMode ? 'border-amber-600/40 text-[#c4b5a0]' : 'border-amber-300 text-amber-900/75'
+                  }`}>
+                  Waiting for response…
+                </div>
+              ) : (
+                <pre className={preClass} style={{ fontSize: `${monoSize}px` }}>
+                  {toolEvent.detail ?? ''}
+                </pre>
+              )}
+            </div>
+          </>
+        ) : toolEvent.kind === 'call' ? (
+          toolEvent.detail && (
+            <pre className={preClass} style={{ fontSize: `${monoSize}px` }}>
+              {toolEvent.detail}
+            </pre>
+          )
+        ) : (
+          toolEvent.detail && (
+            <pre className={preClass} style={{ fontSize: `${monoSize}px` }}>
+              {toolEvent.detail}
+            </pre>
+          )
+        )}
+      </div>
     </details>
   );
 }
@@ -296,25 +486,32 @@ interface ImageModalProps {
 }
 
 function ImageModal({ imageData, onClose }: ImageModalProps) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
-      onClick={onClose}
-      onKeyDown={e => e.key === 'Escape' && onClose()}
-      role="button"
-      tabIndex={0}
-      aria-label={t('chat_imageCapture_closeModal')}>
-      <div className="relative max-h-[90vh] max-w-[90vw]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true">
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/80"
+        onClick={onClose}
+        aria-label={t('chat_imageCapture_closeModal')}
+      />
+      <div className="relative z-10 max-h-[90vh] max-w-[90vw]">
         <img
           src={`data:image/jpeg;base64,${imageData}`}
           alt={t('chat_imageCapture_fullImage')}
-          className="max-h-[90vh] max-w-[90vw] object-contain rounded-lg"
-          onClick={e => e.stopPropagation()}
+          className="max-h-[90vh] max-w-[90vw] rounded-lg object-contain"
         />
         <button
           type="button"
           onClick={onClose}
-          className="absolute -right-2 -top-2 flex h-8 w-8 items-center justify-center rounded-full bg-white text-gray-800 shadow-lg hover:bg-gray-100 transition-colors"
+          className="absolute -right-2 -top-2 flex size-8 items-center justify-center rounded-full bg-white text-gray-800 shadow-lg transition-colors hover:bg-gray-100"
           aria-label={t('chat_imageCapture_closeModal')}>
           ✕
         </button>
@@ -329,6 +526,7 @@ interface StreamingMessageBlockProps {
   isSameActor?: boolean;
   fontSize?: number;
   qaUiTheme?: ResolvedQaUiTheme | null;
+  markdownComponents: Components;
 }
 
 function StreamingMessageBlock({
@@ -337,15 +535,21 @@ function StreamingMessageBlock({
   isSameActor = false,
   fontSize = 14,
   qaUiTheme = null,
+  markdownComponents,
 }: StreamingMessageBlockProps) {
   const actor = ACTOR_PROFILES['system'];
+  const { thoughtLine, body: bodyAfterThought } = partitionThoughtPrefix(content);
+  const messageColor = qaUiTheme?.messageText ?? (isDarkMode ? '#d1d1d1' : '#374151');
+  const mdWrapClass = `max-w-none [&_p]:mb-3 [&_p:last-child]:mb-0 [&_li>p]:mb-0 [&_li>p]:inline [&_ul]:my-2 [&_ol]:my-2 [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-5 [&_ol]:pl-5 [&_li]:my-0.5 [&_h1]:mt-6 [&_h1]:mb-2 [&_h1]:text-lg [&_h1]:font-semibold [&_h2]:mt-5 [&_h2]:mb-2 [&_h2]:text-base [&_h2]:font-semibold [&_h3]:mt-4 [&_h3]:mb-1.5 [&_h3]:text-sm [&_h3]:font-semibold [&_strong]:font-semibold [&_blockquote]:my-3 [&_blockquote]:border-l-2 [&_blockquote]:pl-3 ${
+    isDarkMode ? '[&_blockquote]:border-[#4a4a5c] [&_blockquote]:text-[#b8b8c8]' : '[&_blockquote]:border-gray-300 [&_blockquote]:text-gray-600'
+  }`;
 
   return (
     <div
       className={`flex max-w-full gap-3 ${
         !isSameActor
-          ? `mt-4 border-t pt-4 first:mt-0 first:border-t-0 first:pt-0 ${
-              qaUiTheme?.separatorColor ? '' : isDarkMode ? 'border-sky-800/50' : 'border-sky-200/50'
+          ? `mt-3 border-t pt-3 first:mt-0 first:border-t-0 first:pt-0 ${
+              qaUiTheme?.separatorColor ? '' : isDarkMode ? 'border-[#333344]/90' : 'border-sky-200/50'
             }`
           : ''
       }`}
@@ -362,76 +566,43 @@ function StreamingMessageBlock({
       <div className="min-w-0 flex-1">
         {!isSameActor && (
           <div
-            className={`mb-1 text-sm font-semibold ${qaUiTheme?.headingText ? '' : isDarkMode ? 'text-gray-200' : 'text-gray-900'}`}
+            className={`mb-1 text-[13px] font-medium ${
+              qaUiTheme?.headingText ? '' : isDarkMode ? 'text-[#9b9bb0]' : 'text-gray-600'
+            }`}
             style={qaUiTheme?.headingText ? { color: qaUiTheme.headingText } : undefined}>
             {actor.name}
           </div>
         )}
 
-        <div className="space-y-0.5">
+        <div className="space-y-1">
           <div
-            className={`break-words ${qaUiTheme?.messageText ? '' : isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}
+            className={`break-words ${qaUiTheme?.messageText ? '' : isDarkMode ? 'text-[#d1d1d1]' : 'text-gray-700'}`}
             style={{
               fontSize: `${fontSize}px`,
               ...(qaUiTheme?.messageText ? { color: qaUiTheme.messageText } : {}),
             }}>
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              rehypePlugins={[rehypeHighlight]}
-              components={{
-                code({ node, className, children, ...props }) {
-                  const match = /language-(\w+)/.exec(className || '');
-                  const isInline = !match && !className;
-                  return isInline ? (
-                    <code className="px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-sm font-mono" {...props}>
-                      {children}
-                    </code>
-                  ) : (
-                    <code className={className} {...props}>
-                      {children}
-                    </code>
-                  );
-                },
-                pre({ children }) {
-                  return <pre className="p-4 overflow-x-auto rounded-lg bg-gray-100 dark:bg-gray-800">{children}</pre>;
-                },
-                a({ href, children }) {
-                  return (
-                    <a
-                      href={href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={qaUiTheme?.linkColor ? 'hover:underline' : 'text-blue-500 hover:underline'}
-                      style={qaUiTheme?.linkColor ? { color: qaUiTheme.linkColor } : undefined}>
-                      {children}
-                    </a>
-                  );
-                },
-                table({ children }) {
-                  return (
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full border-collapse border border-gray-300 dark:border-gray-600">
-                        {children}
-                      </table>
-                    </div>
-                  );
-                },
-                th({ children }) {
-                  return (
-                    <th className="border border-gray-300 dark:border-gray-600 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-left font-semibold">
-                      {children}
-                    </th>
-                  );
-                },
-                td({ children }) {
-                  return <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{children}</td>;
-                },
-              }}>
-              {content}
-            </ReactMarkdown>
+            {thoughtLine ? (
+              <p
+                className={`mb-2 text-[13px] leading-snug ${
+                  qaUiTheme?.mutedText ? '' : isDarkMode ? 'text-[#888888]' : 'text-gray-500'
+                }`}
+                style={qaUiTheme?.mutedText ? { color: qaUiTheme.mutedText } : undefined}>
+                {thoughtLine}
+              </p>
+            ) : null}
+            <div className={mdWrapClass} style={{ color: messageColor }}>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                rehypePlugins={[rehypeHighlight]}
+                components={markdownComponents}>
+                {bodyAfterThought}
+              </ReactMarkdown>
+            </div>
             <span
-              className="inline-block w-2 h-4 ml-1 bg-blue-500 animate-pulse"
-              style={qaUiTheme?.accentColor ? { backgroundColor: qaUiTheme.accentColor } : undefined}
+              className="ml-0.5 inline-block h-[1em] w-px translate-y-0.5 animate-pulse rounded-sm align-text-bottom"
+              style={{
+                backgroundColor: qaUiTheme?.accentColor ?? (isDarkMode ? '#7c7cff' : '#2563eb'),
+              }}
             />
           </div>
         </div>
@@ -450,7 +621,7 @@ interface WaitingMessageBlockProps {
 function WaitingMessageBlock({
   isDarkMode = false,
   isSameActor = false,
-  fontSize: _fontSize = 14,
+  fontSize = 14,
   qaUiTheme = null,
 }: WaitingMessageBlockProps) {
   const actor = ACTOR_PROFILES['system'];
@@ -459,8 +630,8 @@ function WaitingMessageBlock({
     <div
       className={`flex max-w-full gap-3 ${
         !isSameActor
-          ? `mt-4 border-t pt-4 first:mt-0 first:border-t-0 first:pt-0 ${
-              qaUiTheme?.separatorColor ? '' : isDarkMode ? 'border-sky-800/50' : 'border-sky-200/50'
+          ? `mt-3 border-t pt-3 first:mt-0 first:border-t-0 first:pt-0 ${
+              qaUiTheme?.separatorColor ? '' : isDarkMode ? 'border-[#333344]/90' : 'border-sky-200/50'
             }`
           : ''
       }`}
@@ -484,34 +655,16 @@ function WaitingMessageBlock({
         )}
 
         <div className="space-y-0.5">
-          <div
-            className={`flex items-center gap-2 text-sm ${qaUiTheme?.mutedText ? '' : isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}
-            style={qaUiTheme?.mutedText ? { color: qaUiTheme.mutedText } : undefined}>
-            <div className="flex gap-1">
-              <span
-                className="size-2 rounded-full bg-blue-500 animate-bounce"
-                style={{
-                  animationDelay: '0ms',
-                  ...(qaUiTheme?.accentColor ? { backgroundColor: qaUiTheme.accentColor } : {}),
-                }}
-              />
-              <span
-                className="size-2 rounded-full bg-blue-500 animate-bounce"
-                style={{
-                  animationDelay: '150ms',
-                  ...(qaUiTheme?.accentColor ? { backgroundColor: qaUiTheme.accentColor } : {}),
-                }}
-              />
-              <span
-                className="size-2 rounded-full bg-blue-500 animate-bounce"
-                style={{
-                  animationDelay: '300ms',
-                  ...(qaUiTheme?.accentColor ? { backgroundColor: qaUiTheme.accentColor } : {}),
-                }}
-              />
-            </div>
-            <span>Thinking...</span>
-          </div>
+          <p
+            className={`text-[13px] leading-relaxed ${
+              qaUiTheme?.mutedText ? '' : isDarkMode ? 'text-[#888888]' : 'text-gray-500'
+            } ${!qaUiTheme?.mutedText && isDarkMode ? 'animate-pulse' : ''}`}
+            style={{
+              fontSize: `${fontSize}px`,
+              ...(qaUiTheme?.mutedText ? { color: qaUiTheme.mutedText } : {}),
+            }}>
+            Thinking…
+          </p>
         </div>
       </div>
     </div>

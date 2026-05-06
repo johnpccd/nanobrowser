@@ -73,6 +73,12 @@
   "chat_input_editor": {
     "message": "Message input"
   },
+  "chat_attach_files_button": {
+    "message": "Attach"
+  },
+  "chat_attach_files_tooltip": {
+    "message": "Attach text files: txt, md, json, csv, log, xml, yaml (max 1 MB each)"
+  },
   "chat_history_title": {
     "message": "Chat History"
   },
@@ -261,6 +267,15 @@
   },
   "options_tabs_help": {
     "message": "Help"
+  },
+  "options_tabs_about": {
+    "message": "About"
+  },
+  "options_about_header": {
+    "message": "About"
+  },
+  "options_about_buildSha": {
+    "message": "Build SHA-1"
   },
   "options_mcp_header": {
     "message": "MCP Tools"

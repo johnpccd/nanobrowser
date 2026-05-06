@@ -73,6 +73,12 @@
   "chat_input_editor": {
     "message": "訊息輸入"
   },
+  "chat_attach_files_button": {
+    "message": "附加檔案"
+  },
+  "chat_attach_files_tooltip": {
+    "message": "附加文字檔：txt、md、json、csv、log、xml、yaml（每個最多 1 MB）"
+  },
   "chat_history_title": {
     "message": "對話歷史紀錄"
   },
@@ -258,6 +264,15 @@
   },
   "options_tabs_help": {
     "message": "說明"
+  },
+  "options_tabs_about": {
+    "message": "關於"
+  },
+  "options_about_header": {
+    "message": "關於"
+  },
+  "options_about_buildSha": {
+    "message": "建置 SHA-1"
   },
   "options_general_header": {
     "message": "一般"

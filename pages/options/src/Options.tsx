@@ -3,19 +3,22 @@ import '@src/Options.css';
 import { Button } from '@extension/ui';
 import { withErrorBoundary, withSuspense } from '@extension/shared';
 import { t } from '@extension/i18n';
-import { FiSettings, FiCpu, FiShield, FiHelpCircle, FiTool } from 'react-icons/fi';
+import { FiSettings, FiCpu, FiShield, FiInfo, FiTool, FiUser } from 'react-icons/fi';
 import { GeneralSettings } from './components/GeneralSettings';
 import { ModelSettings } from './components/ModelSettings';
 import { FirewallSettings } from './components/FirewallSettings';
 import { McpToolsSettings } from './components/McpToolsSettings';
-type TabTypes = 'general' | 'models' | 'firewall' | 'mcp' | 'help';
+import { PersonasSettings } from './components/PersonasSettings';
+import { AboutSettings } from './components/AboutSettings';
+type TabTypes = 'general' | 'models' | 'personas' | 'firewall' | 'mcp' | 'about';
 
 const TABS: { id: TabTypes; icon: React.ComponentType<{ className?: string }>; label: string }[] = [
   { id: 'general', icon: FiSettings, label: t('options_tabs_general') },
   { id: 'models', icon: FiCpu, label: t('options_tabs_models') },
+  { id: 'personas', icon: FiUser, label: 'Personas' },
   { id: 'firewall', icon: FiShield, label: t('options_tabs_firewall') },
   { id: 'mcp', icon: FiTool, label: t('options_tabs_mcp' as never) },
-  { id: 'help', icon: FiHelpCircle, label: t('options_tabs_help') },
+  { id: 'about', icon: FiInfo, label: t('options_tabs_about' as never) },
 ];
 
 const Options = () => {
@@ -36,11 +39,7 @@ const Options = () => {
   }, []);
 
   const handleTabClick = (tabId: TabTypes) => {
-    if (tabId === 'help') {
-      window.open('https://nanobrowser.ai/docs', '_blank');
-    } else {
-      setActiveTab(tabId);
-    }
+    setActiveTab(tabId);
   };
 
   const renderTabContent = () => {
@@ -51,8 +50,12 @@ const Options = () => {
         return <ModelSettings isDarkMode={isDarkMode} />;
       case 'firewall':
         return <FirewallSettings isDarkMode={isDarkMode} />;
+      case 'personas':
+        return <PersonasSettings isDarkMode={isDarkMode} />;
       case 'mcp':
         return <McpToolsSettings isDarkMode={isDarkMode} />;
+      case 'about':
+        return <AboutSettings isDarkMode={isDarkMode} />;
       default:
         return null;
     }

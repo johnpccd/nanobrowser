@@ -11,7 +11,11 @@ export interface ToolEvent {
   toolName: string;
   summary: string;
   detail?: string;
+  /** When set (typically on a completed \`result\`), UI shows request + response in one compact block */
+  requestDetail?: string;
   status?: 'pending' | 'success' | 'error';
+  /** Correlates a pending \`call\` row with the later \`result\` update (same bubble in the side panel) */
+  toolRunId?: string;
 }
 
 export interface Message {
@@ -71,6 +75,9 @@ export interface ChatHistoryStorage {
 
   // Add a message to a chat session
   addMessage: (sessionId: string, message: Message) => Promise<ChatMessage>;
+
+  // Patch an existing message (e.g. QA tool bubble: pending → completed)
+  updateMessage: (sessionId: string, messageId: string, patch: Partial<Message>) => Promise<ChatMessage | null>;
 
   // Delete a message from a chat session
   deleteMessage: (sessionId: string, messageId: string) => Promise<void>;

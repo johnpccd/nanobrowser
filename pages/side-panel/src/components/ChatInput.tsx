@@ -3,6 +3,7 @@ import type { ResolvedQaUiTheme } from '@extension/storage';
 import { FaMicrophone } from 'react-icons/fa';
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import { HiOutlineCamera, HiOutlineDocumentText, HiOutlineChat } from 'react-icons/hi';
+import { FiPaperclip } from 'react-icons/fi';
 import { t } from '@extension/i18n';
 
 interface ModelOption {
@@ -10,6 +11,11 @@ interface ModelOption {
   providerName: string;
   model: string;
   displayName: string;
+}
+
+interface PersonaOption {
+  id: string;
+  name: string;
 }
 
 interface ChatInputProps {
@@ -30,6 +36,9 @@ interface ChatInputProps {
   availableModels?: ModelOption[];
   currentQAModel?: string;
   onQAModelChange?: (provider: string, model: string) => void;
+  personas?: PersonaOption[];
+  currentPersonaId?: string;
+  onPersonaChange?: (personaId: string) => void;
   // Expose textarea ref for focus management
   setTextareaRef?: (ref: HTMLTextAreaElement | null) => void;
   // Image capture
@@ -69,6 +78,9 @@ export default function ChatInput({
   availableModels = [],
   currentQAModel,
   onQAModelChange,
+  personas = [],
+  currentPersonaId,
+  onPersonaChange,
   setTextareaRef,
   onCaptureImage,
   capturedImage,
@@ -285,7 +297,13 @@ export default function ChatInput({
   return (
     <form
       onSubmit={handleSubmit}
-      className={`overflow-hidden rounded-lg border transition-colors ${disabled ? 'cursor-not-allowed' : 'focus-within:border-sky-400 hover:border-sky-400'} ${qaUiTheme?.inputBorder ? '' : isDarkMode ? 'border-slate-700' : ''}`}
+      className={`overflow-hidden rounded-xl border transition-colors ${disabled ? 'cursor-not-allowed' : ''} ${
+        qaUiTheme?.inputBorder
+          ? ''
+          : isDarkMode
+            ? 'border-[#333344] focus-within:border-[#4d4d60] hover:border-[#4d4d60]'
+            : 'focus-within:border-sky-400 hover:border-sky-400'
+      }`}
       style={formStyle}
       aria-label={t('chat_input_form')}>
       <div className="flex flex-col">
@@ -293,7 +311,7 @@ export default function ChatInput({
         {(attachedFiles.length > 0 || capturedImage) && (
           <div
             className={`flex flex-wrap gap-2 border-b p-2 ${
-              qaUiTheme?.inputSurface ? '' : isDarkMode ? 'border-slate-700 bg-slate-800' : 'border-gray-200 bg-gray-50'
+              qaUiTheme?.inputSurface ? '' : isDarkMode ? 'border-[#333344] bg-[#1a1a24]' : 'border-gray-200 bg-gray-50'
             }`}
             style={
               qaUiTheme?.inputSurface
@@ -306,27 +324,50 @@ export default function ChatInput({
                 className={`relative flex items-center gap-1 rounded-md p-1 ${
                   isDarkMode ? 'bg-slate-700' : 'bg-gray-200'
                 }`}>
-                <img
-                  src={`data:image/jpeg;base64,${capturedImage}`}
-                  alt={t('chat_imageCapture_preview')}
-                  className="h-12 w-auto max-w-[100px] rounded object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                <button
+                  type="button"
+                  className="cursor-pointer rounded p-0 transition-opacity hover:opacity-80"
+                  aria-label={t('chat_imageCapture_viewFull')}
                   onClick={() => {
-                    // Open image in a modal-like view
-                    const modal = document.createElement('div');
-                    modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/80 cursor-pointer';
-                    modal.onclick = () => modal.remove();
+                    const root = document.createElement('div');
+                    root.className = 'fixed inset-0 z-50 flex items-center justify-center';
+                    root.setAttribute('role', 'dialog');
+                    root.setAttribute('aria-modal', 'true');
+                    const dismiss = () => {
+                      window.removeEventListener('keydown', onBackdropKey);
+                      root.remove();
+                    };
+                    const onBackdropKey = (e: KeyboardEvent) => {
+                      if (e.key === 'Escape') dismiss();
+                    };
+                    window.addEventListener('keydown', onBackdropKey);
+                    const backdrop = document.createElement('button');
+                    backdrop.type = 'button';
+                    backdrop.className = 'absolute inset-0 border-0 bg-black/80 p-0';
+                    backdrop.setAttribute('aria-label', t('chat_imageCapture_closeModal'));
+                    backdrop.onclick = dismiss;
+                    const inner = document.createElement('div');
+                    inner.className = 'relative z-10 max-h-[90vh] max-w-[90vw]';
+                    inner.onclick = e => e.stopPropagation();
                     const img = document.createElement('img');
                     img.src = `data:image/jpeg;base64,${capturedImage}`;
+                    img.alt = t('chat_imageCapture_fullImage');
                     img.className = 'max-h-[90vh] max-w-[90vw] object-contain rounded-lg';
-                    img.onclick = e => e.stopPropagation();
-                    modal.appendChild(img);
-                    document.body.appendChild(modal);
-                  }}
-                />
+                    inner.appendChild(img);
+                    root.appendChild(backdrop);
+                    root.appendChild(inner);
+                    document.body.appendChild(root);
+                  }}>
+                  <img
+                    src={`data:image/jpeg;base64,${capturedImage}`}
+                    alt=""
+                    className="pointer-events-none h-12 w-auto max-w-[100px] rounded object-cover"
+                  />
+                </button>
                 <button
                   type="button"
                   onClick={onRemoveCapturedImage}
-                  className={`absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full text-xs ${
+                  className={`absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-full text-xs ${
                     isDarkMode
                       ? 'bg-slate-600 text-gray-200 hover:bg-slate-500'
                       : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
@@ -374,10 +415,10 @@ export default function ChatInput({
                 : ''
               : disabled
                 ? isDarkMode
-                  ? 'cursor-not-allowed bg-slate-800 text-gray-400'
+                  ? 'cursor-not-allowed bg-[#1a1a24] text-[#6b6b7e]'
                   : 'cursor-not-allowed bg-gray-100 text-gray-500'
                 : isDarkMode
-                  ? 'bg-slate-800 text-gray-200'
+                  ? 'bg-[#252535] text-[#d1d1d1] placeholder:text-[#6b6b7e]'
                   : 'bg-white'
           }`}
           style={textareaStyle}
@@ -391,30 +432,39 @@ export default function ChatInput({
               ? ''
               : disabled
                 ? isDarkMode
-                  ? 'bg-slate-800'
+                  ? 'bg-[#1a1a24]'
                   : 'bg-gray-100'
                 : isDarkMode
-                  ? 'bg-slate-800'
+                  ? 'bg-[#252535]'
                   : 'bg-white'
           }`}
           style={toolbarStyle}>
           <div className="flex gap-2 text-gray-500">
-            {/* File attachment button */}
+            {/* File attachment — distinct control so updates are obvious after rebuild */}
             <button
               type="button"
               onClick={handleFileSelect}
               disabled={disabled}
-              aria-label="Attach files"
-              title="Attach text files (txt, md, json, csv, etc.)"
-              className={`rounded-md p-1.5 transition-colors ${
+              aria-label={t('chat_attach_files_tooltip')}
+              title={t('chat_attach_files_tooltip')}
+              className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${
                 disabled
                   ? 'cursor-not-allowed opacity-50'
                   : isDarkMode
-                    ? 'text-gray-400 hover:bg-slate-700 hover:text-gray-200'
-                    : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
+                    ? 'border-[#3d3d52] bg-[#2a2a3a] text-[#c8c8d4] hover:border-[#5a5a72] hover:bg-[#32324a]'
+                    : 'border-gray-300 bg-gray-50 text-gray-700 hover:border-gray-400 hover:bg-gray-100'
               }`}
-              style={neutralControlStyle}>
-              <span className="text-lg">📎</span>
+              style={
+                qaUiTheme?.inputBorder || qaUiTheme?.inputSurface
+                  ? {
+                      ...(qaUiTheme.inputBorder ? { borderColor: qaUiTheme.inputBorder } : {}),
+                      ...(qaUiTheme.inputSurface ? { backgroundColor: `${qaUiTheme.inputSurface}ee` } : {}),
+                      ...(qaUiTheme.inputText ? { color: qaUiTheme.inputText } : {}),
+                    }
+                  : undefined
+              }>
+              <FiPaperclip className="size-4 shrink-0" strokeWidth={2.25} aria-hidden />
+              <span className="max-w-[4.5rem] truncate sm:max-w-none">{t('chat_attach_files_button')}</span>
             </button>
 
             {/* Hidden file input */}
@@ -471,12 +521,12 @@ export default function ChatInput({
                         }
                       }}
                       disabled={disabled}
-                      className={`rounded-md px-2 py-1.5 text-xs transition-colors max-w-[200px] ${
+                      className={`max-w-[200px] rounded-md px-2 py-1.5 text-xs transition-colors ${
                         disabled
                           ? 'cursor-not-allowed opacity-50'
                           : isDarkMode
-                            ? 'bg-slate-700 text-gray-200 hover:bg-slate-600 border border-slate-600'
-                            : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                            ? 'border border-slate-600 bg-slate-700 text-gray-200 hover:bg-slate-600'
+                            : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
                       }`}
                       style={neutralControlStyle}
                       aria-label="Select QA model">
@@ -494,6 +544,27 @@ export default function ChatInput({
                         );
                       })}
                     </select>
+                    {personas.length > 0 && onPersonaChange && (
+                      <select
+                        value={currentPersonaId || ''}
+                        onChange={e => onPersonaChange(e.target.value)}
+                        disabled={disabled}
+                        className={`max-w-[180px] rounded-md px-2 py-1.5 text-xs transition-colors ${
+                          disabled
+                            ? 'cursor-not-allowed opacity-50'
+                            : isDarkMode
+                              ? 'border border-slate-600 bg-slate-700 text-gray-200 hover:bg-slate-600'
+                              : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                        }`}
+                        style={neutralControlStyle}
+                        aria-label="Select QA persona">
+                        {personas.map(persona => (
+                          <option key={persona.id} value={persona.id}>
+                            {persona.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                     {/* Page Content Toggle button */}
                     {onToggleIncludePageContent && (
                       <button
@@ -511,11 +582,11 @@ export default function ChatInput({
                             ? 'cursor-not-allowed opacity-50'
                             : includePageContent
                               ? isDarkMode
-                                ? 'bg-sky-700 text-white hover:bg-sky-600 border border-sky-600'
-                                : 'bg-sky-100 text-sky-700 hover:bg-sky-200 border border-sky-300'
+                                ? 'border border-sky-600 bg-sky-700 text-white hover:bg-sky-600'
+                                : 'border border-sky-300 bg-sky-100 text-sky-700 hover:bg-sky-200'
                               : isDarkMode
-                                ? 'bg-slate-700 text-gray-400 hover:bg-slate-600 border border-slate-600'
-                                : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-300'
+                                ? 'border border-slate-600 bg-slate-700 text-gray-400 hover:bg-slate-600'
+                                : 'border border-gray-300 bg-gray-100 text-gray-500 hover:bg-gray-200'
                         }`}
                         style={includePageContent ? toggleOnControlStyle : neutralControlStyle}>
                         {includePageContent ? (
@@ -544,11 +615,11 @@ export default function ChatInput({
                             ? 'cursor-not-allowed opacity-50'
                             : enableWebSearch
                               ? isDarkMode
-                                ? 'bg-emerald-700 text-white border border-emerald-600 hover:bg-emerald-600'
-                                : 'bg-emerald-100 text-emerald-700 border border-emerald-300 hover:bg-emerald-200'
+                                ? 'border border-emerald-600 bg-emerald-700 text-white hover:bg-emerald-600'
+                                : 'border border-emerald-300 bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
                               : isDarkMode
-                                ? 'bg-slate-700 text-gray-400 border border-slate-600 hover:bg-slate-600'
-                                : 'bg-gray-100 text-gray-500 border border-gray-300 hover:bg-gray-200'
+                                ? 'border border-slate-600 bg-slate-700 text-gray-400 hover:bg-slate-600'
+                                : 'border border-gray-300 bg-gray-100 text-gray-500 hover:bg-gray-200'
                         }`}
                         style={enableWebSearch ? toggleOnControlStyle : neutralControlStyle}>
                         <span className="hidden sm:inline">{enableWebSearch ? 'Web search on' : 'Web search off'}</span>
@@ -567,8 +638,8 @@ export default function ChatInput({
                           disabled || isCapturingImage
                             ? 'cursor-not-allowed opacity-50'
                             : isDarkMode
-                              ? 'bg-slate-700 text-gray-200 hover:bg-slate-600 border border-slate-600'
-                              : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                              ? 'border border-slate-600 bg-slate-700 text-gray-200 hover:bg-slate-600'
+                              : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
                         }`}
                         style={neutralControlStyle}>
                         {isCapturingImage ? (
