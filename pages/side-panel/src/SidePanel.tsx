@@ -1,5 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect, useCallback, useRef, useMemo, type CSSProperties } from 'react';
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+  type CSSProperties,
+  type Dispatch,
+  type SetStateAction,
+} from 'react';
 import { FiSettings } from 'react-icons/fi';
 import { PiPlusBold } from 'react-icons/pi';
 import { GrHistory } from 'react-icons/gr';
@@ -56,6 +65,7 @@ interface BrowserSpeechRecognition {
 }
 
 interface BrowserSpeechRecognitionEvent {
+  resultIndex: number;
   results: ArrayLike<{
     isFinal: boolean;
     0: { transcript: string };
@@ -116,13 +126,14 @@ const SidePanel = () => {
   const qaResponseBufferRef = useRef<string>('');
   const heartbeatIntervalRef = useRef<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const setInputTextRef = useRef<((text: string) => void) | null>(null);
+  const setInputTextRef = useRef<Dispatch<SetStateAction<string>> | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<number | null>(null);
   const speechRecognitionRef = useRef<BrowserSpeechRecognition | null>(null);
   const recordingModeRef = useRef<'browser' | 'legacy' | null>(null);
+  const keepBrowserListeningRef = useRef<boolean>(false);
   // QA model selection state
   const [availableModels, setAvailableModels] = useState<
     Array<{ provider: string; providerName: string; model: string; displayName: string }>
@@ -748,6 +759,19 @@ const SidePanel = () => {
     }
   }, []);
 
+  const appendDetectedText = useCallback((detectedText: string) => {
+    const text = detectedText.trim();
+    if (!text || !setInputTextRef.current) {
+      return;
+    }
+
+    setInputTextRef.current(prev => {
+      const existingText = typeof prev === 'string' ? prev : '';
+      const separator = existingText.length > 0 && !/\s$/.test(existingText) ? ' ' : '';
+      return `${existingText}${separator}${text}`;
+    });
+  }, []);
+
   // Setup connection management
   const setupConnection = useCallback(() => {
     // Only setup if no existing connection
@@ -811,9 +835,7 @@ const SidePanel = () => {
           if (msgTabId !== null && msgTabId !== undefined && msgSessionId && toolMessage && te) {
             const isActiveView = msgSessionId === sessionIdRef.current && msgTabId === currentTabIdRef.current;
             const isToolCompletion =
-              Boolean(te.toolRunId) &&
-              te.kind === 'result' &&
-              (te.status === 'success' || te.status === 'error');
+              Boolean(te.toolRunId) && te.kind === 'result' && (te.status === 'success' || te.status === 'error');
             const isToolPending = Boolean(te.toolRunId) && te.kind === 'call' && te.status === 'pending';
 
             const findMessageIdForToolRun = async (): Promise<string | undefined> => {
@@ -839,9 +861,7 @@ const SidePanel = () => {
                       timestamp: toolMessage.timestamp ?? Date.now(),
                     });
                     if (isActiveView && updated) {
-                      setMessages(prev =>
-                        prev.map(m => ('id' in m && m.id === messageId ? { ...m, ...updated } : m)),
-                      );
+                      setMessages(prev => prev.map(m => ('id' in m && m.id === messageId ? { ...m, ...updated } : m)));
                     }
                   } else {
                     const saved = await chatHistoryStore.addMessage(msgSessionId, toolMessage);
@@ -981,8 +1001,8 @@ const SidePanel = () => {
           }
         } else if (message && message.type === 'speech_to_text_result') {
           // Handle speech-to-text result
-          if (message.text && setInputTextRef.current) {
-            setInputTextRef.current(message.text);
+          if (message.text) {
+            appendDetectedText(message.text);
           }
           setIsProcessingSpeech(false);
         } else if (message && message.type === 'speech_to_text_error') {
@@ -1040,7 +1060,7 @@ const SidePanel = () => {
       // Clear any references since connection failed
       portRef.current = null;
     }
-  }, [handleTaskState, appendMessage, stopConnection]);
+  }, [handleTaskState, appendDetectedText, appendMessage, stopConnection]);
 
   // Add safety check for message sending
   const sendMessage = useCallback(
@@ -1592,6 +1612,7 @@ const SidePanel = () => {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      keepBrowserListeningRef.current = false;
       if (speechRecognitionRef.current) {
         speechRecognitionRef.current.stop();
         speechRecognitionRef.current = null;
@@ -1720,13 +1741,17 @@ const SidePanel = () => {
 
   const handleMicClick = async () => {
     if (isRecording) {
+      keepBrowserListeningRef.current = false;
       if (recordingModeRef.current === 'browser' && speechRecognitionRef.current) {
         speechRecognitionRef.current.stop();
       }
-      if (recordingModeRef.current === 'legacy' && mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      if (
+        recordingModeRef.current === 'legacy' &&
+        mediaRecorderRef.current &&
+        mediaRecorderRef.current.state === 'recording'
+      ) {
         mediaRecorderRef.current.stop();
       }
-      // Clear the timer
       if (recordingTimerRef.current) {
         clearTimeout(recordingTimerRef.current);
         recordingTimerRef.current = null;
@@ -1735,54 +1760,186 @@ const SidePanel = () => {
       return;
     }
 
+    const startLegacySpeechToText = async () => {
+      try {
+        const permissionStatus = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+
+        if (permissionStatus.state === 'denied') {
+          appendMessage({
+            actor: Actors.SYSTEM,
+            content: t('chat_stt_microphone_permissionDenied'),
+            timestamp: Date.now(),
+          });
+          return;
+        }
+
+        if (permissionStatus.state !== 'granted') {
+          const permissionUrl = chrome.runtime.getURL('permission/index.html');
+          chrome.windows.create(
+            {
+              url: permissionUrl,
+              type: 'popup',
+              width: 500,
+              height: 600,
+            },
+            createdWindow => {
+              if (createdWindow?.id) {
+                chrome.windows.onRemoved.addListener(function onWindowClose(windowId) {
+                  if (windowId === createdWindow.id) {
+                    chrome.windows.onRemoved.removeListener(onWindowClose);
+                    setTimeout(async () => {
+                      try {
+                        const newPermissionStatus = await navigator.permissions.query({
+                          name: 'microphone' as PermissionName,
+                        });
+                        if (newPermissionStatus.state === 'granted') {
+                          void startLegacySpeechToText();
+                        }
+                      } catch (error) {
+                        console.error('Failed to check permission status:', error);
+                      }
+                    }, 500);
+                  }
+                });
+              }
+            },
+          );
+          return;
+        }
+
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        recordingModeRef.current = 'legacy';
+        audioChunksRef.current = [];
+
+        const mediaRecorder = new MediaRecorder(stream);
+        mediaRecorderRef.current = mediaRecorder;
+
+        mediaRecorder.ondataavailable = event => {
+          if (event.data.size > 0) {
+            audioChunksRef.current.push(event.data);
+          }
+        };
+
+        mediaRecorder.onstop = async () => {
+          stream.getTracks().forEach(track => track.stop());
+
+          if (audioChunksRef.current.length > 0) {
+            const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              const base64Audio = reader.result as string;
+              if (!portRef.current) {
+                setupConnection();
+              }
+              try {
+                setIsProcessingSpeech(true);
+                portRef.current?.postMessage({
+                  type: 'speech_to_text',
+                  audio: base64Audio,
+                });
+              } catch (error) {
+                console.error('Failed to send audio for speech-to-text:', error);
+                appendMessage({
+                  actor: Actors.SYSTEM,
+                  content: t('chat_stt_processingFailed'),
+                  timestamp: Date.now(),
+                });
+                setIsRecording(false);
+                setIsProcessingSpeech(false);
+                recordingModeRef.current = null;
+              }
+            };
+            reader.readAsDataURL(audioBlob);
+          }
+          recordingModeRef.current = null;
+        };
+
+        const maxDuration = 2 * 60 * 1000;
+        recordingTimerRef.current = window.setTimeout(() => {
+          if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+            mediaRecorderRef.current.stop();
+          }
+          setIsRecording(false);
+          setIsProcessingSpeech(true);
+          recordingTimerRef.current = null;
+        }, maxDuration);
+
+        mediaRecorder.start();
+        setIsRecording(true);
+      } catch (error) {
+        console.error('Error accessing microphone:', error);
+
+        let errorMessage = t('chat_stt_microphone_accessFailed');
+        if (error instanceof Error) {
+          if (error.name === 'NotAllowedError') {
+            errorMessage += t('chat_stt_microphone_grantPermission');
+          } else if (error.name === 'NotFoundError') {
+            errorMessage += t('chat_stt_microphone_notFound');
+          } else {
+            errorMessage += error.message;
+          }
+        }
+
+        appendMessage({
+          actor: Actors.SYSTEM,
+          content: errorMessage,
+          timestamp: Date.now(),
+        });
+        setIsRecording(false);
+        recordingModeRef.current = null;
+      }
+    };
+
     try {
       const speechRecognitionConstructor = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (mode === 'qa' && speechRecognitionConstructor) {
         const recognition = new speechRecognitionConstructor();
         speechRecognitionRef.current = recognition;
         recordingModeRef.current = 'browser';
+        keepBrowserListeningRef.current = true;
 
         recognition.lang = navigator.language || 'en-US';
-        recognition.continuous = false;
-        recognition.interimResults = true;
-
-        let finalTranscript = '';
+        recognition.continuous = true;
+        recognition.interimResults = false;
 
         recognition.onresult = event => {
-          let interimTranscript = '';
-          for (let i = 0; i < event.results.length; i += 1) {
+          for (let i = event.resultIndex; i < event.results.length; i += 1) {
             const result = event.results[i];
-            const transcript = result[0]?.transcript ?? '';
             if (result.isFinal) {
-              finalTranscript += transcript;
-            } else {
-              interimTranscript += transcript;
+              appendDetectedText(result[0]?.transcript ?? '');
             }
-          }
-
-          if (setInputTextRef.current) {
-            setInputTextRef.current((finalTranscript + interimTranscript).trim());
           }
         };
 
         recognition.onerror = event => {
-          appendMessage({
-            actor: Actors.SYSTEM,
-            content: event.error || t('chat_stt_recognitionFailed'),
-            timestamp: Date.now(),
-          });
-          setIsRecording(false);
-          speechRecognitionRef.current = null;
-          recordingModeRef.current = null;
+          const errorCode = event.error || '';
+          if (errorCode !== 'aborted' && errorCode !== 'no-speech') {
+            appendMessage({
+              actor: Actors.SYSTEM,
+              content: errorCode || t('chat_stt_recognitionFailed'),
+              timestamp: Date.now(),
+            });
+          }
         };
 
         recognition.onend = () => {
-          setIsRecording(false);
-          speechRecognitionRef.current = null;
-          recordingModeRef.current = null;
-          if (setInputTextRef.current && finalTranscript.trim()) {
-            setInputTextRef.current(finalTranscript.trim());
+          if (keepBrowserListeningRef.current) {
+            try {
+              recognition.start();
+              return;
+            } catch (error) {
+              console.error('Failed to restart browser speech recognition:', error);
+            }
           }
+
+          if (!keepBrowserListeningRef.current) {
+            setIsRecording(false);
+            speechRecognitionRef.current = null;
+            recordingModeRef.current = null;
+            return;
+          }
+
+          void startLegacySpeechToText();
         };
 
         recognition.start();
@@ -1790,155 +1947,9 @@ const SidePanel = () => {
         return;
       }
 
-      // First check if permission is already granted
-      const permissionStatus = await navigator.permissions.query({ name: 'microphone' as PermissionName });
-
-      if (permissionStatus.state === 'denied') {
-        appendMessage({
-          actor: Actors.SYSTEM,
-          content: t('chat_stt_microphone_permissionDenied'),
-          timestamp: Date.now(),
-        });
-        return;
-      }
-
-      // If permission is not granted, open permission page
-      if (permissionStatus.state !== 'granted') {
-        const permissionUrl = chrome.runtime.getURL('permission/index.html');
-
-        // Open permission page in a new window
-        chrome.windows.create(
-          {
-            url: permissionUrl,
-            type: 'popup',
-            width: 500,
-            height: 600,
-          },
-          createdWindow => {
-            if (createdWindow?.id) {
-              // Listen for window close to check permission status
-              chrome.windows.onRemoved.addListener(function onWindowClose(windowId) {
-                if (windowId === createdWindow.id) {
-                  chrome.windows.onRemoved.removeListener(onWindowClose);
-                  // Check permission status after window closes
-                  setTimeout(async () => {
-                    try {
-                      const newPermissionStatus = await navigator.permissions.query({
-                        name: 'microphone' as PermissionName,
-                      });
-                      // Only retry if permission was granted
-                      if (newPermissionStatus.state === 'granted') {
-                        handleMicClick();
-                      }
-                      // If denied or prompt, do nothing - let user manually try again
-                    } catch (error) {
-                      console.error('Failed to check permission status:', error);
-                    }
-                  }, 500);
-                }
-              });
-            }
-          },
-        );
-        return;
-      }
-
-      // Permission granted - proceed with recording
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      recordingModeRef.current = 'legacy';
-
-      // Clear previous audio chunks
-      audioChunksRef.current = [];
-
-      // Create MediaRecorder
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-
-      // Handle data available event
-      mediaRecorder.ondataavailable = event => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
-      };
-
-      // Handle stop event
-      mediaRecorder.onstop = async () => {
-        // Stop all tracks to release microphone
-        stream.getTracks().forEach(track => track.stop());
-
-        if (audioChunksRef.current.length > 0) {
-          // Create audio blob
-          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-
-          // Convert blob to base64
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            const base64Audio = reader.result as string;
-
-            // Setup connection if not exists
-            if (!portRef.current) {
-              setupConnection();
-            }
-
-            // Send audio to backend for speech-to-text conversion
-            try {
-              setIsProcessingSpeech(true);
-              portRef.current?.postMessage({
-                type: 'speech_to_text',
-                audio: base64Audio,
-              });
-            } catch (error) {
-              console.error('Failed to send audio for speech-to-text:', error);
-              appendMessage({
-                actor: Actors.SYSTEM,
-                content: t('chat_stt_processingFailed'),
-                timestamp: Date.now(),
-              });
-              setIsRecording(false);
-              setIsProcessingSpeech(false);
-              recordingModeRef.current = null;
-            }
-          };
-          reader.readAsDataURL(audioBlob);
-        }
-        recordingModeRef.current = null;
-      };
-
-      // Set up 2-minute duration limit
-      const maxDuration = 2 * 60 * 1000;
-      recordingTimerRef.current = window.setTimeout(() => {
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-          mediaRecorderRef.current.stop();
-        }
-        setIsRecording(false);
-        setIsProcessingSpeech(true);
-        recordingTimerRef.current = null;
-      }, maxDuration);
-
-      // Start recording
-      mediaRecorder.start();
-      setIsRecording(true);
-    } catch (error) {
-      console.error('Error accessing microphone:', error);
-
-      let errorMessage = t('chat_stt_microphone_accessFailed');
-      if (error instanceof Error) {
-        if (error.name === 'NotAllowedError') {
-          errorMessage += t('chat_stt_microphone_grantPermission');
-        } else if (error.name === 'NotFoundError') {
-          errorMessage += t('chat_stt_microphone_notFound');
-        } else {
-          errorMessage += error.message;
-        }
-      }
-
-      appendMessage({
-        actor: Actors.SYSTEM,
-        content: errorMessage,
-        timestamp: Date.now(),
-      });
-      setIsRecording(false);
-      recordingModeRef.current = null;
+      await startLegacySpeechToText();
+    } catch {
+      await startLegacySpeechToText();
     }
   };
 

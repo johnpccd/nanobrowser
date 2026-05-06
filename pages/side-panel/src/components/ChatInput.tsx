@@ -1,4 +1,13 @@
-import { useState, useRef, useEffect, useCallback, useMemo, type CSSProperties } from 'react';
+import {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  useMemo,
+  type CSSProperties,
+  type Dispatch,
+  type SetStateAction,
+} from 'react';
 import type { ResolvedQaUiTheme } from '@extension/storage';
 import { FaMicrophone } from 'react-icons/fa';
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
@@ -26,7 +35,7 @@ interface ChatInputProps {
   isProcessingSpeech?: boolean;
   disabled: boolean;
   showStopButton: boolean;
-  setContent?: (setter: (text: string) => void) => void;
+  setContent?: (setter: Dispatch<SetStateAction<string>>) => void;
   isDarkMode?: boolean;
   // Historical session ID - if provided, shows replay button instead of send button
   historicalSessionId?: string | null;
