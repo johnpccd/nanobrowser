@@ -16,6 +16,12 @@ export interface ToolEvent {
   status?: 'pending' | 'success' | 'error';
   /** Correlates a pending \`call\` row with the later \`result\` update (same bubble in the side panel) */
   toolRunId?: string;
+  /** Provider/LangChain tool call id — pairs with {@link ToolMessage} when reloading QA history */
+  modelToolCallId?: string;
+  /** Name the model bound for this call (required for MCP replay; may differ from display `toolName`) */
+  boundToolName?: string;
+  /** Arguments object from the model’s tool call (replay as `AIMessage.tool_calls`) */
+  toolArgs?: Record<string, unknown>;
 }
 
 export interface Message {
