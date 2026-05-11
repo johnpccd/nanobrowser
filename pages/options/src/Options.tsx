@@ -3,20 +3,18 @@ import '@src/Options.css';
 import { Button } from '@extension/ui';
 import { withErrorBoundary, withSuspense } from '@extension/shared';
 import { t } from '@extension/i18n';
-import { FiSettings, FiCpu, FiShield, FiInfo, FiTool, FiUser } from 'react-icons/fi';
+import { FiSettings, FiCpu, FiInfo, FiTool, FiUser } from 'react-icons/fi';
 import { GeneralSettings } from './components/GeneralSettings';
 import { ModelSettings } from './components/ModelSettings';
-import { FirewallSettings } from './components/FirewallSettings';
 import { McpToolsSettings } from './components/McpToolsSettings';
 import { PersonasSettings } from './components/PersonasSettings';
 import { AboutSettings } from './components/AboutSettings';
-type TabTypes = 'general' | 'models' | 'personas' | 'firewall' | 'mcp' | 'about';
+type TabTypes = 'general' | 'models' | 'personas' | 'mcp' | 'about';
 
 const TABS: { id: TabTypes; icon: React.ComponentType<{ className?: string }>; label: string }[] = [
   { id: 'general', icon: FiSettings, label: t('options_tabs_general') },
   { id: 'models', icon: FiCpu, label: t('options_tabs_models') },
   { id: 'personas', icon: FiUser, label: 'Personas' },
-  { id: 'firewall', icon: FiShield, label: t('options_tabs_firewall') },
   { id: 'mcp', icon: FiTool, label: t('options_tabs_mcp' as never) },
   { id: 'about', icon: FiInfo, label: t('options_tabs_about' as never) },
 ];
@@ -48,8 +46,6 @@ const Options = () => {
         return <GeneralSettings isDarkMode={isDarkMode} />;
       case 'models':
         return <ModelSettings isDarkMode={isDarkMode} />;
-      case 'firewall':
-        return <FirewallSettings isDarkMode={isDarkMode} />;
       case 'personas':
         return <PersonasSettings isDarkMode={isDarkMode} />;
       case 'mcp':
