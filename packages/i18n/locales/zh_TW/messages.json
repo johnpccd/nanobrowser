@@ -343,6 +343,24 @@
   "options_general_maxInputTokens_desc": {
     "message": "聊天歷史記錄中允許的最大 token 數。超過此限制時，較舊的訊息將被截斷。預設值：1,000,000 tokens。"
   },
+  "options_general_qaMaxNonThinkingToolCalls": {
+    "message": "QA：每次回答的非 thinking 工具呼叫上限"
+  },
+  "options_general_qaMaxNonThinkingToolCalls_desc": {
+    "message": "限制 QA 模式中每次助理回覆的 web_search、fetch_url、MCP 等工具次數（thinking 另有上限）。範圍 1–50。預設：3。"
+  },
+  "options_general_qaMaxThinkingCalls": {
+    "message": "QA：每次回答的 thinking 工具呼叫上限"
+  },
+  "options_general_qaMaxThinkingCalls_desc": {
+    "message": "模型每次回答可呼叫內部 thinking 工具的次數。範圍 0–30。預設：5。"
+  },
+  "options_general_qaMaxToolRounds": {
+    "message": "QA：每次回答的工具往返輪數上限"
+  },
+  "options_general_qaMaxToolRounds_desc": {
+    "message": "單次回答中模型與工具互動的往返輪數上限。範圍 1–64。預設：16。"
+  },
   "options_qa_appearance_header": {
     "message": "QA 模式外觀"
   },

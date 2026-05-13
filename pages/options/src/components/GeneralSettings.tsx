@@ -312,6 +312,75 @@ export const GeneralSettings = ({ isDarkMode = false }: GeneralSettingsProps) =>
           <div className="flex items-center justify-between">
             <div>
               <h3 className={`text-base font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                {t('options_general_qaMaxNonThinkingToolCalls')}
+              </h3>
+              <p className={`text-sm font-normal ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                {t('options_general_qaMaxNonThinkingToolCalls_desc')}
+              </p>
+            </div>
+            <label htmlFor="qaMaxNonThinkingToolCalls" className="sr-only">
+              {t('options_general_qaMaxNonThinkingToolCalls')}
+            </label>
+            <input
+              id="qaMaxNonThinkingToolCalls"
+              type="number"
+              min={1}
+              max={50}
+              value={settings.qaMaxNonThinkingToolCalls}
+              onChange={e => updateSetting('qaMaxNonThinkingToolCalls', Number.parseInt(e.target.value, 10))}
+              className={`w-20 rounded-md border ${isDarkMode ? 'border-slate-600 bg-slate-700 text-gray-200' : 'border-gray-300 bg-white text-gray-700'} px-3 py-2`}
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className={`text-base font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                {t('options_general_qaMaxThinkingCalls')}
+              </h3>
+              <p className={`text-sm font-normal ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                {t('options_general_qaMaxThinkingCalls_desc')}
+              </p>
+            </div>
+            <label htmlFor="qaMaxThinkingCalls" className="sr-only">
+              {t('options_general_qaMaxThinkingCalls')}
+            </label>
+            <input
+              id="qaMaxThinkingCalls"
+              type="number"
+              min={0}
+              max={30}
+              value={settings.qaMaxThinkingCalls}
+              onChange={e => updateSetting('qaMaxThinkingCalls', Number.parseInt(e.target.value, 10))}
+              className={`w-20 rounded-md border ${isDarkMode ? 'border-slate-600 bg-slate-700 text-gray-200' : 'border-gray-300 bg-white text-gray-700'} px-3 py-2`}
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className={`text-base font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                {t('options_general_qaMaxToolRounds')}
+              </h3>
+              <p className={`text-sm font-normal ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                {t('options_general_qaMaxToolRounds_desc')}
+              </p>
+            </div>
+            <label htmlFor="qaMaxToolRounds" className="sr-only">
+              {t('options_general_qaMaxToolRounds')}
+            </label>
+            <input
+              id="qaMaxToolRounds"
+              type="number"
+              min={1}
+              max={64}
+              value={settings.qaMaxToolRounds}
+              onChange={e => updateSetting('qaMaxToolRounds', Number.parseInt(e.target.value, 10))}
+              className={`w-20 rounded-md border ${isDarkMode ? 'border-slate-600 bg-slate-700 text-gray-200' : 'border-gray-300 bg-white text-gray-700'} px-3 py-2`}
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className={`text-base font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                 Enable QA Web Search
               </h3>
               <p className={`text-sm font-normal ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>

@@ -22,6 +22,12 @@ export interface GeneralSettingsConfig {
   searxngApiKey: string;
   searxngMaxResults: number;
   jinaReaderApiKey: string;
+  /** Max web_search, fetch_url, MCP, and unsupported tool calls per QA answer (thinking excluded). */
+  qaMaxNonThinkingToolCalls: number;
+  /** Max `thinking` tool calls per QA answer. */
+  qaMaxThinkingCalls: number;
+  /** Upper bound on QA tool-calling model round-trips per answer. */
+  qaMaxToolRounds: number;
   /** QA / chat panel typography & colors (side panel QA mode). */
   qaFontFamily: string;
   qaChromeFontSize: number;
@@ -64,6 +70,9 @@ export const DEFAULT_GENERAL_SETTINGS: GeneralSettingsConfig = {
   searxngApiKey: '',
   searxngMaxResults: 5,
   jinaReaderApiKey: '',
+  qaMaxNonThinkingToolCalls: 3,
+  qaMaxThinkingCalls: 5,
+  qaMaxToolRounds: 16,
   qaFontFamily: '',
   qaChromeFontSize: 13,
   qaInputFontSize: 14,
@@ -108,6 +117,22 @@ function applyQaAppearanceDefaultsIfEmpty(settings: GeneralSettingsConfig): Gene
     settings.qaInputFontSize = DEFAULT_GENERAL_SETTINGS.qaInputFontSize;
   }
 
+  return settings;
+}
+
+function clampQaToolBudgets(settings: GeneralSettingsConfig): GeneralSettingsConfig {
+  const n = Number(settings.qaMaxNonThinkingToolCalls);
+  const t = Number(settings.qaMaxThinkingCalls);
+  const r = Number(settings.qaMaxToolRounds);
+  settings.qaMaxNonThinkingToolCalls = Number.isFinite(n)
+    ? Math.min(50, Math.max(1, Math.round(n)))
+    : DEFAULT_GENERAL_SETTINGS.qaMaxNonThinkingToolCalls;
+  settings.qaMaxThinkingCalls = Number.isFinite(t)
+    ? Math.min(30, Math.max(0, Math.round(t)))
+    : DEFAULT_GENERAL_SETTINGS.qaMaxThinkingCalls;
+  settings.qaMaxToolRounds = Number.isFinite(r)
+    ? Math.min(64, Math.max(1, Math.round(r)))
+    : DEFAULT_GENERAL_SETTINGS.qaMaxToolRounds;
   return settings;
 }
 
@@ -175,6 +200,8 @@ export const generalSettingsStore: GeneralSettingsStorage = {
       updatedSettings.displayHighlights = true;
     }
 
+    clampQaToolBudgets(updatedSettings);
+
     await storage.set(updatedSettings);
   },
   async getSettings() {
@@ -183,7 +210,7 @@ export const generalSettingsStore: GeneralSettingsStorage = {
       ...DEFAULT_GENERAL_SETTINGS,
       ...settings,
     };
-    return applyQaAppearanceDefaultsIfEmpty(merged);
+    return clampQaToolBudgets(applyQaAppearanceDefaultsIfEmpty(merged));
   },
   async resetToDefaults() {
     await storage.set(DEFAULT_GENERAL_SETTINGS);

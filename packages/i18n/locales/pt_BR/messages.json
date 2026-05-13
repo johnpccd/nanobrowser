@@ -343,6 +343,24 @@
   "options_general_maxInputTokens_desc": {
     "message": "Número máximo de tokens permitidos no histórico do chat. Quando excedido, mensagens mais antigas são cortadas. Padrão: 1.000.000 de tokens."
   },
+  "options_general_qaMaxNonThinkingToolCalls": {
+    "message": "QA: máximo de chamadas de ferramenta (exceto thinking) por resposta"
+  },
+  "options_general_qaMaxNonThinkingToolCalls_desc": {
+    "message": "Limite de web_search, fetch_url, MCP e ferramentas semelhantes no modo QA por resposta do assistente (thinking tem limite próprio). Intervalo 1–50. Padrão: 3."
+  },
+  "options_general_qaMaxThinkingCalls": {
+    "message": "QA: máximo de chamadas à ferramenta thinking por resposta"
+  },
+  "options_general_qaMaxThinkingCalls_desc": {
+    "message": "Quantas vezes o modelo pode usar a ferramenta interna thinking por resposta. Intervalo 0–30. Padrão: 5."
+  },
+  "options_general_qaMaxToolRounds": {
+    "message": "QA: máximo de rodadas com ferramentas por resposta"
+  },
+  "options_general_qaMaxToolRounds_desc": {
+    "message": "Teto de idas e vindas modelo–ferramentas para uma resposta. Intervalo 1–64. Padrão: 16."
+  },
   "options_qa_appearance_header": {
     "message": "Aparência do modo QA"
   },

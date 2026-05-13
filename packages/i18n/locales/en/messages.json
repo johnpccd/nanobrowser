@@ -481,6 +481,24 @@
   "options_general_maxInputTokens_desc": {
     "message": "Maximum number of tokens allowed in the chat history context. When exceeded, older messages are trimmed. Default: 1,000,000 tokens."
   },
+  "options_general_qaMaxNonThinkingToolCalls": {
+    "message": "QA: max non-thinking tool calls per answer"
+  },
+  "options_general_qaMaxNonThinkingToolCalls_desc": {
+    "message": "Cap for web_search, fetch_url, MCP, and similar tools in QA mode per assistant reply (the thinking tool has its own limit). Range 1–50. Default: 3."
+  },
+  "options_general_qaMaxThinkingCalls": {
+    "message": "QA: max thinking tool calls per answer"
+  },
+  "options_general_qaMaxThinkingCalls_desc": {
+    "message": "How many times the model may call the internal thinking tool per answer. Range 0–30. Default: 5."
+  },
+  "options_general_qaMaxToolRounds": {
+    "message": "QA: max tool rounds per answer"
+  },
+  "options_general_qaMaxToolRounds_desc": {
+    "message": "Upper bound on back-and-forth model invocations with tools for one answer. Range 1–64. Default: 16."
+  },
   "options_qa_appearance_header": {
     "message": "QA mode appearance"
   },

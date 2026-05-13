@@ -41,11 +41,6 @@ interface TabConnection {
 const tabConnections = new Map<number, TabConnection>();
 
 const SIDE_PANEL_URL = chrome.runtime.getURL('side-panel/index.html');
-const MAX_QA_TOOL_CALLS = 3;
-/** Reasoning steps via `thinking` tool; separate cap so web/MCP budget stays usable. */
-const MAX_QA_THINKING_CALLS = 5;
-/** Upper bound on tool-calling round-trips (each round: one model invoke). */
-const MAX_QA_TOOL_ROUNDS = 16;
 const MAX_TOOL_EVENT_DETAIL_CHARS = 6000;
 
 /** Mutable ref so tool `func` bodies can attach provider ids to `emitQAToolEvent` without a global. */
@@ -795,6 +790,9 @@ chrome.runtime.onConnect.addListener(port => {
                 let pageContent = '';
 
                 const generalSettings = await generalSettingsStore.getSettings();
+                const qaMaxNonThinkingToolCalls = generalSettings.qaMaxNonThinkingToolCalls;
+                const qaMaxThinkingCalls = generalSettings.qaMaxThinkingCalls;
+                const qaMaxToolRounds = generalSettings.qaMaxToolRounds;
                 const enableWebSearch =
                   message.enableWebSearch !== undefined
                     ? Boolean(message.enableWebSearch)
@@ -1193,7 +1191,7 @@ chrome.runtime.onConnect.addListener(port => {
                 if (qaLLMWithTools) {
                   const promptHints: string[] = [
                     'The `thinking` tool is available: call it to work through logic, planning, or ambiguity before you commit to an answer. It only records your reasoning for this turn; it does not load new information.',
-                    `Use at most ${MAX_QA_THINKING_CALLS} thinking calls per answer; then finalize or use other tools.`,
+                    `Use at most ${qaMaxThinkingCalls} thinking calls per answer; then finalize or use other tools.`,
                   ];
                   if (enableWebSearch && generalSettings.searxngBaseUrl) {
                     promptHints.push(
@@ -1203,8 +1201,8 @@ chrome.runtime.onConnect.addListener(port => {
                       'If the user gives a vague follow-up like "look that up online", infer the concrete search query from the conversation yourself before calling the tool.',
                       'Use `web_search` to discover relevant links or fresh information.',
                       'Use `fetch_url` only when you want to inspect the contents of a specific result URL or source page more deeply.',
-                      `Use at most ${MAX_QA_TOOL_CALLS} web_search calls in one answer.`,
-                      `Use at most ${MAX_QA_TOOL_CALLS} fetch_url calls in one answer.`,
+                      `Use at most ${qaMaxNonThinkingToolCalls} web_search calls in one answer.`,
+                      `Use at most ${qaMaxNonThinkingToolCalls} fetch_url calls in one answer.`,
                       'Cite URLs from search results when relying on them.',
                     );
                   }
@@ -1213,7 +1211,7 @@ chrome.runtime.onConnect.addListener(port => {
                       'MCP tools are registered under the same names as on the MCP server when possible; if two enabled servers expose the same tool name, the later one gets a short `_` + hex suffix.',
                       'For every MCP tool call you must pass `arguments_json`: a string containing a JSON object of named parameters (use "{}" if the tool needs no arguments).',
                       'Use MCP tools only when they are directly helpful to answer the user request.',
-                      `Use at most ${MAX_QA_TOOL_CALLS} MCP tool calls in one answer.`,
+                      `Use at most ${qaMaxNonThinkingToolCalls} MCP tool calls in one answer.`,
                     );
                   }
                   systemSections.push(promptHints.join(' '));
@@ -1308,8 +1306,8 @@ chrome.runtime.onConnect.addListener(port => {
 
                   let toolRounds = 0;
                   while (
-                    toolRounds < MAX_QA_TOOL_ROUNDS &&
-                    (toolCallCount < MAX_QA_TOOL_CALLS || thinkingCallCount < MAX_QA_THINKING_CALLS)
+                    toolRounds < qaMaxToolRounds &&
+                    (toolCallCount < qaMaxNonThinkingToolCalls || thinkingCallCount < qaMaxThinkingCalls)
                   ) {
                     toolRounds += 1;
                     const toolResponse = await qaLLMWithTools.invoke(toolConversationMessages, {
@@ -1371,8 +1369,8 @@ chrome.runtime.onConnect.addListener(port => {
                         let toolResult: string;
 
                         if (isThinkingTool) {
-                          if (thinkingCallCount >= MAX_QA_THINKING_CALLS) {
-                            const detail = `You have reached the thinking-step limit (${MAX_QA_THINKING_CALLS}) for this answer. Continue with web or MCP tools if you need facts, then give the user a clear final answer without calling thinking again.`;
+                          if (thinkingCallCount >= qaMaxThinkingCalls) {
+                            const detail = `You have reached the thinking-step limit (${qaMaxThinkingCalls}) for this answer. Continue with web or MCP tools if you need facts, then give the user a clear final answer without calling thinking again.`;
                             emitQAToolModelTurnResult(streamTabConn?.port, qaToolPersistenceCtx, {
                               sessionId,
                               tabId,
@@ -1393,8 +1391,8 @@ chrome.runtime.onConnect.addListener(port => {
                           }
                           thinkingCallCount += 1;
                         } else if (isBuiltInWebTool) {
-                          if (toolCallCount >= MAX_QA_TOOL_CALLS) {
-                            const detail = `Non-thinking tool budget exhausted (${MAX_QA_TOOL_CALLS} per answer). Answer with the context you already have.`;
+                          if (toolCallCount >= qaMaxNonThinkingToolCalls) {
+                            const detail = `Non-thinking tool budget exhausted (${qaMaxNonThinkingToolCalls} per answer). Answer with the context you already have.`;
                             emitQAToolModelTurnResult(streamTabConn?.port, qaToolPersistenceCtx, {
                               sessionId,
                               tabId,
@@ -1415,8 +1413,8 @@ chrome.runtime.onConnect.addListener(port => {
                           }
                           toolCallCount += 1;
                         } else {
-                          if (toolCallCount >= MAX_QA_TOOL_CALLS) {
-                            const detail = `Non-thinking tool budget exhausted (${MAX_QA_TOOL_CALLS} per answer). Answer with the context you already have.`;
+                          if (toolCallCount >= qaMaxNonThinkingToolCalls) {
+                            const detail = `Non-thinking tool budget exhausted (${qaMaxNonThinkingToolCalls} per answer). Answer with the context you already have.`;
                             const displayName = qaChatDisplayToolName(toolName, mcpToolMeta!);
                             emitQAToolModelTurnResult(streamTabConn?.port, qaToolPersistenceCtx, {
                               sessionId,
