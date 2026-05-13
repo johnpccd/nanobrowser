@@ -303,6 +303,69 @@ function emitQAToolEvent(
     },
   });
 }
+
+/** Human-readable tool label in QA chat (matches successful MCP rows: `mcp:server/tool`). */
+function qaChatDisplayToolName(
+  boundToolName: string,
+  mcpMeta: { server: { name: string }; toolName: string } | undefined,
+): string {
+  if (mcpMeta) {
+    return `mcp:${mcpMeta.server.name}/${mcpMeta.toolName}`;
+  }
+  if (/^[a-zA-Z0-9_.-]+:[a-zA-Z0-9_.-]+$/.test(boundToolName) && !boundToolName.startsWith('mcp:')) {
+    return `mcp:${boundToolName.replace(':', '/')}`;
+  }
+  return boundToolName;
+}
+
+/**
+ * Emit one QA chat row for a tool handled directly in the model loop (no call/result pair with toolRunId).
+ * Ensures every tool invocation is visible even when blocked by policy or when execution throws.
+ */
+function emitQAToolModelTurnResult(
+  port: chrome.runtime.Port | undefined,
+  persistenceCtx: QaToolPersistenceContextRef,
+  params: {
+    sessionId: string;
+    tabId: number;
+    displayToolName: string;
+    boundToolName: string;
+    toolCallId: string;
+    toolArgs: Record<string, unknown>;
+    summary: string;
+    detail: string;
+    status?: 'error' | 'success';
+  },
+): void {
+  persistenceCtx.current = {
+    modelToolCallId: params.toolCallId,
+    boundToolName: params.boundToolName,
+    toolArgs: params.toolArgs,
+  };
+  try {
+    const requestDetail = truncateToolDetail(`Arguments: ${JSON.stringify(params.toolArgs, null, 2)}`);
+    emitQAToolEvent(
+      port,
+      {
+        sessionId: params.sessionId,
+        tabId: params.tabId,
+        toolName: params.displayToolName,
+        kind: 'result',
+        summary: params.summary,
+        requestDetail,
+        detail: params.detail,
+        status: params.status ?? 'error',
+        modelToolCallId: params.toolCallId,
+        boundToolName: params.boundToolName,
+        toolArgs: params.toolArgs,
+      },
+      persistenceCtx,
+    );
+  } finally {
+    persistenceCtx.current = null;
+  }
+}
+
 function getMessageTextContent(content: unknown): string {
   if (typeof content === 'string') {
     return content;
@@ -1257,10 +1320,21 @@ chrome.runtime.onConnect.addListener(port => {
                       const mcpToolMeta = mcpToolsByName.get(toolName);
 
                       if (!isThinkingTool && !isBuiltInWebTool && !mcpToolMeta) {
+                        const unsupportedDetail = `Unsupported tool: ${toolName}`;
+                        emitQAToolModelTurnResult(streamTabConn?.port, qaToolPersistenceCtx, {
+                          sessionId,
+                          tabId,
+                          displayToolName: qaChatDisplayToolName(toolName, undefined),
+                          boundToolName: toolName,
+                          toolCallId,
+                          toolArgs,
+                          summary: 'Unsupported tool',
+                          detail: unsupportedDetail,
+                        });
                         toolConversationMessages.push(
                           new ToolMessage({
                             tool_call_id: toolCallId,
-                            content: `Unsupported tool: ${toolName}`,
+                            content: unsupportedDetail,
                           }),
                         );
                         toolCallCount += 1;
@@ -1277,118 +1351,180 @@ chrome.runtime.onConnect.addListener(port => {
 
                         if (isThinkingTool) {
                           if (thinkingCallCount >= MAX_QA_THINKING_CALLS) {
+                            const detail = `You have reached the thinking-step limit (${MAX_QA_THINKING_CALLS}) for this answer. Continue with web or MCP tools if you need facts, then give the user a clear final answer without calling thinking again.`;
+                            emitQAToolModelTurnResult(streamTabConn?.port, qaToolPersistenceCtx, {
+                              sessionId,
+                              tabId,
+                              displayToolName: 'thinking',
+                              boundToolName: toolName,
+                              toolCallId,
+                              toolArgs,
+                              summary: 'Thinking limit reached',
+                              detail,
+                            });
                             toolConversationMessages.push(
                               new ToolMessage({
                                 tool_call_id: toolCallId,
-                                content: `You have reached the thinking-step limit (${MAX_QA_THINKING_CALLS}) for this answer. Continue with web or MCP tools if you need facts, then give the user a clear final answer without calling thinking again.`,
+                                content: detail,
                               }),
                             );
                             continue;
                           }
                           thinkingCallCount += 1;
-                          toolResult = await thinkingTool.func({
-                            thought: String(toolArgs.thought ?? ''),
-                          });
                         } else if (isBuiltInWebTool) {
                           if (toolCallCount >= MAX_QA_TOOL_CALLS) {
-                            toolConversationMessages.push(
-                              new ToolMessage({
-                                tool_call_id: toolCallId,
-                                content: `Non-thinking tool budget exhausted (${MAX_QA_TOOL_CALLS} per answer). Answer with the context you already have.`,
-                              }),
-                            );
-                            continue;
-                          }
-                          toolCallCount += 1;
-                          toolResult =
-                            toolName === 'web_search'
-                              ? await webSearchTool.func({
-                                  query: String(toolArgs.query || ''),
-                                })
-                              : await fetchUrlTool.func({
-                                  url: String(toolArgs.url || ''),
-                                });
-                        } else {
-                          if (toolCallCount >= MAX_QA_TOOL_CALLS) {
-                            toolConversationMessages.push(
-                              new ToolMessage({
-                                tool_call_id: toolCallId,
-                                content: `Non-thinking tool budget exhausted (${MAX_QA_TOOL_CALLS} per answer). Answer with the context you already have.`,
-                              }),
-                            );
-                            continue;
-                          }
-                          toolCallCount += 1;
-                          const prettyToolName = `mcp:${mcpToolMeta!.server.name}/${mcpToolMeta!.toolName}`;
-                          const mcpCallArgs = coerceMcpToolCallArgs(toolArgs);
-                          const requestDetail = truncateToolDetail(
-                            `Arguments: ${JSON.stringify(mcpCallArgs, null, 2)}`,
-                          );
-                          const toolRunId = crypto.randomUUID();
-                          emitQAToolEvent(
-                            streamTabConn?.port,
-                            {
+                            const detail = `Non-thinking tool budget exhausted (${MAX_QA_TOOL_CALLS} per answer). Answer with the context you already have.`;
+                            emitQAToolModelTurnResult(streamTabConn?.port, qaToolPersistenceCtx, {
                               sessionId,
                               tabId,
-                              toolName: prettyToolName,
-                              kind: 'call',
-                              summary: 'Calling MCP…',
-                              requestDetail,
-                              toolRunId,
-                              status: 'pending',
-                              modelToolCallId: toolCallId,
+                              displayToolName: toolName,
                               boundToolName: toolName,
+                              toolCallId,
                               toolArgs,
-                            },
-                            qaToolPersistenceCtx,
-                          );
-                          try {
-                            const mcpResult = await executeMcpTool(mcpToolMeta!.server, {
-                              toolName: mcpToolMeta!.toolName,
-                              argumentsInput: mcpCallArgs,
-                              signal: abortController.signal,
+                              summary: 'Tool call limit reached',
+                              detail,
                             });
-                            toolResult = mcpResult.content;
-                            emitQAToolEvent(
-                              streamTabConn?.port,
-                              {
-                                sessionId,
-                                tabId,
-                                toolName: prettyToolName,
-                                kind: 'result',
-                                summary: 'MCP tool call succeeded',
-                                requestDetail,
-                                detail: truncateToolDetail(mcpResult.content),
-                                toolRunId,
-                                status: 'success',
-                                modelToolCallId: toolCallId,
-                                boundToolName: toolName,
-                                toolArgs,
-                              },
-                              qaToolPersistenceCtx,
+                            toolConversationMessages.push(
+                              new ToolMessage({
+                                tool_call_id: toolCallId,
+                                content: detail,
+                              }),
                             );
-                          } catch (mcpError) {
-                            const errorMessage = mcpError instanceof Error ? mcpError.message : String(mcpError);
-                            emitQAToolEvent(
-                              streamTabConn?.port,
-                              {
-                                sessionId,
-                                tabId,
-                                toolName: prettyToolName,
-                                kind: 'result',
-                                summary: 'MCP tool call failed',
-                                requestDetail,
-                                detail: truncateToolDetail(errorMessage),
-                                toolRunId,
-                                status: 'error',
-                                modelToolCallId: toolCallId,
-                                boundToolName: toolName,
-                                toolArgs,
-                              },
-                              qaToolPersistenceCtx,
-                            );
-                            toolResult = `MCP tool call failed: ${errorMessage}`;
+                            continue;
                           }
+                          toolCallCount += 1;
+                        } else {
+                          if (toolCallCount >= MAX_QA_TOOL_CALLS) {
+                            const detail = `Non-thinking tool budget exhausted (${MAX_QA_TOOL_CALLS} per answer). Answer with the context you already have.`;
+                            const displayName = qaChatDisplayToolName(toolName, mcpToolMeta!);
+                            emitQAToolModelTurnResult(streamTabConn?.port, qaToolPersistenceCtx, {
+                              sessionId,
+                              tabId,
+                              displayToolName: displayName,
+                              boundToolName: toolName,
+                              toolCallId,
+                              toolArgs,
+                              summary: 'Tool call limit reached',
+                              detail,
+                            });
+                            toolConversationMessages.push(
+                              new ToolMessage({
+                                tool_call_id: toolCallId,
+                                content: detail,
+                              }),
+                            );
+                            continue;
+                          }
+                          toolCallCount += 1;
+                        }
+
+                        try {
+                          if (isThinkingTool) {
+                            toolResult = await thinkingTool.func({
+                              thought: String(toolArgs.thought ?? ''),
+                            });
+                          } else if (isBuiltInWebTool) {
+                            toolResult =
+                              toolName === 'web_search'
+                                ? await webSearchTool.func({
+                                    query: String(toolArgs.query || ''),
+                                  })
+                                : await fetchUrlTool.func({
+                                    url: String(toolArgs.url || ''),
+                                  });
+                          } else {
+                            const prettyToolName = qaChatDisplayToolName(toolName, mcpToolMeta!);
+                            const mcpCallArgs = coerceMcpToolCallArgs(toolArgs);
+                            const requestDetail = truncateToolDetail(
+                              `Arguments: ${JSON.stringify(mcpCallArgs, null, 2)}`,
+                            );
+                            const toolRunId = crypto.randomUUID();
+                            emitQAToolEvent(
+                              streamTabConn?.port,
+                              {
+                                sessionId,
+                                tabId,
+                                toolName: prettyToolName,
+                                kind: 'call',
+                                summary: 'Calling MCP…',
+                                requestDetail,
+                                toolRunId,
+                                status: 'pending',
+                                modelToolCallId: toolCallId,
+                                boundToolName: toolName,
+                                toolArgs,
+                              },
+                              qaToolPersistenceCtx,
+                            );
+                            try {
+                              const mcpResult = await executeMcpTool(mcpToolMeta!.server, {
+                                toolName: mcpToolMeta!.toolName,
+                                argumentsInput: mcpCallArgs,
+                                signal: abortController.signal,
+                              });
+                              toolResult = mcpResult.content;
+                              emitQAToolEvent(
+                                streamTabConn?.port,
+                                {
+                                  sessionId,
+                                  tabId,
+                                  toolName: prettyToolName,
+                                  kind: 'result',
+                                  summary: 'MCP tool call succeeded',
+                                  requestDetail,
+                                  detail: truncateToolDetail(mcpResult.content),
+                                  toolRunId,
+                                  status: 'success',
+                                  modelToolCallId: toolCallId,
+                                  boundToolName: toolName,
+                                  toolArgs,
+                                },
+                                qaToolPersistenceCtx,
+                              );
+                            } catch (mcpError) {
+                              const errorMessage = mcpError instanceof Error ? mcpError.message : String(mcpError);
+                              emitQAToolEvent(
+                                streamTabConn?.port,
+                                {
+                                  sessionId,
+                                  tabId,
+                                  toolName: prettyToolName,
+                                  kind: 'result',
+                                  summary: 'MCP tool call failed',
+                                  requestDetail,
+                                  detail: truncateToolDetail(errorMessage),
+                                  toolRunId,
+                                  status: 'error',
+                                  modelToolCallId: toolCallId,
+                                  boundToolName: toolName,
+                                  toolArgs,
+                                },
+                                qaToolPersistenceCtx,
+                              );
+                              toolResult = `MCP tool call failed: ${errorMessage}`;
+                            }
+                          }
+                        } catch (unexpectedError) {
+                          const errorMessage =
+                            unexpectedError instanceof Error ? unexpectedError.message : String(unexpectedError);
+                          const toolFailedLine = `Tool failed: ${errorMessage}`;
+                          emitQAToolModelTurnResult(streamTabConn?.port, qaToolPersistenceCtx, {
+                            sessionId,
+                            tabId,
+                            displayToolName: qaChatDisplayToolName(toolName, mcpToolMeta),
+                            boundToolName: toolName,
+                            toolCallId,
+                            toolArgs,
+                            summary: 'Tool failed',
+                            detail: errorMessage,
+                          });
+                          toolConversationMessages.push(
+                            new ToolMessage({
+                              tool_call_id: toolCallId,
+                              content: toolFailedLine,
+                            }),
+                          );
+                          continue;
                         }
 
                         toolConversationMessages.push(
