@@ -28,7 +28,10 @@ export interface Message {
   actor: Actors;
   content: string;
   timestamp: number; // Unix timestamp in milliseconds
-  imageData?: string; // Base64 encoded image data for QA mode image capture
+  /** Legacy single-screenshot field. Kept for backward compatibility with older sessions. */
+  imageData?: string;
+  /** Multiple base64-encoded screenshots attached to a single QA message. Preferred over {@link imageData}. */
+  imageDataList?: string[];
   toolEvent?: ToolEvent;
 }
 

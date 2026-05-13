@@ -198,15 +198,19 @@ function MessageBlock({
   qaUiTheme = null,
   markdownComponents,
 }: MessageBlockProps) {
-  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
-
-  const handleImageClick = useCallback(() => {
-    setIsImageModalOpen(true);
-  }, []);
+  // Tracks which screenshot (by index) is open in the lightbox. `null` means closed.
+  const [openImageIndex, setOpenImageIndex] = useState<number | null>(null);
 
   const handleCloseModal = useCallback(() => {
-    setIsImageModalOpen(false);
+    setOpenImageIndex(null);
   }, []);
+
+  // Prefer the multi-image list. Fall back to the legacy single `imageData` for old sessions.
+  const imageList = useMemo<string[]>(() => {
+    if (message.imageDataList && message.imageDataList.length > 0) return message.imageDataList;
+    if (message.imageData) return [message.imageData];
+    return [];
+  }, [message.imageData, message.imageDataList]);
 
   if (!message.actor) {
     console.error('No actor found');
@@ -219,7 +223,9 @@ function MessageBlock({
 
   const messageColor = qaUiTheme?.messageText ?? (isDarkMode ? '#d1d1d1' : '#374151');
   const mdWrapClass = `max-w-none [&_p]:mb-3 [&_p:last-child]:mb-0 [&_li>p]:mb-0 [&_li>p]:inline [&_ul]:my-2 [&_ol]:my-2 [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-5 [&_ol]:pl-5 [&_li]:my-0.5 [&_h1]:mt-6 [&_h1]:mb-2 [&_h1]:text-lg [&_h1]:font-semibold [&_h2]:mt-5 [&_h2]:mb-2 [&_h2]:text-base [&_h2]:font-semibold [&_h3]:mt-4 [&_h3]:mb-1.5 [&_h3]:text-sm [&_h3]:font-semibold [&_strong]:font-semibold [&_blockquote]:my-3 [&_blockquote]:border-l-2 [&_blockquote]:pl-3 ${
-    isDarkMode ? '[&_blockquote]:border-[#4a4a5c] [&_blockquote]:text-[#b8b8c8]' : '[&_blockquote]:border-gray-300 [&_blockquote]:text-gray-600'
+    isDarkMode
+      ? '[&_blockquote]:border-[#4a4a5c] [&_blockquote]:text-[#b8b8c8]'
+      : '[&_blockquote]:border-gray-300 [&_blockquote]:text-gray-600'
   }`;
 
   return (
@@ -254,25 +260,30 @@ function MessageBlock({
           )}
 
           <div className="space-y-1">
-            {/* Display attached image thumbnail if present */}
-            {message.imageData && (
-              <div className="mb-2">
-                <button
-                  type="button"
-                  onClick={handleImageClick}
-                  className="group relative block overflow-hidden rounded-lg border border-gray-200 transition-colors hover:border-[#5b7cff]/60 dark:border-[#333344]"
-                  aria-label={t('chat_imageCapture_viewFull')}>
-                  <img
-                    src={`data:image/jpeg;base64,${message.imageData}`}
-                    alt={t('chat_imageCapture_attached')}
-                    className="h-auto max-h-32 w-full max-w-full object-cover"
-                  />
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
-                    <span className="rounded bg-black/50 px-2 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
-                      {t('chat_imageCapture_clickToExpand')}
-                    </span>
-                  </div>
-                </button>
+            {/* Display attached screenshot thumbnails (supports multiple). */}
+            {imageList.length > 0 && (
+              <div className="mb-2 flex flex-wrap gap-2">
+                {imageList.map((image, idx) => (
+                  <button
+                    key={`${idx}-${image.length}`}
+                    type="button"
+                    onClick={() => setOpenImageIndex(idx)}
+                    className="group relative block overflow-hidden rounded-lg border border-gray-200 transition-colors hover:border-[#5b7cff]/60 dark:border-[#333344]"
+                    aria-label={t('chat_imageCapture_viewFull')}>
+                    <img
+                      src={`data:image/jpeg;base64,${image}`}
+                      alt={t('chat_imageCapture_attached')}
+                      className={`h-auto max-h-32 max-w-full object-cover ${
+                        imageList.length === 1 ? 'w-full' : 'w-auto'
+                      }`}
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
+                      <span className="rounded bg-black/50 px-2 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
+                        {t('chat_imageCapture_clickToExpand')}
+                      </span>
+                    </div>
+                  </button>
+                ))}
               </div>
             )}
             {message.toolEvent ? (
@@ -336,7 +347,9 @@ function MessageBlock({
       </div>
 
       {/* Image Modal */}
-      {isImageModalOpen && message.imageData && <ImageModal imageData={message.imageData} onClose={handleCloseModal} />}
+      {openImageIndex !== null && imageList[openImageIndex] && (
+        <ImageModal imageData={imageList[openImageIndex]} onClose={handleCloseModal} />
+      )}
     </>
   );
 }
@@ -541,7 +554,9 @@ function StreamingMessageBlock({
   const { thoughtLine, body: bodyAfterThought } = partitionThoughtPrefix(content);
   const messageColor = qaUiTheme?.messageText ?? (isDarkMode ? '#d1d1d1' : '#374151');
   const mdWrapClass = `max-w-none [&_p]:mb-3 [&_p:last-child]:mb-0 [&_li>p]:mb-0 [&_li>p]:inline [&_ul]:my-2 [&_ol]:my-2 [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-5 [&_ol]:pl-5 [&_li]:my-0.5 [&_h1]:mt-6 [&_h1]:mb-2 [&_h1]:text-lg [&_h1]:font-semibold [&_h2]:mt-5 [&_h2]:mb-2 [&_h2]:text-base [&_h2]:font-semibold [&_h3]:mt-4 [&_h3]:mb-1.5 [&_h3]:text-sm [&_h3]:font-semibold [&_strong]:font-semibold [&_blockquote]:my-3 [&_blockquote]:border-l-2 [&_blockquote]:pl-3 ${
-    isDarkMode ? '[&_blockquote]:border-[#4a4a5c] [&_blockquote]:text-[#b8b8c8]' : '[&_blockquote]:border-gray-300 [&_blockquote]:text-gray-600'
+    isDarkMode
+      ? '[&_blockquote]:border-[#4a4a5c] [&_blockquote]:text-[#b8b8c8]'
+      : '[&_blockquote]:border-gray-300 [&_blockquote]:text-gray-600'
   }`;
 
   return (

@@ -737,15 +737,26 @@ chrome.runtime.onConnect.addListener(port => {
           }
 
           case 'qa_query': {
+            // Accept both legacy `imageData` (single screenshot) and `imageDataList` (multi-screenshot).
+            const incomingImageList = Array.isArray(message.imageDataList)
+              ? (message.imageDataList.filter((s: unknown) => typeof s === 'string' && s.length > 0) as string[])
+              : undefined;
+            const incomingSingle = typeof message.imageData === 'string' ? (message.imageData as string) : undefined;
+            const imageDataList: string[] | undefined =
+              incomingImageList && incomingImageList.length > 0
+                ? incomingImageList
+                : incomingSingle
+                  ? [incomingSingle]
+                  : undefined;
+
             if (!message.tabId) return port.postMessage({ type: 'error', error: t('bg_errors_noTabId') });
-            if (!message.query && !message.imageData)
+            if (!message.query && !imageDataList)
               return port.postMessage({ type: 'error', error: 'No query or image provided' });
             if (!message.sessionId) return port.postMessage({ type: 'error', error: 'No session ID provided' });
 
             const tabId = message.tabId;
             const userQuery = message.query || '';
             const sessionId = message.sessionId;
-            const imageData = message.imageData as string | undefined;
             const includePageContent = message.includePageContent !== false; // Default to true
             const personaSystemPrompt =
               typeof message.personaSystemPrompt === 'string' ? message.personaSystemPrompt : '';
@@ -1219,18 +1230,28 @@ chrome.runtime.onConnect.addListener(port => {
                 if (session && session.messages && session.messages.length > 0) {
                   for (const msg of session.messages) {
                     if (msg.actor === Actors.USER) {
-                      // Check if message has an image attached (stored in extended message type)
-                      const msgWithImage = msg as { imageData?: string } & typeof msg;
-                      if (msgWithImage.imageData) {
-                        // Create message with both text and image
+                      // Check if message has one or more screenshots attached. Prefer the new
+                      // `imageDataList` field, falling back to the legacy single `imageData` field
+                      // so old sessions continue to work.
+                      const msgWithImages = msg as {
+                        imageData?: string;
+                        imageDataList?: string[];
+                      } & typeof msg;
+                      const storedImages =
+                        msgWithImages.imageDataList && msgWithImages.imageDataList.length > 0
+                          ? msgWithImages.imageDataList
+                          : msgWithImages.imageData
+                            ? [msgWithImages.imageData]
+                            : [];
+                      if (storedImages.length > 0) {
                         conversationMessages.push(
                           new HumanMessage({
                             content: [
                               { type: 'text', text: msg.content || 'Please analyze this image.' },
-                              {
-                                type: 'image_url',
-                                image_url: { url: `data:image/jpeg;base64,${msgWithImage.imageData}` },
-                              },
+                              ...storedImages.map(image => ({
+                                type: 'image_url' as const,
+                                image_url: { url: `data:image/jpeg;base64,${image}` },
+                              })),
                             ],
                           }),
                         );
@@ -1261,16 +1282,16 @@ chrome.runtime.onConnect.addListener(port => {
                     userQuery.trim().includes(lastMessage.content.trim()));
 
                 if (!isLastMessageCurrentQuery) {
-                  // If we have an image attached to the current query, include it
-                  if (imageData) {
+                  // Include all attached screenshots for the current turn (multi-image support).
+                  if (imageDataList && imageDataList.length > 0) {
                     conversationMessages.push(
                       new HumanMessage({
                         content: [
                           { type: 'text', text: userQuery || 'Please analyze this image.' },
-                          {
-                            type: 'image_url',
-                            image_url: { url: `data:image/jpeg;base64,${imageData}` },
-                          },
+                          ...imageDataList.map(image => ({
+                            type: 'image_url' as const,
+                            image_url: { url: `data:image/jpeg;base64,${image}` },
+                          })),
                         ],
                       }),
                     );

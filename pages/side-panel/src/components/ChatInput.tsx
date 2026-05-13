@@ -28,7 +28,7 @@ interface PersonaOption {
 }
 
 interface ChatInputProps {
-  onSendMessage: (text: string, displayText?: string, imageData?: string) => void;
+  onSendMessage: (text: string, displayText?: string, imageDataList?: string[]) => void;
   onStopTask: () => void;
   onMicClick?: () => void;
   isRecording?: boolean;
@@ -50,10 +50,11 @@ interface ChatInputProps {
   onPersonaChange?: (personaId: string) => void;
   // Expose textarea ref for focus management
   setTextareaRef?: (ref: HTMLTextAreaElement | null) => void;
-  // Image capture
+  // Image capture — supports multiple screenshots per message.
   onCaptureImage?: () => Promise<string | null>;
-  capturedImage?: string | null;
-  onRemoveCapturedImage?: () => void;
+  capturedImages?: string[];
+  /** Pass an index to remove a single screenshot; omit to clear all. */
+  onRemoveCapturedImage?: (index?: number) => void;
   isCapturingImage?: boolean;
   // Page content toggle for QA mode
   includePageContent?: boolean;
@@ -92,7 +93,7 @@ export default function ChatInput({
   onPersonaChange,
   setTextareaRef,
   onCaptureImage,
-  capturedImage,
+  capturedImages = [],
   onRemoveCapturedImage,
   isCapturingImage = false,
   includePageContent = true,
@@ -103,9 +104,10 @@ export default function ChatInput({
 }: ChatInputProps) {
   const [text, setText] = useState('');
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
+  const hasCapturedImages = capturedImages.length > 0;
   const isSendButtonDisabled = useMemo(
-    () => disabled || (text.trim() === '' && attachedFiles.length === 0 && !capturedImage),
-    [disabled, text, attachedFiles, capturedImage],
+    () => disabled || (text.trim() === '' && attachedFiles.length === 0 && !hasCapturedImages),
+    [disabled, text, attachedFiles, hasCapturedImages],
   );
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -151,7 +153,7 @@ export default function ChatInput({
       e.preventDefault();
       const trimmedText = text.trim();
 
-      if (trimmedText || attachedFiles.length > 0 || capturedImage) {
+      if (trimmedText || attachedFiles.length > 0 || hasCapturedImages) {
         let messageContent = trimmedText;
         let displayContent = trimmedText;
 
@@ -175,18 +177,20 @@ export default function ChatInput({
           displayContent = trimmedText ? `${trimmedText}\n\n${fileList}` : fileList;
         }
 
-        // Add image indicator to display content if image is attached
-        if (capturedImage) {
-          displayContent = displayContent
-            ? `${displayContent}\n\n📷 ${t('chat_imageCapture_attached')}`
-            : `📷 ${t('chat_imageCapture_attached')}`;
+        // Add image indicator(s) to display content if screenshots are attached.
+        if (hasCapturedImages) {
+          const indicator =
+            capturedImages.length === 1
+              ? `📷 ${t('chat_imageCapture_attached')}`
+              : `📷 ${t('chat_imageCapture_attached')} (${capturedImages.length})`;
+          displayContent = displayContent ? `${displayContent}\n\n${indicator}` : indicator;
         }
 
-        onSendMessage(messageContent, displayContent, capturedImage || undefined);
+        onSendMessage(messageContent, displayContent, hasCapturedImages ? [...capturedImages] : undefined);
         setText('');
         setAttachedFiles([]);
-        // Clear captured image after sending
-        if (capturedImage && onRemoveCapturedImage) {
+        // Clear captured images after sending
+        if (hasCapturedImages && onRemoveCapturedImage) {
           onRemoveCapturedImage();
         }
 
@@ -199,7 +203,7 @@ export default function ChatInput({
         }
       }
     },
-    [text, attachedFiles, capturedImage, onSendMessage, isQAMode, disabled, onRemoveCapturedImage],
+    [text, attachedFiles, capturedImages, hasCapturedImages, onSendMessage, isQAMode, disabled, onRemoveCapturedImage],
   );
 
   const handleKeyDown = useCallback(
@@ -271,6 +275,42 @@ export default function ChatInput({
     setAttachedFiles(prev => prev.filter((_, i) => i !== index));
   }, []);
 
+  /**
+   * Imperatively open a full-size preview for a captured screenshot.
+   * Kept imperative (matches the previous single-image implementation) so it doesn't pull a portal
+   * dependency into the composer.
+   */
+  const openImagePreview = useCallback((image: string) => {
+    const root = document.createElement('div');
+    root.className = 'fixed inset-0 z-50 flex items-center justify-center';
+    root.setAttribute('role', 'dialog');
+    root.setAttribute('aria-modal', 'true');
+    const dismiss = () => {
+      window.removeEventListener('keydown', onBackdropKey);
+      root.remove();
+    };
+    const onBackdropKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') dismiss();
+    };
+    window.addEventListener('keydown', onBackdropKey);
+    const backdrop = document.createElement('button');
+    backdrop.type = 'button';
+    backdrop.className = 'absolute inset-0 border-0 bg-black/80 p-0';
+    backdrop.setAttribute('aria-label', t('chat_imageCapture_closeModal'));
+    backdrop.onclick = dismiss;
+    const inner = document.createElement('div');
+    inner.className = 'relative z-10 max-h-[90vh] max-w-[90vw]';
+    inner.onclick = e => e.stopPropagation();
+    const img = document.createElement('img');
+    img.src = `data:image/jpeg;base64,${image}`;
+    img.alt = t('chat_imageCapture_fullImage');
+    img.className = 'max-h-[90vh] max-w-[90vw] object-contain rounded-lg';
+    inner.appendChild(img);
+    root.appendChild(backdrop);
+    root.appendChild(inner);
+    document.body.appendChild(root);
+  }, []);
+
   const formStyle: CSSProperties = {
     ...(qaUiTheme?.inputBorder ? { borderColor: qaUiTheme.inputBorder } : {}),
   };
@@ -317,7 +357,7 @@ export default function ChatInput({
       aria-label={t('chat_input_form')}>
       <div className="flex flex-col">
         {/* File attachments and captured image display */}
-        {(attachedFiles.length > 0 || capturedImage) && (
+        {(attachedFiles.length > 0 || hasCapturedImages) && (
           <div
             className={`flex flex-wrap gap-2 border-b p-2 ${
               qaUiTheme?.inputSurface ? '' : isDarkMode ? 'border-[#333344] bg-[#1a1a24]' : 'border-gray-200 bg-gray-50'
@@ -327,9 +367,10 @@ export default function ChatInput({
                 ? { backgroundColor: qaUiTheme.inputSurface, borderBottomColor: qaUiTheme.inputBorder }
                 : undefined
             }>
-            {/* Captured image preview */}
-            {capturedImage && (
+            {/* Captured screenshot previews — one chip per image so the user can review/remove each. */}
+            {capturedImages.map((image, index) => (
               <div
+                key={`captured-${index}-${image.length}`}
                 className={`relative flex items-center gap-1 rounded-md p-1 ${
                   isDarkMode ? 'bg-slate-700' : 'bg-gray-200'
                 }`}>
@@ -337,45 +378,16 @@ export default function ChatInput({
                   type="button"
                   className="cursor-pointer rounded p-0 transition-opacity hover:opacity-80"
                   aria-label={t('chat_imageCapture_viewFull')}
-                  onClick={() => {
-                    const root = document.createElement('div');
-                    root.className = 'fixed inset-0 z-50 flex items-center justify-center';
-                    root.setAttribute('role', 'dialog');
-                    root.setAttribute('aria-modal', 'true');
-                    const dismiss = () => {
-                      window.removeEventListener('keydown', onBackdropKey);
-                      root.remove();
-                    };
-                    const onBackdropKey = (e: KeyboardEvent) => {
-                      if (e.key === 'Escape') dismiss();
-                    };
-                    window.addEventListener('keydown', onBackdropKey);
-                    const backdrop = document.createElement('button');
-                    backdrop.type = 'button';
-                    backdrop.className = 'absolute inset-0 border-0 bg-black/80 p-0';
-                    backdrop.setAttribute('aria-label', t('chat_imageCapture_closeModal'));
-                    backdrop.onclick = dismiss;
-                    const inner = document.createElement('div');
-                    inner.className = 'relative z-10 max-h-[90vh] max-w-[90vw]';
-                    inner.onclick = e => e.stopPropagation();
-                    const img = document.createElement('img');
-                    img.src = `data:image/jpeg;base64,${capturedImage}`;
-                    img.alt = t('chat_imageCapture_fullImage');
-                    img.className = 'max-h-[90vh] max-w-[90vw] object-contain rounded-lg';
-                    inner.appendChild(img);
-                    root.appendChild(backdrop);
-                    root.appendChild(inner);
-                    document.body.appendChild(root);
-                  }}>
+                  onClick={() => openImagePreview(image)}>
                   <img
-                    src={`data:image/jpeg;base64,${capturedImage}`}
+                    src={`data:image/jpeg;base64,${image}`}
                     alt=""
                     className="pointer-events-none h-12 w-auto max-w-[100px] rounded object-cover"
                   />
                 </button>
                 <button
                   type="button"
-                  onClick={onRemoveCapturedImage}
+                  onClick={() => onRemoveCapturedImage?.(index)}
                   className={`absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-full text-xs ${
                     isDarkMode
                       ? 'bg-slate-600 text-gray-200 hover:bg-slate-500'
@@ -385,7 +397,7 @@ export default function ChatInput({
                   ✕
                 </button>
               </div>
-            )}
+            ))}
             {/* File attachments */}
             {attachedFiles.map((file, index) => (
               <div

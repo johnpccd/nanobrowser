@@ -103,8 +103,8 @@ const SidePanel = () => {
   const [qaResponseBuffer, setQaResponseBuffer] = useState<string>('');
   const [isQaStreaming, setIsQaStreaming] = useState(false);
   const [isWaitingForQaResponse, setIsWaitingForQaResponse] = useState(false);
-  // Image capture state
-  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  // Image capture state — Capture appends to this list so multiple screenshots can be attached to one message.
+  const [capturedImages, setCapturedImages] = useState<string[]>([]);
   const [isCapturingImage, setIsCapturingImage] = useState(false);
   // Page content inclusion state for QA mode
   const [includePageContent, setIncludePageContent] = useState(true);
@@ -1235,13 +1235,18 @@ const SidePanel = () => {
     }
   };
 
-  const handleSendMessage = async (text: string, displayText?: string, imageData?: string) => {
-    console.log('handleSendMessage', text, imageData ? '(with image)' : '');
+  const handleSendMessage = async (text: string, displayText?: string, imageDataList?: string[]) => {
+    const imageCount = imageDataList?.length ?? 0;
+    console.log(
+      'handleSendMessage',
+      text,
+      imageCount > 0 ? `(with ${imageCount} image${imageCount > 1 ? 's' : ''})` : '',
+    );
 
     // Trim the input text first
     const trimmedText = text.trim();
 
-    if (!trimmedText && !imageData) return;
+    if (!trimmedText && imageCount === 0) return;
 
     // Check if the input is a command (starts with /)
     if (trimmedText.startsWith('/')) {
@@ -1305,17 +1310,17 @@ const SidePanel = () => {
 
         // IMPORTANT: Save the message to storage BEFORE sending the query
         // This ensures the message is available when we load chat history
-        // Include image reference in stored message if image was attached
-        const messageToStore = imageData
-          ? { ...userMessage, imageData } // Store image data with the message
-          : userMessage;
+        // Include image references in stored message if screenshots were attached.
+        // We persist `imageDataList` for multi-image support and also mirror the first image to legacy
+        // `imageData` so older readers (and code paths still consulting it) continue to work.
+        const messageToStore =
+          imageCount > 0 ? { ...userMessage, imageData: imageDataList![0], imageDataList } : userMessage;
         await chatHistoryStore.addMessage(sessionIdRef.current, messageToStore);
 
-        // Update UI state directly (don't use appendMessage as it would save again)
-        setMessages(prev => [...prev, imageData ? { ...userMessage, imageData } : userMessage]);
+        setMessages(prev => [...prev, messageToStore]);
 
-        // Clear captured image after sending
-        setCapturedImage(null);
+        // Clear captured images after sending
+        setCapturedImages([]);
 
         // Clear buffer for this tab when starting a new query
         tabBuffersRef.current.delete(tabId);
@@ -1335,7 +1340,10 @@ const SidePanel = () => {
           query: text,
           sessionId: sessionIdRef.current,
           tabId,
-          imageData, // Include image in the message to background
+          // Send the full list for multi-image QA. Mirror first image to `imageData` for back-compat
+          // with any older background handler still reading the singular field.
+          imageData: imageCount > 0 ? imageDataList![0] : undefined,
+          imageDataList: imageCount > 0 ? imageDataList : undefined,
           includePageContent, // Whether to include page content in the query
           enableWebSearch, // Whether to include web search in the query
           personaSystemPrompt: activePersona?.systemPrompt || undefined,
@@ -1346,7 +1354,7 @@ const SidePanel = () => {
           text,
           tabId,
           sessionIdRef.current,
-          imageData ? '(with image)' : '',
+          imageCount > 0 ? `(with ${imageCount} image${imageCount > 1 ? 's' : ''})` : '',
           includePageContent ? '(with page content)' : '(generic chat)',
           enableWebSearch ? '(with web search)' : '(without web search)',
         );
@@ -1665,7 +1673,8 @@ const SidePanel = () => {
           if (message.type === 'screenshot_result') {
             clearTimeout(timeout);
             if (message.screenshot) {
-              setCapturedImage(message.screenshot);
+              // Append to allow attaching multiple screenshots to a single message.
+              setCapturedImages(prev => [...prev, message.screenshot as string]);
               resolve(message.screenshot);
             } else {
               reject(new Error(message.error || 'Failed to capture screenshot'));
@@ -1710,9 +1719,13 @@ const SidePanel = () => {
     }
   }, [isCapturingImage, setupConnection, appendMessage]);
 
-  // Handle removing captured image
-  const handleRemoveCapturedImage = useCallback(() => {
-    setCapturedImage(null);
+  // Remove a single captured screenshot by index. Passing no index clears all.
+  const handleRemoveCapturedImage = useCallback((index?: number) => {
+    if (index === undefined) {
+      setCapturedImages([]);
+      return;
+    }
+    setCapturedImages(prev => prev.filter((_, i) => i !== index));
   }, []);
 
   // Handle toggling page content inclusion for QA mode
@@ -2113,7 +2126,7 @@ const SidePanel = () => {
                           textareaRef.current = ref;
                         }}
                         onCaptureImage={mode === 'qa' ? handleCaptureImage : undefined}
-                        capturedImage={capturedImage}
+                        capturedImages={capturedImages}
                         onRemoveCapturedImage={handleRemoveCapturedImage}
                         isCapturingImage={isCapturingImage}
                         includePageContent={includePageContent}
@@ -2181,7 +2194,7 @@ const SidePanel = () => {
                         textareaRef.current = ref;
                       }}
                       onCaptureImage={mode === 'qa' ? handleCaptureImage : undefined}
-                      capturedImage={capturedImage}
+                      capturedImages={capturedImages}
                       onRemoveCapturedImage={handleRemoveCapturedImage}
                       isCapturingImage={isCapturingImage}
                       includePageContent={includePageContent}
