@@ -1664,47 +1664,48 @@ const SidePanel = () => {
 
       // Request screenshot from background service
       return new Promise((resolve, reject) => {
+        const port = portRef.current;
+        if (!port) {
+          reject(new Error('No connection available'));
+          return;
+        }
+
+        // One-time listener: must be removed as soon as we handle the result. If we only remove it
+        // after a delay, every past listener still receives each new `screenshot_result` and the
+        // same screenshot gets appended once per prior capture (stacked duplicates).
+        function handleScreenshotResponse(message: { type: string; screenshot?: string; error?: string }) {
+          if (message.type !== 'screenshot_result') return;
+
+          clearTimeout(timeout);
+          try {
+            port.onMessage.removeListener(handleScreenshotResponse);
+          } catch {
+            // Port might be disconnected
+          }
+
+          if (message.screenshot) {
+            setCapturedImages(prev => [...prev, message.screenshot as string]);
+            resolve(message.screenshot);
+          } else {
+            reject(new Error(message.error || 'Failed to capture screenshot'));
+          }
+        }
+
         const timeout = setTimeout(() => {
+          try {
+            port.onMessage.removeListener(handleScreenshotResponse);
+          } catch {
+            // Port might be disconnected
+          }
           reject(new Error('Screenshot capture timed out'));
         }, 10000);
 
-        // Create a one-time message listener for the screenshot response
-        const handleScreenshotResponse = (message: { type: string; screenshot?: string; error?: string }) => {
-          if (message.type === 'screenshot_result') {
-            clearTimeout(timeout);
-            if (message.screenshot) {
-              // Append to allow attaching multiple screenshots to a single message.
-              setCapturedImages(prev => [...prev, message.screenshot as string]);
-              resolve(message.screenshot);
-            } else {
-              reject(new Error(message.error || 'Failed to capture screenshot'));
-            }
-          }
-        };
+        port.onMessage.addListener(handleScreenshotResponse);
 
-        // Store the listener so we can remove it later
-        const port = portRef.current;
-        if (port) {
-          port.onMessage.addListener(handleScreenshotResponse);
-
-          // Send screenshot request
-          port.postMessage({
-            type: 'capture_screenshot',
-            tabId,
-          });
-
-          // Clean up listener after response
-          setTimeout(() => {
-            try {
-              port.onMessage.removeListener(handleScreenshotResponse);
-            } catch {
-              // Port might be disconnected
-            }
-          }, 10000);
-        } else {
-          clearTimeout(timeout);
-          reject(new Error('No connection available'));
-        }
+        port.postMessage({
+          type: 'capture_screenshot',
+          tabId,
+        });
       });
     } catch (error) {
       console.error('Failed to capture screenshot:', error);
