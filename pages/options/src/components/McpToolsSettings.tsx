@@ -407,7 +407,7 @@ export const McpToolsSettings = ({ isDarkMode = false }: McpToolsSettingsProps) 
                         : tr('options_mcp_transport_sse')}
                     </p>
                   </div>
-                  <div className="flex flex-shrink-0 items-center gap-2">
+                  <div className="flex shrink-0 items-center gap-2">
                     <button
                       type="button"
                       onClick={() => beginEdit(server)}

@@ -232,6 +232,27 @@
   "chat_mcpTools_manage_servers": {
     "message": "Gerenciar servidores MCP..."
   },
+  "chat_mcpTools_builtins_heading": {
+    "message": "Ferramentas integradas"
+  },
+  "chat_mcpTools_mcpServers_heading": {
+    "message": "Servidores MCP remotos"
+  },
+  "chat_mcpTools_builtin_needsSearxng": {
+    "message": "Configure uma URL base do SearXNG em Geral para expor esta ferramenta ao modelo."
+  },
+  "chat_mcpTools_noMcpServers": {
+    "message": "Nenhum servidor MCP com endpoint está configurado."
+  },
+  "chat_mcpTools_builtin_desc_thinking": {
+    "message": "Texto de raciocínio estendido que o modelo pode emitir antes da resposta."
+  },
+  "chat_mcpTools_builtin_desc_webSearch": {
+    "message": "Pesquisa na Web pela sua instância SearXNG."
+  },
+  "chat_mcpTools_builtin_desc_fetchUrl": {
+    "message": "Busca e lê o conteúdo da página pela sua instância SearXNG."
+  },
   "chat_pageContent_toggle": {
     "message": "Alternar conteúdo da página"
   },

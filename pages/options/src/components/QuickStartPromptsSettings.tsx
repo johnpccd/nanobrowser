@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { FaPlus, FaTrash, FaPen, FaCheck, FaTimes, FaGripVertical } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaPen, FaGripVertical } from 'react-icons/fa';
 import favoritesStorage, { type FavoritePrompt } from '@extension/storage/lib/prompt/favorites';
 import { t } from '@extension/i18n';
 

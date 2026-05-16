@@ -521,47 +521,55 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 
   if (message?.type === 'mcp_qa_list_tool_state') {
-    (async () => {
+    /** Return a Promise so the service worker stays alive until discovery finishes (MV3). */
+    return (async () => {
       try {
         const mcp = await mcpToolsSettingsStore.getSettings();
-        const sorted = [...mcp.servers].filter(s => s.endpoint?.trim()).sort((a, b) => a.id.localeCompare(b.id));
+        const sorted = [...(mcp.servers ?? [])]
+          .filter(s => typeof s.endpoint === 'string' && s.endpoint.trim())
+          .sort((a, b) => a.id.localeCompare(b.id));
         const timeoutMs = typeof message.timeoutMs === 'number' ? message.timeoutMs : 6000;
         const servers = await Promise.all(
           sorted.map(async server => {
             try {
               const discovered = await discoverMcpTools(server, { timeoutMs });
               const names = discovered.map(t => String(t.name).trim()).filter(Boolean);
+              const enabledList = server.enabledToolNames;
               const rows = names.map(name => ({
                 name,
-                enabled: server.enabledToolNames === null || server.enabledToolNames.includes(name),
+                enabled:
+                  enabledList === null ||
+                  enabledList === undefined ||
+                  (Array.isArray(enabledList) && enabledList.includes(name)),
               }));
-              return { id: server.id, name: server.name, endpoint: server.endpoint, tools: rows };
+              return {
+                id: server.id,
+                name: server.name,
+                endpoint: server.endpoint,
+                tools: rows,
+              };
             } catch (mcpErr) {
               const errorMsg = mcpErr instanceof Error ? mcpErr.message : String(mcpErr);
               return {
                 id: server.id,
                 name: server.name,
                 endpoint: server.endpoint,
-                tools: [],
+                tools: [] as Array<{ name: string; enabled: boolean }>,
                 error: errorMsg,
               };
             }
           }),
         );
-
-        sendResponse({ ok: true, servers });
+        return { ok: true, servers };
       } catch (error) {
-        sendResponse({
+        return {
           ok: false,
           error: error instanceof Error ? error.message : 'Failed to list MCP tool state.',
-        });
+        };
       }
     })();
-
-    return true;
   }
 
-  // Handle other message types if needed in the future
   return false;
 });
 

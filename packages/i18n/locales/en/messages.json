@@ -218,7 +218,7 @@
     "message": "…"
   },
   "chat_mcpTools_menu_title": {
-    "message": "MCP tools for QA"
+    "message": "Tools"
   },
   "chat_mcpTools_loading": {
     "message": "Loading tools from servers..."
@@ -231,6 +231,27 @@
   },
   "chat_mcpTools_manage_servers": {
     "message": "Manage MCP servers..."
+  },
+  "chat_mcpTools_builtins_heading": {
+    "message": "Built-in tools"
+  },
+  "chat_mcpTools_mcpServers_heading": {
+    "message": "Remote MCP servers"
+  },
+  "chat_mcpTools_builtin_needsSearxng": {
+    "message": "Configure a SearXNG base URL in General settings for this tool to be exposed to the model."
+  },
+  "chat_mcpTools_noMcpServers": {
+    "message": "No MCP servers with an endpoint are configured."
+  },
+  "chat_mcpTools_builtin_desc_thinking": {
+    "message": "Extended reasoning text the model can emit before answering."
+  },
+  "chat_mcpTools_builtin_desc_webSearch": {
+    "message": "Search the web via your SearXNG instance."
+  },
+  "chat_mcpTools_builtin_desc_fetchUrl": {
+    "message": "Fetch and read page content via your SearXNG instance."
   },
   "chat_pageContent_toggle": {
     "message": "Toggle page content"

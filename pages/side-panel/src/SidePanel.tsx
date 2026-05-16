@@ -37,11 +37,36 @@ import { mcpToolsSettingsStore, nextEnabledToolNamesForToggle } from '@extension
 import favoritesStorage, { type FavoritePrompt, favoritesBaseStorage } from '@extension/storage/lib/prompt/favorites';
 import { t } from '@extension/i18n';
 import MessageList from './components/MessageList';
-import ChatInput, { type QaMcpToolsPanelState } from './components/ChatInput';
+import ChatInput, {
+  type QaBuiltinToolPanelRow,
+  type QaBuiltinToolToggleId,
+  type QaMcpToolsPanelState,
+} from './components/ChatInput';
 import ChatHistoryList from './components/ChatHistoryList';
 import BookmarkList from './components/BookmarkList';
 import { EventType, type AgentEvent, ExecutionState } from './types/event';
 import './SidePanel.css';
+
+function qaBuiltinRowsFromGeneral(g: GeneralSettingsConfig): QaBuiltinToolPanelRow[] {
+  const hasSearxng = Boolean(g.searxngBaseUrl?.trim());
+  return [
+    {
+      id: 'thinking',
+      prefEnabled: g.qaEnableThinkingTool,
+      exposesToModel: g.qaEnableThinkingTool,
+    },
+    {
+      id: 'web_search',
+      prefEnabled: g.qaEnableWebSearchTool,
+      exposesToModel: g.qaEnableWebSearchTool && hasSearxng,
+    },
+    {
+      id: 'fetch_url',
+      prefEnabled: g.qaEnableFetchUrlTool,
+      exposesToModel: g.qaEnableFetchUrlTool && hasSearxng,
+    },
+  ];
+}
 
 // Declare chrome API types
 declare global {
@@ -116,6 +141,7 @@ const SidePanel = () => {
   const [qaMcpToolsPanel, setQaMcpToolsPanel] = useState<QaMcpToolsPanelState>({
     loading: false,
     error: null,
+    builtins: qaBuiltinRowsFromGeneral(DEFAULT_GENERAL_SETTINGS),
     servers: [],
   });
   // Font size state
@@ -1739,7 +1765,6 @@ const SidePanel = () => {
     setCapturedImages(prev => prev.filter((_, i) => i !== index));
   }, []);
 
-  // Handle toggling page content inclusion for QA mode
   const handleToggleIncludePageContent = useCallback(async () => {
     const newValue = !includePageContent;
     setIncludePageContent(newValue);
@@ -1747,21 +1772,9 @@ const SidePanel = () => {
       await generalSettingsStore.updateSettings({ includePageContent: newValue });
     } catch (error) {
       console.error('Error updating includePageContent setting:', error);
-      // Revert on error
       setIncludePageContent(!newValue);
     }
   }, [includePageContent]);
-
-  const handleToggleEnableWebSearch = useCallback(async () => {
-    const newValue = !enableWebSearch;
-    setEnableWebSearch(newValue);
-    try {
-      await generalSettingsStore.updateSettings({ enableWebSearch: newValue });
-    } catch (error) {
-      console.error('Error updating enableWebSearch setting:', error);
-      setEnableWebSearch(!newValue);
-    }
-  }, [enableWebSearch]);
 
   const refreshQaToolCount = useCallback(async (force?: boolean) => {
     try {
@@ -1785,16 +1798,41 @@ const SidePanel = () => {
 
   const fetchQaMcpToolState = useCallback(async () => {
     setQaMcpToolsPanel(prev => ({ ...prev, loading: true, error: null }));
+
     try {
-      const res = (await chrome.runtime.sendMessage({ type: 'mcp_qa_list_tool_state' })) as {
-        ok?: boolean;
-        error?: string;
-        servers?: QaMcpToolsPanelState['servers'];
-      };
+      const freshGeneral = await generalSettingsStore.getSettings();
+      const builtins = qaBuiltinRowsFromGeneral(freshGeneral);
+
+      const res = (await chrome.runtime.sendMessage({
+        type: 'mcp_qa_list_tool_state',
+      })) as { ok?: boolean; error?: string; servers?: QaMcpToolsPanelState['servers'] } | undefined;
+
+      const lastErr = chrome.runtime.lastError?.message?.trim() ? String(chrome.runtime.lastError.message).trim() : '';
+      if (lastErr) {
+        setQaMcpToolsPanel({
+          loading: false,
+          error: lastErr,
+          builtins,
+          servers: [],
+        });
+        return;
+      }
+
+      if (res === undefined) {
+        setQaMcpToolsPanel({
+          loading: false,
+          error: t('chat_mcpTools_loadError'),
+          builtins,
+          servers: [],
+        });
+        return;
+      }
+
       if (!res?.ok) {
         setQaMcpToolsPanel({
           loading: false,
           error: res?.error ?? t('chat_mcpTools_loadError'),
+          builtins,
           servers: [],
         });
         return;
@@ -1802,10 +1840,23 @@ const SidePanel = () => {
       setQaMcpToolsPanel({
         loading: false,
         error: null,
+        builtins,
         servers: res.servers ?? [],
       });
     } catch {
-      setQaMcpToolsPanel({ loading: false, error: t('chat_mcpTools_loadError'), servers: [] });
+      let builtins = qaBuiltinRowsFromGeneral(DEFAULT_GENERAL_SETTINGS);
+      try {
+        builtins = qaBuiltinRowsFromGeneral(await generalSettingsStore.getSettings());
+      } catch {
+        // defaults already set
+      }
+      const lastErr = chrome.runtime.lastError?.message?.trim() ? String(chrome.runtime.lastError.message).trim() : '';
+      setQaMcpToolsPanel({
+        loading: false,
+        error: lastErr || t('chat_mcpTools_loadError'),
+        builtins,
+        servers: [],
+      });
     }
   }, []);
 
@@ -1833,6 +1884,34 @@ const SidePanel = () => {
     [fetchQaMcpToolState, refreshQaToolCount],
   );
 
+  const handleToggleQaBuiltinTool = useCallback(
+    async (id: QaBuiltinToolToggleId, nextEnabled: boolean) => {
+      const patch =
+        id === 'thinking'
+          ? { qaEnableThinkingTool: nextEnabled }
+          : id === 'web_search'
+            ? { qaEnableWebSearchTool: nextEnabled }
+            : { qaEnableFetchUrlTool: nextEnabled };
+      try {
+        await generalSettingsStore.updateSettings(patch);
+        await loadGeneralSettings();
+        void refreshQaToolCount(true);
+        if (qaMcpToolsMenuOpenRef.current) {
+          try {
+            const fresh = await generalSettingsStore.getSettings();
+            const builtins = qaBuiltinRowsFromGeneral(fresh);
+            setQaMcpToolsPanel(prev => ({ ...prev, builtins }));
+          } catch (e) {
+            console.error('Failed to refresh built-in MCP tool rows', e);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to toggle built-in QA tool preference', e);
+      }
+    },
+    [loadGeneralSettings, refreshQaToolCount],
+  );
+
   const handleOpenQaToolSettings = useCallback(() => {
     const url = chrome.runtime.getURL('options/index.html#mcp');
     chrome.tabs.create({ url });
@@ -1852,6 +1931,14 @@ const SidePanel = () => {
     if (mode !== 'qa' || !qaMcpToolsMenuOpen) return;
     void fetchQaMcpToolState();
   }, [mode, qaMcpToolsMenuOpen, fetchQaMcpToolState]);
+
+  useEffect(() => {
+    if (mode !== 'qa' || !qaMcpToolsMenuOpen) return;
+    setQaMcpToolsPanel(prev => ({
+      ...prev,
+      builtins: qaBuiltinRowsFromGeneral(generalSettingsSnapshot),
+    }));
+  }, [generalSettingsSnapshot, mode, qaMcpToolsMenuOpen]);
 
   useEffect(() => {
     const onStorageChanged = (
@@ -2220,8 +2307,19 @@ const SidePanel = () => {
               <>
                 {messages.length === 0 && (
                   <>
+                    <div className="min-h-0 flex-1 overflow-y-auto">
+                      <BookmarkList
+                        bookmarks={favoritePrompts}
+                        onBookmarkSelect={handleBookmarkSelect}
+                        onBookmarkUpdateTitle={handleBookmarkUpdateTitle}
+                        onBookmarkDelete={handleBookmarkDelete}
+                        onBookmarkReorder={handleBookmarkReorder}
+                        isDarkMode={isDarkMode}
+                        qaUiTheme={mode === 'qa' ? qaUiTheme : null}
+                      />
+                    </div>
                     <div
-                      className={`border-t ${isDarkMode ? 'border-[#333344]' : 'border-sky-100'} mb-2 p-2 shadow-sm backdrop-blur-sm`}>
+                      className={`shrink-0 border-t ${isDarkMode ? 'border-[#333344]' : 'border-sky-100'} p-2 shadow-sm backdrop-blur-sm`}>
                       <ChatInput
                         onSendMessage={handleSendMessage}
                         onStopTask={handleStopTask}
@@ -2252,8 +2350,6 @@ const SidePanel = () => {
                         isCapturingImage={isCapturingImage}
                         includePageContent={includePageContent}
                         onToggleIncludePageContent={mode === 'qa' ? handleToggleIncludePageContent : undefined}
-                        enableWebSearch={enableWebSearch}
-                        onToggleEnableWebSearch={mode === 'qa' ? handleToggleEnableWebSearch : undefined}
                         qaUiTheme={mode === 'qa' ? qaUiTheme : null}
                         qaEnabledToolCount={mode === 'qa' ? qaEnabledToolCount : null}
                         onOpenQaToolSettings={mode === 'qa' ? handleOpenQaToolSettings : undefined}
@@ -2261,17 +2357,7 @@ const SidePanel = () => {
                         qaMcpToolsMenuOpen={mode === 'qa' ? qaMcpToolsMenuOpen : false}
                         onQaMcpToolsMenuOpenChange={mode === 'qa' ? setQaMcpToolsMenuOpen : undefined}
                         onToggleQaMcpTool={mode === 'qa' ? handleToggleQaMcpTool : undefined}
-                      />
-                    </div>
-                    <div className="flex-1 overflow-y-auto">
-                      <BookmarkList
-                        bookmarks={favoritePrompts}
-                        onBookmarkSelect={handleBookmarkSelect}
-                        onBookmarkUpdateTitle={handleBookmarkUpdateTitle}
-                        onBookmarkDelete={handleBookmarkDelete}
-                        onBookmarkReorder={handleBookmarkReorder}
-                        isDarkMode={isDarkMode}
-                        qaUiTheme={mode === 'qa' ? qaUiTheme : null}
+                        onToggleQaBuiltinTool={mode === 'qa' ? handleToggleQaBuiltinTool : undefined}
                       />
                     </div>
                   </>
@@ -2326,8 +2412,6 @@ const SidePanel = () => {
                       isCapturingImage={isCapturingImage}
                       includePageContent={includePageContent}
                       onToggleIncludePageContent={mode === 'qa' ? handleToggleIncludePageContent : undefined}
-                      enableWebSearch={enableWebSearch}
-                      onToggleEnableWebSearch={mode === 'qa' ? handleToggleEnableWebSearch : undefined}
                       qaUiTheme={mode === 'qa' ? qaUiTheme : null}
                       qaEnabledToolCount={mode === 'qa' ? qaEnabledToolCount : null}
                       onOpenQaToolSettings={mode === 'qa' ? handleOpenQaToolSettings : undefined}
@@ -2335,6 +2419,7 @@ const SidePanel = () => {
                       qaMcpToolsMenuOpen={mode === 'qa' ? qaMcpToolsMenuOpen : false}
                       onQaMcpToolsMenuOpenChange={mode === 'qa' ? setQaMcpToolsMenuOpen : undefined}
                       onToggleQaMcpTool={mode === 'qa' ? handleToggleQaMcpTool : undefined}
+                      onToggleQaBuiltinTool={mode === 'qa' ? handleToggleQaBuiltinTool : undefined}
                     />
                   </div>
                 )}

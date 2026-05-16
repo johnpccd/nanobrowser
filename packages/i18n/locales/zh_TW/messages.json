@@ -232,6 +232,27 @@
   "chat_mcpTools_manage_servers": {
     "message": "管理 MCP 伺服器..."
   },
+  "chat_mcpTools_builtins_heading": {
+    "message": "內建工具"
+  },
+  "chat_mcpTools_mcpServers_heading": {
+    "message": "遠端 MCP 伺服器"
+  },
+  "chat_mcpTools_builtin_needsSearxng": {
+    "message": "請在一般設定中設定 SearXNG 基底網址，模型才能使用此工具。"
+  },
+  "chat_mcpTools_noMcpServers": {
+    "message": "尚未設定任何含端點的 MCP 伺服器。"
+  },
+  "chat_mcpTools_builtin_desc_thinking": {
+    "message": "模型在作答前可輸出的延伸推理文字。"
+  },
+  "chat_mcpTools_builtin_desc_webSearch": {
+    "message": "透過您的 SearXNG 執行網頁搜尋。"
+  },
+  "chat_mcpTools_builtin_desc_fetchUrl": {
+    "message": "透過您的 SearXNG 擷取並讀取頁面內容。"
+  },
   "chat_pageContent_toggle": {
     "message": "切換頁面內容"
   },
