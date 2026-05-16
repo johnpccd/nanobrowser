@@ -289,6 +289,30 @@
   "options_mcp_enable_desc": {
     "message": "When enabled, QA can call tools discovered from your active MCP servers."
   },
+  "options_mcp_qaBuiltin_header": {
+    "message": "QA built-in tools"
+  },
+  "options_mcp_qaBuiltin_desc": {
+    "message": "Choose which first-party QA tools the model may use alongside MCP servers. Thinking is reasoning-only; web tools require QA “web search” mode in chat (toolbar toggle / default preference) and a configured SearXNG base URL in General settings."
+  },
+  "options_mcp_qaBuiltin_thinking": {
+    "message": "Thinking (`thinking`)"
+  },
+  "options_mcp_qaBuiltin_thinking_desc": {
+    "message": "Let the model call the internal reasoning tool before answering."
+  },
+  "options_mcp_qaBuiltin_webSearch": {
+    "message": "Web search (`web_search`)"
+  },
+  "options_mcp_qaBuiltin_webSearch_desc": {
+    "message": "When web assist is enabled for a reply, expose SearXNG web search."
+  },
+  "options_mcp_qaBuiltin_fetchUrl": {
+    "message": "Fetch URL (`fetch_url`)"
+  },
+  "options_mcp_qaBuiltin_fetchUrl_desc": {
+    "message": "When web assist is enabled for a reply, expose readable-page fetch via Jina Reader for http(s) URLs."
+  },
   "options_mcp_addServer": {
     "message": "Add server"
   },

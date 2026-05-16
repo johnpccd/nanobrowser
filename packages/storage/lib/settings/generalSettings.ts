@@ -18,6 +18,18 @@ export interface GeneralSettingsConfig {
   fontSize: number;
   maxInputTokens: number;
   enableWebSearch: boolean;
+  /** When false, QA does not expose the internal `thinking` tool. */
+  qaEnableThinkingTool: boolean;
+  /**
+   * When QA “web assist” is on (sidebar toggle / default preference), expose `web_search`
+   * if SearXNG base URL is configured.
+   */
+  qaEnableWebSearchTool: boolean;
+  /**
+   * When QA web assist is on, expose `fetch_url` if SearXNG base URL is configured
+   * (same gating as today for registering these tools together).
+   */
+  qaEnableFetchUrlTool: boolean;
   searxngBaseUrl: string;
   searxngApiKey: string;
   searxngMaxResults: number;
@@ -66,6 +78,9 @@ export const DEFAULT_GENERAL_SETTINGS: GeneralSettingsConfig = {
   fontSize: 14,
   maxInputTokens: 1000000,
   enableWebSearch: false,
+  qaEnableThinkingTool: true,
+  qaEnableWebSearchTool: false,
+  qaEnableFetchUrlTool: false,
   searxngBaseUrl: '',
   searxngApiKey: '',
   searxngMaxResults: 5,
@@ -210,6 +225,23 @@ export const generalSettingsStore: GeneralSettingsStorage = {
       ...DEFAULT_GENERAL_SETTINGS,
       ...settings,
     };
+    const storedRecord = settings as Partial<GeneralSettingsConfig> | undefined;
+
+    merged.qaEnableThinkingTool =
+      typeof merged.qaEnableThinkingTool === 'boolean'
+        ? merged.qaEnableThinkingTool
+        : DEFAULT_GENERAL_SETTINGS.qaEnableThinkingTool;
+
+    merged.qaEnableWebSearchTool =
+      storedRecord && typeof storedRecord.qaEnableWebSearchTool === 'boolean'
+        ? storedRecord.qaEnableWebSearchTool
+        : merged.enableWebSearch;
+
+    merged.qaEnableFetchUrlTool =
+      storedRecord && typeof storedRecord.qaEnableFetchUrlTool === 'boolean'
+        ? storedRecord.qaEnableFetchUrlTool
+        : merged.enableWebSearch;
+
     return clampQaToolBudgets(applyQaAppearanceDefaultsIfEmpty(merged));
   },
   async resetToDefaults() {

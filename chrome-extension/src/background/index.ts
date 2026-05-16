@@ -793,10 +793,14 @@ chrome.runtime.onConnect.addListener(port => {
                 const qaMaxNonThinkingToolCalls = generalSettings.qaMaxNonThinkingToolCalls;
                 const qaMaxThinkingCalls = generalSettings.qaMaxThinkingCalls;
                 const qaMaxToolRounds = generalSettings.qaMaxToolRounds;
-                const enableWebSearch =
+                const wantWebAssist =
                   message.enableWebSearch !== undefined
                     ? Boolean(message.enableWebSearch)
                     : generalSettings.enableWebSearch;
+                const hasSearxng = Boolean(generalSettings.searxngBaseUrl?.trim());
+                const qaEnableThinkingTool = generalSettings.qaEnableThinkingTool;
+                const includeWebSearchTool = wantWebAssist && generalSettings.qaEnableWebSearchTool && hasSearxng;
+                const includeFetchUrlTool = wantWebAssist && generalSettings.qaEnableFetchUrlTool && hasSearxng;
                 const session = await chatHistoryStore.getSession(sessionId);
 
                 // 0. Only get page content if includePageContent is true
@@ -1159,15 +1163,22 @@ chrome.runtime.onConnect.addListener(port => {
                   }
                 }
 
-                const qaTools: DynamicStructuredTool[] = [thinkingTool];
-                if (enableWebSearch && generalSettings.searxngBaseUrl) {
-                  qaTools.push(webSearchTool, fetchUrlTool);
+                const qaTools: DynamicStructuredTool[] = [];
+                if (qaEnableThinkingTool) {
+                  qaTools.push(thinkingTool);
+                }
+                if (includeWebSearchTool) {
+                  qaTools.push(webSearchTool);
+                }
+                if (includeFetchUrlTool) {
+                  qaTools.push(fetchUrlTool);
                 }
                 qaTools.push(...mcpDynamicTools);
 
                 const qaLLMWithTools =
+                  qaTools.length > 0 &&
                   typeof (qaLLM as BaseChatModel & { bindTools?: (tools: unknown[]) => BaseChatModel }).bindTools ===
-                  'function'
+                    'function'
                     ? (qaLLM as BaseChatModel & { bindTools: (tools: unknown[]) => BaseChatModel }).bindTools(qaTools)
                     : null;
 
@@ -1189,21 +1200,38 @@ chrome.runtime.onConnect.addListener(port => {
                 }
 
                 if (qaLLMWithTools) {
-                  const promptHints: string[] = [
-                    'The `thinking` tool is available: call it to work through logic, planning, or ambiguity before you commit to an answer. It only records your reasoning for this turn; it does not load new information.',
-                    `Use at most ${qaMaxThinkingCalls} thinking calls per answer; then finalize or use other tools.`,
-                  ];
-                  if (enableWebSearch && generalSettings.searxngBaseUrl) {
+                  const promptHints: string[] = [];
+                  if (qaEnableThinkingTool) {
+                    promptHints.push(
+                      'The `thinking` tool is available: call it to work through logic, planning, or ambiguity before you commit to an answer. It only records your reasoning for this turn; it does not load new information.',
+                      `Use at most ${qaMaxThinkingCalls} thinking calls per answer; then finalize or use other tools.`,
+                    );
+                  }
+                  if (includeWebSearchTool || includeFetchUrlTool) {
+                    promptHints.push(
+                      'When web tools are exposed, decide whether each is needed before every call.',
+                      'If the user gives a vague follow-up like "look that up online", infer the concrete search query from the conversation yourself before calling tools.',
+                      'You decide what query or URL you pass to tools.',
+                      'Cite URLs from search results when relying on them.',
+                    );
+                  }
+                  if (includeWebSearchTool) {
                     promptHints.push(
                       'Web search is available as the `web_search` tool.',
-                      'Readable page fetch is available as the `fetch_url` tool.',
-                      'You decide whether to use it and what query to send.',
-                      'If the user gives a vague follow-up like "look that up online", infer the concrete search query from the conversation yourself before calling the tool.',
                       'Use `web_search` to discover relevant links or fresh information.',
-                      'Use `fetch_url` only when you want to inspect the contents of a specific result URL or source page more deeply.',
                       `Use at most ${qaMaxNonThinkingToolCalls} web_search calls in one answer.`,
+                    );
+                  }
+                  if (includeFetchUrlTool) {
+                    promptHints.push(
+                      'Readable page fetch is available as the `fetch_url` tool.',
+                      'Use `fetch_url` when you want the body of a specific http(s) URL or need to read a discovered link in depth.',
                       `Use at most ${qaMaxNonThinkingToolCalls} fetch_url calls in one answer.`,
-                      'Cite URLs from search results when relying on them.',
+                    );
+                  }
+                  if (includeWebSearchTool && includeFetchUrlTool) {
+                    promptHints.push(
+                      'You may chain `web_search` and `fetch_url`: search first when you lack URLs, fetch when you already have http(s) links to read.',
                     );
                   }
                   if (mcpDynamicTools.length > 0) {
@@ -1214,8 +1242,10 @@ chrome.runtime.onConnect.addListener(port => {
                       `Use at most ${qaMaxNonThinkingToolCalls} MCP tool calls in one answer.`,
                     );
                   }
-                  systemSections.push(promptHints.join(' '));
-                } else if ((enableWebSearch && generalSettings.searxngBaseUrl) || mcpDynamicTools.length > 0) {
+                  if (promptHints.length > 0) {
+                    systemSections.push(promptHints.join(' '));
+                  }
+                } else if (includeWebSearchTool || includeFetchUrlTool || mcpDynamicTools.length > 0) {
                   systemSections.push(
                     'External tools are enabled, but this QA model does not support tool calling in this path. Do not claim to have used tools unless you actually have.',
                   );

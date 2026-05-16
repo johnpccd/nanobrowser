@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { DEFAULT_GENERAL_SETTINGS, type GeneralSettingsConfig, generalSettingsStore } from '@extension/storage';
 import {
   DEFAULT_MCP_TOOLS_SETTINGS,
   mcpToolsSettingsStore,
@@ -53,6 +54,7 @@ function createServerId(name: string): string {
 
 export const McpToolsSettings = ({ isDarkMode = false }: McpToolsSettingsProps) => {
   const tr = (key: string) => t(key as never);
+  const [generalSettings, setGeneralSettings] = useState<GeneralSettingsConfig>(DEFAULT_GENERAL_SETTINGS);
   const [settings, setSettings] = useState<McpToolsSettingsConfig>(DEFAULT_MCP_TOOLS_SETTINGS);
   const [draft, setDraft] = useState<McpServerConfig>(EMPTY_SERVER_DRAFT);
   const [allowedToolsInput, setAllowedToolsInput] = useState('');
@@ -64,8 +66,26 @@ export const McpToolsSettings = ({ isDarkMode = false }: McpToolsSettingsProps) 
   const activeServers = useMemo(() => settings.servers, [settings.servers]);
 
   useEffect(() => {
-    mcpToolsSettingsStore.getSettings().then(setSettings);
+    let cancelled = false;
+    (async () => {
+      const [mcpLatest, genLatest] = await Promise.all([
+        mcpToolsSettingsStore.getSettings(),
+        generalSettingsStore.getSettings(),
+      ]);
+      if (!cancelled) {
+        setSettings(mcpLatest);
+        setGeneralSettings(genLatest);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  async function persistGeneralSettings(patch: Partial<GeneralSettingsConfig>) {
+    await generalSettingsStore.updateSettings(patch);
+    setGeneralSettings(await generalSettingsStore.getSettings());
+  }
 
   const saveSettings = async (next: McpToolsSettingsConfig) => {
     await mcpToolsSettingsStore.updateSettings(next);
@@ -228,8 +248,98 @@ export const McpToolsSettings = ({ isDarkMode = false }: McpToolsSettingsProps) 
             />
             <label
               htmlFor="mcpEnabled"
-              className={`peer h-6 w-11 rounded-full ${isDarkMode ? 'bg-slate-600' : 'bg-gray-200'} after:absolute after:left-[2px] after:top-[2px] after:size-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300`}
-            />
+              className={`peer h-6 w-11 rounded-full ${isDarkMode ? 'bg-slate-600' : 'bg-gray-200'} after:absolute after:left-[2px] after:top-[2px] after:size-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300`}>
+              <span className="sr-only">{tr('options_mcp_enable')}</span>
+            </label>
+          </div>
+        </div>
+
+        <div className={`mb-6 space-y-4 rounded-lg border p-4 ${isDarkMode ? 'border-slate-700' : 'border-gray-200'}`}>
+          <div>
+            <h3 className={`text-base font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+              {tr('options_mcp_qaBuiltin_header')}
+            </h3>
+            <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              {tr('options_mcp_qaBuiltin_desc')}
+            </p>
+          </div>
+
+          <div
+            className={`flex flex-col gap-4 border-t pt-4 sm:flex-row sm:items-center sm:justify-between ${isDarkMode ? 'border-slate-600' : 'border-gray-200'}`}>
+            <div>
+              <p className={`text-sm font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                {tr('options_mcp_qaBuiltin_thinking')}
+              </p>
+              <p className={`mt-1 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                {tr('options_mcp_qaBuiltin_thinking_desc')}
+              </p>
+            </div>
+            <div className="relative inline-flex shrink-0 cursor-pointer items-center">
+              <input
+                id="qaThinkingToolEnabled"
+                type="checkbox"
+                checked={generalSettings.qaEnableThinkingTool}
+                onChange={e => void persistGeneralSettings({ qaEnableThinkingTool: e.target.checked })}
+                className="peer sr-only"
+              />
+              <label
+                htmlFor="qaThinkingToolEnabled"
+                className={`peer h-6 w-11 rounded-full ${isDarkMode ? 'bg-slate-600' : 'bg-gray-200'} after:absolute after:left-[2px] after:top-[2px] after:size-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300`}>
+                <span className="sr-only">{tr('options_mcp_qaBuiltin_thinking')}</span>
+              </label>
+            </div>
+          </div>
+
+          <div
+            className={`flex flex-col gap-4 border-t pt-4 sm:flex-row sm:items-center sm:justify-between ${isDarkMode ? 'border-slate-600' : 'border-gray-200'}`}>
+            <div>
+              <p className={`text-sm font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                {tr('options_mcp_qaBuiltin_webSearch')}
+              </p>
+              <p className={`mt-1 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                {tr('options_mcp_qaBuiltin_webSearch_desc')}
+              </p>
+            </div>
+            <div className="relative inline-flex shrink-0 cursor-pointer items-center">
+              <input
+                id="qaWebSearchToolEnabled"
+                type="checkbox"
+                checked={generalSettings.qaEnableWebSearchTool}
+                onChange={e => void persistGeneralSettings({ qaEnableWebSearchTool: e.target.checked })}
+                className="peer sr-only"
+              />
+              <label
+                htmlFor="qaWebSearchToolEnabled"
+                className={`peer h-6 w-11 rounded-full ${isDarkMode ? 'bg-slate-600' : 'bg-gray-200'} after:absolute after:left-[2px] after:top-[2px] after:size-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300`}>
+                <span className="sr-only">{tr('options_mcp_qaBuiltin_webSearch')}</span>
+              </label>
+            </div>
+          </div>
+
+          <div
+            className={`flex flex-col gap-4 border-t pt-4 sm:flex-row sm:items-center sm:justify-between ${isDarkMode ? 'border-slate-600' : 'border-gray-200'}`}>
+            <div>
+              <p className={`text-sm font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                {tr('options_mcp_qaBuiltin_fetchUrl')}
+              </p>
+              <p className={`mt-1 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                {tr('options_mcp_qaBuiltin_fetchUrl_desc')}
+              </p>
+            </div>
+            <div className="relative inline-flex shrink-0 cursor-pointer items-center">
+              <input
+                id="qaFetchUrlToolEnabled"
+                type="checkbox"
+                checked={generalSettings.qaEnableFetchUrlTool}
+                onChange={e => void persistGeneralSettings({ qaEnableFetchUrlTool: e.target.checked })}
+                className="peer sr-only"
+              />
+              <label
+                htmlFor="qaFetchUrlToolEnabled"
+                className={`peer h-6 w-11 rounded-full ${isDarkMode ? 'bg-slate-600' : 'bg-gray-200'} after:absolute after:left-[2px] after:top-[2px] after:size-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300`}>
+                <span className="sr-only">{tr('options_mcp_qaBuiltin_fetchUrl')}</span>
+              </label>
+            </div>
           </div>
         </div>
 
