@@ -7,6 +7,7 @@ import {
   useMemo,
   type CSSProperties,
   type Dispatch,
+  type RefObject,
   type SetStateAction,
 } from 'react';
 import { createPortal } from 'react-dom';
@@ -122,6 +123,113 @@ function qaBuiltinToolDescription(id: QaBuiltinToolToggleId): string {
   }
 }
 
+const QA_SELECT_MIN_MODEL_PX = 56;
+const QA_SELECT_MIN_PERSONA_PX = 48;
+const QA_SELECT_CHROME_PX = 30;
+
+function measureSelectLabelPx(el: HTMLElement, label: string): number {
+  const style = getComputedStyle(el);
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    return QA_SELECT_MIN_MODEL_PX;
+  }
+  ctx.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+  return Math.ceil(ctx.measureText(label).width) + QA_SELECT_CHROME_PX;
+}
+
+/** Sizes QA model/persona selects to fit labels when space allows; shrinks proportionally when narrow. */
+function useQaToolbarSelectWidths(
+  containerRef: RefObject<HTMLDivElement | null>,
+  modelSelectRef: RefObject<HTMLSelectElement | null>,
+  personaSelectRef: RefObject<HTMLSelectElement | null>,
+  modelLabel: string,
+  personaLabel: string,
+  hasPersona: boolean,
+  enabled: boolean,
+): { modelWidthPx?: number; personaWidthPx?: number } {
+  const [widths, setWidths] = useState<{ modelWidthPx?: number; personaWidthPx?: number }>({});
+
+  useLayoutEffect(() => {
+    if (!enabled) {
+      setWidths({});
+      return;
+    }
+
+    const container = containerRef.current;
+    const modelEl = modelSelectRef.current;
+    if (!container || !modelEl) {
+      return;
+    }
+
+    const update = () => {
+      const growWidth = container.clientWidth;
+      if (growWidth <= 0) {
+        return;
+      }
+
+      const modelContent = Math.max(measureSelectLabelPx(modelEl, modelLabel), QA_SELECT_MIN_MODEL_PX);
+      const personaEl = personaSelectRef.current;
+
+      if (!hasPersona || !personaEl) {
+        setWidths({ modelWidthPx: Math.min(modelContent, growWidth), personaWidthPx: undefined });
+        return;
+      }
+
+      const personaContent = Math.max(measureSelectLabelPx(personaEl, personaLabel), QA_SELECT_MIN_PERSONA_PX);
+      const gap = 4;
+      const totalIdeal = modelContent + personaContent + gap;
+
+      if (totalIdeal <= growWidth) {
+        setWidths({ modelWidthPx: modelContent, personaWidthPx: personaContent });
+        return;
+      }
+
+      const modelRatio = modelContent / (modelContent + personaContent);
+      let modelW = Math.max(QA_SELECT_MIN_MODEL_PX, Math.floor((growWidth - gap) * modelRatio));
+      let personaW = growWidth - gap - modelW;
+      if (personaW < QA_SELECT_MIN_PERSONA_PX) {
+        personaW = QA_SELECT_MIN_PERSONA_PX;
+        modelW = Math.max(QA_SELECT_MIN_MODEL_PX, growWidth - gap - personaW);
+      }
+      setWidths({ modelWidthPx: modelW, personaWidthPx: personaW });
+    };
+
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(container);
+    return () => ro.disconnect();
+  }, [containerRef, modelSelectRef, personaSelectRef, modelLabel, personaLabel, hasPersona, enabled]);
+
+  return widths;
+}
+
+/** Compact control for QA toolbar icons (attach, mic, page toggle, capture, tools). */
+function toolbarIconButtonClass(
+  isDarkMode: boolean,
+  disabled: boolean,
+  variant: 'neutral' | 'active' = 'neutral',
+  size: 'icon' | 'badge' = 'icon',
+): string {
+  const sizing = size === 'icon' ? 'size-8' : 'h-8 min-w-8 w-auto gap-0.5 px-1.5';
+  const base = `flex shrink-0 items-center justify-center rounded-lg border transition-colors ${sizing}`;
+  if (disabled) {
+    return `${base} cursor-not-allowed opacity-50`;
+  }
+  if (variant === 'active') {
+    return `${base} ${
+      isDarkMode
+        ? 'border-sky-600 bg-sky-700 text-white hover:bg-sky-600'
+        : 'border-sky-300 bg-sky-100 text-sky-700 hover:bg-sky-200'
+    }`;
+  }
+  return `${base} ${
+    isDarkMode
+      ? 'border-[#3d3d52] bg-[#2a2a3a] text-[#c8c8d4] hover:border-[#5a5a72] hover:bg-[#32324a]'
+      : 'border-gray-300 bg-gray-50 text-gray-700 hover:border-gray-400 hover:bg-gray-100'
+  }`;
+}
+
 export default function ChatInput({
   onSendMessage,
   onStopTask,
@@ -168,9 +276,45 @@ export default function ChatInput({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const qaMcpMenuAnchorRef = useRef<HTMLDivElement>(null);
   const qaMcpMenuPopoverRef = useRef<HTMLDivElement>(null);
+  const qaSelectsGrowRef = useRef<HTMLDivElement>(null);
+  const qaModelSelectRef = useRef<HTMLSelectElement>(null);
+  const qaPersonaSelectRef = useRef<HTMLSelectElement>(null);
 
   /** Fixed geometry for portaled MCP menu (escapes overflow-hidden + paints above header). */
   const [mcpMenuFixedStyle, setMcpMenuFixedStyle] = useState<CSSProperties | null>(null);
+
+  const selectedModelLabel = useMemo(() => {
+    if (!currentQAModel) {
+      return 'Select model...';
+    }
+    const [provider, model] = currentQAModel.split('>');
+    return availableModels.find(m => m.provider === provider && m.model === model)?.displayName ?? currentQAModel;
+  }, [currentQAModel, availableModels]);
+
+  const selectedPersonaLabel = useMemo(
+    () => personas.find(p => p.id === currentPersonaId)?.name ?? '',
+    [personas, currentPersonaId],
+  );
+
+  const hasQaPersonaSelect = personas.length > 0 && Boolean(onPersonaChange);
+  const qaSelectWidths = useQaToolbarSelectWidths(
+    qaSelectsGrowRef,
+    qaModelSelectRef,
+    qaPersonaSelectRef,
+    selectedModelLabel,
+    selectedPersonaLabel,
+    hasQaPersonaSelect,
+    isQAMode && availableModels.length > 0,
+  );
+
+  const qaSelectClass = (disabledSelect: boolean) =>
+    `max-w-full shrink-0 rounded-md px-1.5 py-1 text-[11px] transition-colors ${
+      disabledSelect
+        ? 'cursor-not-allowed opacity-50'
+        : isDarkMode
+          ? 'border border-slate-600 bg-slate-700 text-gray-200 hover:bg-slate-600'
+          : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+    }`;
 
   // Handle text changes and resize textarea
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -574,7 +718,7 @@ export default function ChatInput({
         />
 
         <div
-          className={`flex items-center justify-between px-2 py-1.5 ${
+          className={`flex min-w-0 items-center gap-1 px-2 py-1.5 ${
             qaUiTheme?.inputSurface
               ? ''
               : disabled
@@ -586,7 +730,7 @@ export default function ChatInput({
                   : 'bg-white'
           }`}
           style={toolbarStyle}>
-          <div className="flex gap-2 text-gray-500">
+          <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden text-gray-500">
             {/* File attachment — distinct control so updates are obvious after rebuild */}
             <button
               type="button"
@@ -594,13 +738,17 @@ export default function ChatInput({
               disabled={disabled}
               aria-label={t('chat_attach_files_tooltip')}
               title={t('chat_attach_files_tooltip')}
-              className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                disabled
-                  ? 'cursor-not-allowed opacity-50'
-                  : isDarkMode
-                    ? 'border-[#3d3d52] bg-[#2a2a3a] text-[#c8c8d4] hover:border-[#5a5a72] hover:bg-[#32324a]'
-                    : 'border-gray-300 bg-gray-50 text-gray-700 hover:border-gray-400 hover:bg-gray-100'
-              }`}
+              className={
+                isQAMode
+                  ? toolbarIconButtonClass(isDarkMode, disabled)
+                  : `flex shrink-0 items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                      disabled
+                        ? 'cursor-not-allowed opacity-50'
+                        : isDarkMode
+                          ? 'border-[#3d3d52] bg-[#2a2a3a] text-[#c8c8d4] hover:border-[#5a5a72] hover:bg-[#32324a]'
+                          : 'border-gray-300 bg-gray-50 text-gray-700 hover:border-gray-400 hover:bg-gray-100'
+                    }`
+              }
               style={
                 qaUiTheme?.inputBorder || qaUiTheme?.inputSurface
                   ? {
@@ -611,7 +759,9 @@ export default function ChatInput({
                   : undefined
               }>
               <FiPaperclip className="size-4 shrink-0" strokeWidth={2.25} aria-hidden />
-              <span className="max-w-[4.5rem] truncate sm:max-w-none">{t('chat_attach_files_button')}</span>
+              {!isQAMode && (
+                <span className="max-w-[4.5rem] truncate sm:max-w-none">{t('chat_attach_files_button')}</span>
+              )}
             </button>
 
             {/* Hidden file input */}
@@ -638,15 +788,20 @@ export default function ChatInput({
                         ? t('chat_stt_recording_stop')
                         : t('chat_stt_input_start')
                   }
-                  className={`rounded-md p-1.5 transition-colors ${
-                    disabled || isProcessingSpeech
-                      ? 'cursor-not-allowed opacity-50'
+                  title={
+                    isProcessingSpeech
+                      ? t('chat_stt_processing')
                       : isRecording
-                        ? 'bg-red-500 text-white hover:bg-red-600'
-                        : isDarkMode
-                          ? 'text-gray-400 hover:bg-slate-700 hover:text-gray-200'
-                          : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
-                  }`}
+                        ? t('chat_stt_recording_stop')
+                        : t('chat_stt_input_start')
+                  }
+                  className={
+                    isRecording
+                      ? `flex size-8 shrink-0 items-center justify-center rounded-lg border border-red-600 bg-red-500 text-white transition-colors hover:bg-red-600 ${
+                          disabled || isProcessingSpeech ? 'cursor-not-allowed opacity-50' : ''
+                        }`
+                      : toolbarIconButtonClass(isDarkMode, disabled || isProcessingSpeech)
+                  }
                   style={isRecording ? undefined : neutralControlStyle}>
                   {isProcessingSpeech ? (
                     <AiOutlineLoading3Quarters className="size-4 animate-spin" />
@@ -656,62 +811,69 @@ export default function ChatInput({
                 </button>
                 {isQAMode && availableModels.length > 0 && onQAModelChange && (
                   <>
-                    <select
-                      value={currentQAModel || ''}
-                      onChange={e => {
-                        const value = e.target.value;
-                        if (value) {
-                          const [provider, model] = value.split('>');
-                          if (provider && model) {
-                            onQAModelChange(provider, model);
-                          }
-                        }
-                      }}
-                      disabled={disabled}
-                      className={`max-w-[200px] rounded-md px-2 py-1.5 text-xs transition-colors ${
-                        disabled
-                          ? 'cursor-not-allowed opacity-50'
-                          : isDarkMode
-                            ? 'border border-slate-600 bg-slate-700 text-gray-200 hover:bg-slate-600'
-                            : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-                      }`}
-                      style={neutralControlStyle}
-                      aria-label="Select QA model">
-                      {!currentQAModel && (
-                        <option value="" disabled>
-                          Select model...
-                        </option>
-                      )}
-                      {availableModels.map(option => {
-                        const value = `${option.provider}>${option.model}`;
-                        return (
-                          <option key={value} value={value}>
-                            {option.displayName}
-                          </option>
-                        );
-                      })}
-                    </select>
-                    {personas.length > 0 && onPersonaChange && (
+                    <div
+                      ref={qaSelectsGrowRef}
+                      data-qa-growable
+                      className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
                       <select
-                        value={currentPersonaId || ''}
-                        onChange={e => onPersonaChange(e.target.value)}
+                        ref={qaModelSelectRef}
+                        value={currentQAModel || ''}
+                        onChange={e => {
+                          const value = e.target.value;
+                          if (value) {
+                            const [provider, model] = value.split('>');
+                            if (provider && model) {
+                              onQAModelChange(provider, model);
+                            }
+                          }
+                        }}
                         disabled={disabled}
-                        className={`max-w-[180px] rounded-md px-2 py-1.5 text-xs transition-colors ${
-                          disabled
-                            ? 'cursor-not-allowed opacity-50'
-                            : isDarkMode
-                              ? 'border border-slate-600 bg-slate-700 text-gray-200 hover:bg-slate-600'
-                              : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-                        }`}
-                        style={neutralControlStyle}
-                        aria-label="Select QA persona">
-                        {personas.map(persona => (
-                          <option key={persona.id} value={persona.id}>
-                            {persona.name}
+                        title={selectedModelLabel}
+                        className={qaSelectClass(disabled)}
+                        style={{
+                          ...neutralControlStyle,
+                          ...(qaSelectWidths.modelWidthPx != null
+                            ? { width: `${qaSelectWidths.modelWidthPx}px` }
+                            : { minWidth: `${QA_SELECT_MIN_MODEL_PX}px` }),
+                        }}
+                        aria-label="Select QA model">
+                        {!currentQAModel && (
+                          <option value="" disabled>
+                            Select model...
                           </option>
-                        ))}
+                        )}
+                        {availableModels.map(option => {
+                          const value = `${option.provider}>${option.model}`;
+                          return (
+                            <option key={value} value={value}>
+                              {option.displayName}
+                            </option>
+                          );
+                        })}
                       </select>
-                    )}
+                      {hasQaPersonaSelect && (
+                        <select
+                          ref={qaPersonaSelectRef}
+                          value={currentPersonaId || ''}
+                          onChange={e => onPersonaChange!(e.target.value)}
+                          disabled={disabled}
+                          title={selectedPersonaLabel}
+                          className={qaSelectClass(disabled)}
+                          style={{
+                            ...neutralControlStyle,
+                            ...(qaSelectWidths.personaWidthPx != null
+                              ? { width: `${qaSelectWidths.personaWidthPx}px` }
+                              : { minWidth: `${QA_SELECT_MIN_PERSONA_PX}px` }),
+                          }}
+                          aria-label="Select QA persona">
+                          {personas.map(persona => (
+                            <option key={persona.id} value={persona.id}>
+                              {persona.name}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
                     {/* Page content (current tab) vs generic chat */}
                     {onToggleIncludePageContent && (
                       <button
@@ -724,26 +886,17 @@ export default function ChatInput({
                             ? t('chat_pageContent_tooltip_enabled')
                             : t('chat_pageContent_tooltip_disabled')
                         }
-                        className={`flex items-center gap-1 rounded-md px-2 py-1.5 text-xs transition-colors ${
-                          disabled
-                            ? 'cursor-not-allowed opacity-50'
-                            : includePageContent
-                              ? isDarkMode
-                                ? 'border border-sky-600 bg-sky-700 text-white hover:bg-sky-600'
-                                : 'border border-sky-300 bg-sky-100 text-sky-700 hover:bg-sky-200'
-                              : isDarkMode
-                                ? 'border border-slate-600 bg-slate-700 text-gray-400 hover:bg-slate-600'
-                                : 'border border-gray-300 bg-gray-100 text-gray-500 hover:bg-gray-200'
-                        }`}
+                        className={toolbarIconButtonClass(
+                          isDarkMode,
+                          disabled,
+                          includePageContent ? 'active' : 'neutral',
+                        )}
                         style={includePageContent ? toggleOnControlStyle : neutralControlStyle}>
                         {includePageContent ? (
-                          <HiOutlineDocumentText className="size-4" />
+                          <HiOutlineDocumentText className="size-4" aria-hidden />
                         ) : (
-                          <HiOutlineChat className="size-4" />
+                          <HiOutlineChat className="size-4" aria-hidden />
                         )}
-                        <span className="hidden sm:inline">
-                          {includePageContent ? t('chat_pageContent_enabled') : t('chat_pageContent_disabled')}
-                        </span>
                       </button>
                     )}
                     {/* Image Capture button */}
@@ -754,20 +907,13 @@ export default function ChatInput({
                         disabled={disabled || isCapturingImage}
                         aria-label={t('chat_imageCapture_button')}
                         title={t('chat_imageCapture_tooltip')}
-                        className={`flex items-center gap-1 rounded-md px-2 py-1.5 text-xs transition-colors ${
-                          disabled || isCapturingImage
-                            ? 'cursor-not-allowed opacity-50'
-                            : isDarkMode
-                              ? 'border border-slate-600 bg-slate-700 text-gray-200 hover:bg-slate-600'
-                              : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-                        }`}
+                        className={toolbarIconButtonClass(isDarkMode, disabled || isCapturingImage)}
                         style={neutralControlStyle}>
                         {isCapturingImage ? (
-                          <AiOutlineLoading3Quarters className="size-4 animate-spin" />
+                          <AiOutlineLoading3Quarters className="size-4 animate-spin" aria-hidden />
                         ) : (
-                          <HiOutlineCamera className="size-4" />
+                          <HiOutlineCamera className="size-4" aria-hidden />
                         )}
-                        <span className="hidden sm:inline">{t('chat_imageCapture_label')}</span>
                       </button>
                     )}
                     {onOpenQaToolSettings &&
@@ -796,13 +942,12 @@ export default function ChatInput({
                                   ? t('chat_qaTools_tooltip', [String(qaEnabledToolCount)])
                                   : t('chat_qaTools_button')
                               }
-                              className={`flex items-center gap-1 rounded-md px-2 py-1.5 text-xs transition-colors ${
-                                disabled
-                                  ? 'cursor-not-allowed opacity-50'
-                                  : isDarkMode
-                                    ? `border ${qaMcpToolsMenuOpen ? 'border-sky-500' : 'border-slate-600'} bg-slate-700 text-gray-200 hover:bg-slate-600`
-                                    : `border ${qaMcpToolsMenuOpen ? 'border-sky-500' : 'border-gray-300'} bg-white text-gray-700 hover:bg-gray-50`
-                              }`}
+                              className={toolbarIconButtonClass(
+                                isDarkMode,
+                                disabled,
+                                qaMcpToolsMenuOpen ? 'active' : 'neutral',
+                                'badge',
+                              )}
                               style={
                                 qaUiTheme?.inputBorder || qaUiTheme?.inputSurface
                                   ? {
@@ -980,7 +1125,7 @@ export default function ChatInput({
             <button
               type="button"
               onClick={onStopTask}
-              className="rounded-md bg-red-500 px-3 py-1 text-white transition-colors hover:bg-red-600"
+              className="shrink-0 whitespace-nowrap rounded-md bg-red-500 px-2.5 py-1 text-xs text-white transition-colors hover:bg-red-600 sm:px-3 sm:text-sm"
               style={qaUiTheme?.chromeFontSizePx ? { fontSize: `${qaUiTheme.chromeFontSizePx}px` } : undefined}>
               {t('chat_buttons_stop')}
             </button>
@@ -990,7 +1135,7 @@ export default function ChatInput({
               onClick={handleReplay}
               disabled={!historicalSessionId}
               aria-disabled={!historicalSessionId}
-              className={`rounded-md bg-green-500 px-3 py-1 text-white transition-colors hover:enabled:bg-green-600 ${!historicalSessionId ? 'cursor-not-allowed opacity-50' : ''}`}
+              className={`shrink-0 whitespace-nowrap rounded-md bg-green-500 px-2.5 py-1 text-xs text-white transition-colors hover:enabled:bg-green-600 sm:px-3 sm:text-sm ${!historicalSessionId ? 'cursor-not-allowed opacity-50' : ''}`}
               style={qaUiTheme?.chromeFontSizePx ? { fontSize: `${qaUiTheme.chromeFontSizePx}px` } : undefined}>
               {t('chat_buttons_replay')}
             </button>
@@ -999,7 +1144,7 @@ export default function ChatInput({
               type="submit"
               disabled={isSendButtonDisabled}
               aria-disabled={isSendButtonDisabled}
-              className={`rounded-md px-3 py-1 text-white transition-colors hover:enabled:opacity-90 ${qaUiTheme?.accentColor ? '' : 'bg-[#19C2FF] hover:enabled:bg-[#0073DC]'} ${isSendButtonDisabled ? 'cursor-not-allowed opacity-50' : ''}`}
+              className={`shrink-0 whitespace-nowrap rounded-md px-2.5 py-1 text-xs text-white transition-colors hover:enabled:opacity-90 sm:px-3 sm:text-sm ${qaUiTheme?.accentColor ? '' : 'bg-[#19C2FF] hover:enabled:bg-[#0073DC]'} ${isSendButtonDisabled ? 'cursor-not-allowed opacity-50' : ''}`}
               style={{
                 ...(qaUiTheme?.accentColor ? { backgroundColor: qaUiTheme.accentColor } : {}),
                 ...(qaUiTheme?.chromeFontSizePx ? { fontSize: `${qaUiTheme.chromeFontSizePx}px` } : {}),
