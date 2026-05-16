@@ -12,7 +12,7 @@ import type { ResolvedQaUiTheme } from '@extension/storage';
 import { FaMicrophone } from 'react-icons/fa';
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import { HiOutlineCamera, HiOutlineDocumentText, HiOutlineChat } from 'react-icons/hi';
-import { FiPaperclip } from 'react-icons/fi';
+import { FiPaperclip, FiTool } from 'react-icons/fi';
 import { t } from '@extension/i18n';
 
 interface ModelOption {
@@ -63,6 +63,9 @@ interface ChatInputProps {
   enableWebSearch?: boolean;
   onToggleEnableWebSearch?: () => void;
   qaUiTheme?: ResolvedQaUiTheme | null;
+  /** Number of QA tools/slots currently bound (built-in + MCP); null while loading. */
+  qaEnabledToolCount?: number | null;
+  onOpenQaToolSettings?: () => void;
 }
 
 // File attachment interface
@@ -101,6 +104,8 @@ export default function ChatInput({
   enableWebSearch = false,
   onToggleEnableWebSearch,
   qaUiTheme = null,
+  qaEnabledToolCount,
+  onOpenQaToolSettings,
 }: ChatInputProps) {
   const [text, setText] = useState('');
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
@@ -669,6 +674,38 @@ export default function ChatInput({
                           <HiOutlineCamera className="size-4" />
                         )}
                         <span className="hidden sm:inline">{t('chat_imageCapture_label')}</span>
+                      </button>
+                    )}
+                    {onOpenQaToolSettings && (
+                      <button
+                        type="button"
+                        onClick={onOpenQaToolSettings}
+                        disabled={disabled}
+                        aria-label={
+                          qaEnabledToolCount != null
+                            ? t('chat_qaTools_tooltip', [String(qaEnabledToolCount)])
+                            : t('chat_qaTools_button')
+                        }
+                        title={
+                          qaEnabledToolCount != null
+                            ? t('chat_qaTools_tooltip', [String(qaEnabledToolCount)])
+                            : t('chat_qaTools_button')
+                        }
+                        className={`flex items-center gap-1 rounded-md px-2 py-1.5 text-xs transition-colors ${
+                          disabled
+                            ? 'cursor-not-allowed opacity-50'
+                            : isDarkMode
+                              ? 'border border-slate-600 bg-slate-700 text-gray-200 hover:bg-slate-600'
+                              : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                        }`}
+                        style={neutralControlStyle}>
+                        <FiTool className="size-4 shrink-0" aria-hidden />
+                        <span
+                          className={`min-w-[1.15rem] rounded-full px-1 py-px text-center text-[10px] font-semibold leading-tight tabular-nums ${
+                            isDarkMode ? 'bg-sky-700 text-white' : 'bg-sky-600 text-white'
+                          }`}>
+                          {qaEnabledToolCount != null ? qaEnabledToolCount : t('chat_qaTools_countLoading')}
+                        </span>
                       </button>
                     )}
                   </>

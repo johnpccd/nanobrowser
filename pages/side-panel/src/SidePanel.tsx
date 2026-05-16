@@ -109,6 +109,7 @@ const SidePanel = () => {
   // Page content inclusion state for QA mode
   const [includePageContent, setIncludePageContent] = useState(true);
   const [enableWebSearch, setEnableWebSearch] = useState(false);
+  const [qaEnabledToolCount, setQaEnabledToolCount] = useState<number | null>(null);
   // Font size state
   const [fontSize, setFontSize] = useState<number>(14);
   const [generalSettingsSnapshot, setGeneralSettingsSnapshot] =
@@ -1669,6 +1670,7 @@ const SidePanel = () => {
           reject(new Error('No connection available'));
           return;
         }
+        const sidePanelPort = port;
 
         // One-time listener: must be removed as soon as we handle the result. If we only remove it
         // after a delay, every past listener still receives each new `screenshot_result` and the
@@ -1678,7 +1680,7 @@ const SidePanel = () => {
 
           clearTimeout(timeout);
           try {
-            port.onMessage.removeListener(handleScreenshotResponse);
+            sidePanelPort.onMessage.removeListener(handleScreenshotResponse);
           } catch {
             // Port might be disconnected
           }
@@ -1693,16 +1695,16 @@ const SidePanel = () => {
 
         const timeout = setTimeout(() => {
           try {
-            port.onMessage.removeListener(handleScreenshotResponse);
+            sidePanelPort.onMessage.removeListener(handleScreenshotResponse);
           } catch {
             // Port might be disconnected
           }
           reject(new Error('Screenshot capture timed out'));
         }, 10000);
 
-        port.onMessage.addListener(handleScreenshotResponse);
+        sidePanelPort.onMessage.addListener(handleScreenshotResponse);
 
-        port.postMessage({
+        sidePanelPort.postMessage({
           type: 'capture_screenshot',
           tabId,
         });
@@ -1752,6 +1754,53 @@ const SidePanel = () => {
       setEnableWebSearch(!newValue);
     }
   }, [enableWebSearch]);
+
+  const refreshQaToolCount = useCallback(async (force?: boolean) => {
+    try {
+      const res = (await chrome.runtime.sendMessage({
+        type: 'get_qa_enabled_tool_count',
+        force: force === true,
+      })) as { ok?: boolean; count?: number };
+      if (res?.ok && typeof res.count === 'number') {
+        setQaEnabledToolCount(res.count);
+      } else {
+        setQaEnabledToolCount(0);
+      }
+    } catch {
+      setQaEnabledToolCount(null);
+    }
+  }, []);
+
+  const handleOpenQaToolSettings = useCallback(() => {
+    const url = chrome.runtime.getURL('options/index.html#mcp');
+    chrome.tabs.create({ url });
+  }, []);
+
+  useEffect(() => {
+    if (mode !== 'qa') {
+      setQaEnabledToolCount(null);
+      return;
+    }
+    setQaEnabledToolCount(null);
+    void refreshQaToolCount(true);
+  }, [mode, refreshQaToolCount]);
+
+  useEffect(() => {
+    const onStorageChanged = (
+      changes: { [key: string]: chrome.storage.StorageChange },
+      area: chrome.storage.AreaName,
+    ) => {
+      if (area !== 'local') return;
+      if (changes['general-settings']) {
+        void loadGeneralSettings();
+      }
+      if ((changes['general-settings'] || changes['mcp-tools-settings']) && modeRef.current === 'qa') {
+        void refreshQaToolCount(true);
+      }
+    };
+    chrome.storage.onChanged.addListener(onStorageChanged);
+    return () => chrome.storage.onChanged.removeListener(onStorageChanged);
+  }, [loadGeneralSettings, refreshQaToolCount]);
 
   const handleMicClick = async () => {
     if (isRecording) {
@@ -2135,6 +2184,8 @@ const SidePanel = () => {
                         enableWebSearch={enableWebSearch}
                         onToggleEnableWebSearch={mode === 'qa' ? handleToggleEnableWebSearch : undefined}
                         qaUiTheme={mode === 'qa' ? qaUiTheme : null}
+                        qaEnabledToolCount={mode === 'qa' ? qaEnabledToolCount : null}
+                        onOpenQaToolSettings={mode === 'qa' ? handleOpenQaToolSettings : undefined}
                       />
                     </div>
                     <div className="flex-1 overflow-y-auto">
@@ -2203,6 +2254,8 @@ const SidePanel = () => {
                       enableWebSearch={enableWebSearch}
                       onToggleEnableWebSearch={mode === 'qa' ? handleToggleEnableWebSearch : undefined}
                       qaUiTheme={mode === 'qa' ? qaUiTheme : null}
+                      qaEnabledToolCount={mode === 'qa' ? qaEnabledToolCount : null}
+                      onOpenQaToolSettings={mode === 'qa' ? handleOpenQaToolSettings : undefined}
                     />
                   </div>
                 )}

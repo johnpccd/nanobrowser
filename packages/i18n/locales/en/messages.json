@@ -202,6 +202,21 @@
   "chat_imageCapture_fullImage": {
     "message": "Full size screenshot"
   },
+  "chat_qaTools_button": {
+    "message": "QA tools settings"
+  },
+  "chat_qaTools_tooltip": {
+    "message": "$COUNT$ QA tool(s) are currently exposed to the model (built-in + MCP). Open settings to turn off what you don't need and reduce token use.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "5"
+      }
+    }
+  },
+  "chat_qaTools_countLoading": {
+    "message": "…"
+  },
   "chat_pageContent_toggle": {
     "message": "Toggle page content"
   },

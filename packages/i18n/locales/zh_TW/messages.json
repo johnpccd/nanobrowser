@@ -202,6 +202,21 @@
   "chat_imageCapture_fullImage": {
     "message": "全尺寸截圖"
   },
+  "chat_qaTools_button": {
+    "message": "QA 工具設定"
+  },
+  "chat_qaTools_tooltip": {
+    "message": "目前有 $COUNT$ 個 QA 工具會暴露給模型（內建 + MCP）。開啟設定可關閉不需要的工具以降低 token 用量。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "5"
+      }
+    }
+  },
+  "chat_qaTools_countLoading": {
+    "message": "…"
+  },
   "chat_pageContent_toggle": {
     "message": "切換頁面內容"
   },

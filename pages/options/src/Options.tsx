@@ -19,8 +19,17 @@ const TABS: { id: TabTypes; icon: React.ComponentType<{ className?: string }>; l
   { id: 'about', icon: FiInfo, label: t('options_tabs_about' as never) },
 ];
 
+function tabFromLocationHash(): TabTypes | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  const h = window.location.hash.replace(/^#/, '').trim();
+  const ids: TabTypes[] = ['general', 'models', 'personas', 'mcp', 'about'];
+  return ids.includes(h as TabTypes) ? (h as TabTypes) : null;
+}
+
 const Options = () => {
-  const [activeTab, setActiveTab] = useState<TabTypes>('models');
+  const [activeTab, setActiveTab] = useState<TabTypes>(() => tabFromLocationHash() ?? 'models');
   const [isDarkMode, setIsDarkMode] = useState(false);
 
   // Check for dark mode preference
@@ -36,8 +45,24 @@ const Options = () => {
     return () => darkModeMediaQuery.removeEventListener('change', handleChange);
   }, []);
 
+  useEffect(() => {
+    const sync = () => {
+      const next = tabFromLocationHash();
+      if (next) {
+        setActiveTab(next);
+      }
+    };
+    sync();
+    window.addEventListener('hashchange', sync);
+    return () => window.removeEventListener('hashchange', sync);
+  }, []);
+
   const handleTabClick = (tabId: TabTypes) => {
     setActiveTab(tabId);
+    const nextHash = `#${tabId}`;
+    if (window.location.hash !== nextHash) {
+      window.history.replaceState(null, '', nextHash);
+    }
   };
 
   const renderTabContent = () => {

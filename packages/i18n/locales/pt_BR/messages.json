@@ -202,6 +202,21 @@
   "chat_imageCapture_fullImage": {
     "message": "Captura de tela em tamanho real"
   },
+  "chat_qaTools_button": {
+    "message": "Configurações de ferramentas QA"
+  },
+  "chat_qaTools_tooltip": {
+    "message": "$COUNT$ ferramenta(s) QA exposta(s) ao modelo (integradas + MCP). Abra as configurações para desativar o que não precisa e reduzir tokens.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "5"
+      }
+    }
+  },
+  "chat_qaTools_countLoading": {
+    "message": "…"
+  },
   "chat_pageContent_toggle": {
     "message": "Alternar conteúdo da página"
   },

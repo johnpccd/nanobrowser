@@ -25,6 +25,7 @@ import { Actors, type ToolEvent } from '@extension/storage/lib/chat/types';
 import { z } from 'zod';
 import { readUrlWithJina } from './services/jinaReader';
 import { discoverMcpTools, executeMcpTool } from './services/mcpClient';
+import { getQaEnabledToolCountCached, invalidateQaToolCountCache } from './qaToolCount';
 
 const logger = createLogger('background');
 
@@ -422,6 +423,13 @@ chrome.tabs.onRemoved.addListener(tabId => {
 
 logger.info('background loaded');
 
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName !== 'local') return;
+  if (changes['general-settings'] || changes['mcp-tools-settings']) {
+    invalidateQaToolCountCache();
+  }
+});
+
 // Listen for simple messages (e.g., from options page)
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === 'test_searxng') {
@@ -468,6 +476,25 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
 
+  if (message?.type === 'get_qa_enabled_tool_count') {
+    (async () => {
+      try {
+        if (message.force === true) {
+          invalidateQaToolCountCache();
+        }
+        const count = await getQaEnabledToolCountCached();
+        sendResponse({ ok: true, count });
+      } catch (error) {
+        sendResponse({
+          ok: false,
+          error: error instanceof Error ? error.message : 'Failed to count QA tools.',
+        });
+      }
+    })();
+
+    return true;
+  }
+
   if (message?.type === 'mcp_discover_tools') {
     (async () => {
       try {
@@ -477,6 +504,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
           return;
         }
         const tools = await discoverMcpTools(server);
+        invalidateQaToolCountCache();
         sendResponse({
           ok: true,
           tools: tools.map(tool => tool.name),

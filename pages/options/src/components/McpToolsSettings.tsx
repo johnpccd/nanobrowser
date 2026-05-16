@@ -67,7 +67,7 @@ export const McpToolsSettings = ({ isDarkMode = false }: McpToolsSettingsProps) 
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    const reloadFromStorage = async () => {
       const [mcpLatest, genLatest] = await Promise.all([
         mcpToolsSettingsStore.getSettings(),
         generalSettingsStore.getSettings(),
@@ -76,9 +76,21 @@ export const McpToolsSettings = ({ isDarkMode = false }: McpToolsSettingsProps) 
         setSettings(mcpLatest);
         setGeneralSettings(genLatest);
       }
-    })();
+    };
+
+    void reloadFromStorage();
+
+    const unsubMcp = mcpToolsSettingsStore.subscribe(() => {
+      void reloadFromStorage();
+    });
+    const unsubGen = generalSettingsStore.subscribe(() => {
+      void reloadFromStorage();
+    });
+
     return () => {
       cancelled = true;
+      unsubMcp();
+      unsubGen();
     };
   }, []);
 
