@@ -206,7 +206,7 @@
     "message": "QA 工具設定"
   },
   "chat_qaTools_tooltip": {
-    "message": "目前有 $COUNT$ 個 QA 工具會暴露給模型（內建 + MCP）。開啟設定可關閉不需要的工具以降低 token 用量。",
+    "message": "目前有 $COUNT$ 個 QA 工具會暴露給模型（內建 + MCP）。請使用此選單或設定開關個別 MCP 工具以降低 token。",
     "placeholders": {
       "count": {
         "content": "$1",
@@ -216,6 +216,21 @@
   },
   "chat_qaTools_countLoading": {
     "message": "…"
+  },
+  "chat_mcpTools_menu_title": {
+    "message": "QA 可用的 MCP 工具"
+  },
+  "chat_mcpTools_loading": {
+    "message": "正在向伺服器載入工具..."
+  },
+  "chat_mcpTools_loadError": {
+    "message": "無法載入 MCP 工具。請檢查伺服器設定後再試。"
+  },
+  "chat_mcpTools_empty": {
+    "message": "尚未設定任何含端點的 MCP 伺服器。"
+  },
+  "chat_mcpTools_manage_servers": {
+    "message": "管理 MCP 伺服器..."
   },
   "chat_pageContent_toggle": {
     "message": "切換頁面內容"
@@ -288,6 +303,12 @@
   },
   "options_about_buildSha": {
     "message": "建置 SHA-1"
+  },
+  "options_mcp_perTool_hint": {
+    "message": "模型可使用哪些 MCP 工具，是在 QA 聊天中依個別工具設定——請使用訊息框旁的工具按鈕。"
+  },
+  "options_mcp_discover_toolTogglesHint": {
+    "message": "請在 QA 聊天中，透過撰寫區旁的 MCP 工具選單逐一開關各工具。"
   },
   "options_general_header": {
     "message": "一般"

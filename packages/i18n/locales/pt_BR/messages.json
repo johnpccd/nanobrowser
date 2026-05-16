@@ -206,7 +206,7 @@
     "message": "Configurações de ferramentas QA"
   },
   "chat_qaTools_tooltip": {
-    "message": "$COUNT$ ferramenta(s) QA exposta(s) ao modelo (integradas + MCP). Abra as configurações para desativar o que não precisa e reduzir tokens.",
+    "message": "$COUNT$ ferramenta(s) QA exposta(s) ao modelo (integradas + MCP). Use este menu ou as configurações para ligar/desligar cada ferramenta MCP e reduzir tokens.",
     "placeholders": {
       "count": {
         "content": "$1",
@@ -216,6 +216,21 @@
   },
   "chat_qaTools_countLoading": {
     "message": "…"
+  },
+  "chat_mcpTools_menu_title": {
+    "message": "Ferramentas MCP para QA"
+  },
+  "chat_mcpTools_loading": {
+    "message": "Carregando ferramentas dos servidores..."
+  },
+  "chat_mcpTools_loadError": {
+    "message": "Não foi possível carregar ferramentas MCP. Verifique os servidores e tente de novo."
+  },
+  "chat_mcpTools_empty": {
+    "message": "Ainda não há servidores MCP com endpoint configurado."
+  },
+  "chat_mcpTools_manage_servers": {
+    "message": "Gerenciar servidores MCP..."
   },
   "chat_pageContent_toggle": {
     "message": "Alternar conteúdo da página"
@@ -288,6 +303,12 @@
   },
   "options_about_buildSha": {
     "message": "SHA-1 da compilação"
+  },
+  "options_mcp_perTool_hint": {
+    "message": "Quais ferramentas MCP o modelo pode usar é definido por ferramenta no chat de QA — use o botão de ferramentas ao lado da caixa de mensagem."
+  },
+  "options_mcp_discover_toolTogglesHint": {
+    "message": "Ative ou desative cada ferramenta no chat de QA pelo menu de ferramentas MCP ao lado do compositor."
   },
   "options_general_header": {
     "message": "Geral"

@@ -520,6 +520,47 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
 
+  if (message?.type === 'mcp_qa_list_tool_state') {
+    (async () => {
+      try {
+        const mcp = await mcpToolsSettingsStore.getSettings();
+        const sorted = [...mcp.servers].filter(s => s.endpoint?.trim()).sort((a, b) => a.id.localeCompare(b.id));
+        const timeoutMs = typeof message.timeoutMs === 'number' ? message.timeoutMs : 6000;
+        const servers = await Promise.all(
+          sorted.map(async server => {
+            try {
+              const discovered = await discoverMcpTools(server, { timeoutMs });
+              const names = discovered.map(t => String(t.name).trim()).filter(Boolean);
+              const rows = names.map(name => ({
+                name,
+                enabled: server.enabledToolNames === null || server.enabledToolNames.includes(name),
+              }));
+              return { id: server.id, name: server.name, endpoint: server.endpoint, tools: rows };
+            } catch (mcpErr) {
+              const errorMsg = mcpErr instanceof Error ? mcpErr.message : String(mcpErr);
+              return {
+                id: server.id,
+                name: server.name,
+                endpoint: server.endpoint,
+                tools: [],
+                error: errorMsg,
+              };
+            }
+          }),
+        );
+
+        sendResponse({ ok: true, servers });
+      } catch (error) {
+        sendResponse({
+          ok: false,
+          error: error instanceof Error ? error.message : 'Failed to list MCP tool state.',
+        });
+      }
+    })();
+
+    return true;
+  }
+
   // Handle other message types if needed in the future
   return false;
 });
@@ -1056,9 +1097,7 @@ chrome.runtime.onConnect.addListener(port => {
                     }
                   },
                 });
-                const enabledMcpServers = mcpSettings.enabled
-                  ? mcpSettings.servers.filter(server => server.enabled && server.endpoint)
-                  : [];
+                const enabledMcpServers = mcpSettings.servers.filter(server => Boolean(server.endpoint?.trim()));
                 const usedBoundMcpToolNames = new Set<string>();
                 const mcpToolsByName = new Map<
                   string,
@@ -1079,7 +1118,7 @@ chrome.runtime.onConnect.addListener(port => {
                       if (!tool.name) {
                         continue;
                       }
-                      if (server.toolAccessMode === 'allowlist' && !server.allowedTools.includes(tool.name)) {
+                      if (server.enabledToolNames !== null && !server.enabledToolNames.includes(tool.name)) {
                         continue;
                       }
                       const normalizedToolName = allocateBoundMcpToolName(server.id, tool.name, usedBoundMcpToolNames);

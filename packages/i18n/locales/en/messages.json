@@ -206,7 +206,7 @@
     "message": "QA tools settings"
   },
   "chat_qaTools_tooltip": {
-    "message": "$COUNT$ QA tool(s) are currently exposed to the model (built-in + MCP). Open settings to turn off what you don't need and reduce token use.",
+    "message": "$COUNT$ QA tool(s) are currently exposed to the model (built-in + MCP). Open this menu or settings to toggle individual MCP tools and reduce token use.",
     "placeholders": {
       "count": {
         "content": "$1",
@@ -216,6 +216,21 @@
   },
   "chat_qaTools_countLoading": {
     "message": "…"
+  },
+  "chat_mcpTools_menu_title": {
+    "message": "MCP tools for QA"
+  },
+  "chat_mcpTools_loading": {
+    "message": "Loading tools from servers..."
+  },
+  "chat_mcpTools_loadError": {
+    "message": "Could not load MCP tools. Check your servers or try again."
+  },
+  "chat_mcpTools_empty": {
+    "message": "No MCP servers with an endpoint are configured yet."
+  },
+  "chat_mcpTools_manage_servers": {
+    "message": "Manage MCP servers..."
   },
   "chat_pageContent_toggle": {
     "message": "Toggle page content"
@@ -297,6 +312,9 @@
   },
   "options_mcp_desc": {
     "message": "Configure remote MCP servers and expose their tools to QA mode. Streamable HTTP uses one POST URL. Legacy SSE uses a GET SSE URL plus a separate JSON-RPC POST URL (or the stream’s endpoint event)."
+  },
+  "options_mcp_perTool_hint": {
+    "message": "Which MCP tools the model may call is configured per tool in QA chat — open the tool button next to the message box."
   },
   "options_mcp_enable": {
     "message": "Enable MCP tools in QA mode"
@@ -447,6 +465,9 @@
   },
   "options_mcp_discover_allowlistHint": {
     "message": "Allowlist mode: names were added to your allowed-tools field (save the server if you are editing)."
+  },
+  "options_mcp_discover_toolTogglesHint": {
+    "message": "Turn individual tools on or off from QA chat using the MCP tools menu beside the composer."
   },
   "options_mcp_errors_bgUnreachable": {
     "message": "Could not reach the extension background. Open chrome://extensions, reload this extension, then try again."

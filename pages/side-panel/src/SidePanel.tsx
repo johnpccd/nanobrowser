@@ -33,10 +33,11 @@ import {
   DEFAULT_PERSONA_ID,
   type Persona,
 } from '@extension/storage';
+import { mcpToolsSettingsStore, nextEnabledToolNamesForToggle } from '@extension/storage/lib/settings/mcpTools';
 import favoritesStorage, { type FavoritePrompt, favoritesBaseStorage } from '@extension/storage/lib/prompt/favorites';
 import { t } from '@extension/i18n';
 import MessageList from './components/MessageList';
-import ChatInput from './components/ChatInput';
+import ChatInput, { type QaMcpToolsPanelState } from './components/ChatInput';
 import ChatHistoryList from './components/ChatHistoryList';
 import BookmarkList from './components/BookmarkList';
 import { EventType, type AgentEvent, ExecutionState } from './types/event';
@@ -110,6 +111,13 @@ const SidePanel = () => {
   const [includePageContent, setIncludePageContent] = useState(true);
   const [enableWebSearch, setEnableWebSearch] = useState(false);
   const [qaEnabledToolCount, setQaEnabledToolCount] = useState<number | null>(null);
+  const [qaMcpToolsMenuOpen, setQaMcpToolsMenuOpen] = useState(false);
+  const qaMcpToolsMenuOpenRef = useRef(false);
+  const [qaMcpToolsPanel, setQaMcpToolsPanel] = useState<QaMcpToolsPanelState>({
+    loading: false,
+    error: null,
+    servers: [],
+  });
   // Font size state
   const [fontSize, setFontSize] = useState<number>(14);
   const [generalSettingsSnapshot, setGeneralSettingsSnapshot] =
@@ -1771,6 +1779,60 @@ const SidePanel = () => {
     }
   }, []);
 
+  useEffect(() => {
+    qaMcpToolsMenuOpenRef.current = qaMcpToolsMenuOpen;
+  }, [qaMcpToolsMenuOpen]);
+
+  const fetchQaMcpToolState = useCallback(async () => {
+    setQaMcpToolsPanel(prev => ({ ...prev, loading: true, error: null }));
+    try {
+      const res = (await chrome.runtime.sendMessage({ type: 'mcp_qa_list_tool_state' })) as {
+        ok?: boolean;
+        error?: string;
+        servers?: QaMcpToolsPanelState['servers'];
+      };
+      if (!res?.ok) {
+        setQaMcpToolsPanel({
+          loading: false,
+          error: res?.error ?? t('chat_mcpTools_loadError'),
+          servers: [],
+        });
+        return;
+      }
+      setQaMcpToolsPanel({
+        loading: false,
+        error: null,
+        servers: res.servers ?? [],
+      });
+    } catch {
+      setQaMcpToolsPanel({ loading: false, error: t('chat_mcpTools_loadError'), servers: [] });
+    }
+  }, []);
+
+  const handleToggleQaMcpTool = useCallback(
+    async (payload: { serverId: string; toolName: string; nextEnabled: boolean; discoveredNames: string[] }) => {
+      const { serverId, toolName, nextEnabled, discoveredNames } = payload;
+      if (discoveredNames.length === 0) return;
+      try {
+        const latest = await mcpToolsSettingsStore.getSettings();
+        const server = latest.servers.find(s => s.id === serverId);
+        if (!server) return;
+        const nextNames = nextEnabledToolNamesForToggle(
+          server.enabledToolNames,
+          discoveredNames,
+          toolName,
+          nextEnabled,
+        );
+        await mcpToolsSettingsStore.upsertServer({ ...server, enabledToolNames: nextNames });
+        void refreshQaToolCount(true);
+        await fetchQaMcpToolState();
+      } catch (e) {
+        console.error('Failed to toggle MCP tool', e);
+      }
+    },
+    [fetchQaMcpToolState, refreshQaToolCount],
+  );
+
   const handleOpenQaToolSettings = useCallback(() => {
     const url = chrome.runtime.getURL('options/index.html#mcp');
     chrome.tabs.create({ url });
@@ -1779,11 +1841,17 @@ const SidePanel = () => {
   useEffect(() => {
     if (mode !== 'qa') {
       setQaEnabledToolCount(null);
+      setQaMcpToolsMenuOpen(false);
       return;
     }
     setQaEnabledToolCount(null);
     void refreshQaToolCount(true);
   }, [mode, refreshQaToolCount]);
+
+  useEffect(() => {
+    if (mode !== 'qa' || !qaMcpToolsMenuOpen) return;
+    void fetchQaMcpToolState();
+  }, [mode, qaMcpToolsMenuOpen, fetchQaMcpToolState]);
 
   useEffect(() => {
     const onStorageChanged = (
@@ -1797,10 +1865,13 @@ const SidePanel = () => {
       if ((changes['general-settings'] || changes['mcp-tools-settings']) && modeRef.current === 'qa') {
         void refreshQaToolCount(true);
       }
+      if (changes['mcp-tools-settings'] && modeRef.current === 'qa' && qaMcpToolsMenuOpenRef.current) {
+        void fetchQaMcpToolState();
+      }
     };
     chrome.storage.onChanged.addListener(onStorageChanged);
     return () => chrome.storage.onChanged.removeListener(onStorageChanged);
-  }, [loadGeneralSettings, refreshQaToolCount]);
+  }, [fetchQaMcpToolState, loadGeneralSettings, refreshQaToolCount]);
 
   const handleMicClick = async () => {
     if (isRecording) {
@@ -2186,6 +2257,10 @@ const SidePanel = () => {
                         qaUiTheme={mode === 'qa' ? qaUiTheme : null}
                         qaEnabledToolCount={mode === 'qa' ? qaEnabledToolCount : null}
                         onOpenQaToolSettings={mode === 'qa' ? handleOpenQaToolSettings : undefined}
+                        qaMcpToolsPanel={mode === 'qa' ? qaMcpToolsPanel : null}
+                        qaMcpToolsMenuOpen={mode === 'qa' ? qaMcpToolsMenuOpen : false}
+                        onQaMcpToolsMenuOpenChange={mode === 'qa' ? setQaMcpToolsMenuOpen : undefined}
+                        onToggleQaMcpTool={mode === 'qa' ? handleToggleQaMcpTool : undefined}
                       />
                     </div>
                     <div className="flex-1 overflow-y-auto">
@@ -2256,6 +2331,10 @@ const SidePanel = () => {
                       qaUiTheme={mode === 'qa' ? qaUiTheme : null}
                       qaEnabledToolCount={mode === 'qa' ? qaEnabledToolCount : null}
                       onOpenQaToolSettings={mode === 'qa' ? handleOpenQaToolSettings : undefined}
+                      qaMcpToolsPanel={mode === 'qa' ? qaMcpToolsPanel : null}
+                      qaMcpToolsMenuOpen={mode === 'qa' ? qaMcpToolsMenuOpen : false}
+                      onQaMcpToolsMenuOpenChange={mode === 'qa' ? setQaMcpToolsMenuOpen : undefined}
+                      onToggleQaMcpTool={mode === 'qa' ? handleToggleQaMcpTool : undefined}
                     />
                   </div>
                 )}

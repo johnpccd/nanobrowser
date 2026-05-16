@@ -5,7 +5,6 @@ import {
   mcpToolsSettingsStore,
   type McpAuthType,
   type McpServerConfig,
-  type McpToolAccessMode,
   type McpToolsSettingsConfig,
   type McpTransport,
 } from '@extension/storage/lib/settings/mcpTools';
@@ -18,30 +17,13 @@ interface McpToolsSettingsProps {
 const EMPTY_SERVER_DRAFT: McpServerConfig = {
   id: '',
   name: '',
-  enabled: true,
   transport: 'streamable_http',
   endpoint: '',
   sseMessageEndpoint: '',
   authType: 'none',
   authToken: '',
-  toolAccessMode: 'all',
-  allowedTools: [],
+  enabledToolNames: null,
 };
-
-function parseAllowedTools(value: string): string[] {
-  return Array.from(
-    new Set(
-      value
-        .split(',')
-        .map(item => item.trim())
-        .filter(Boolean),
-    ),
-  );
-}
-
-function toAllowedToolsInput(tools: string[]): string {
-  return tools.join(', ');
-}
 
 function createServerId(name: string): string {
   const normalized = name
@@ -57,7 +39,6 @@ export const McpToolsSettings = ({ isDarkMode = false }: McpToolsSettingsProps) 
   const [generalSettings, setGeneralSettings] = useState<GeneralSettingsConfig>(DEFAULT_GENERAL_SETTINGS);
   const [settings, setSettings] = useState<McpToolsSettingsConfig>(DEFAULT_MCP_TOOLS_SETTINGS);
   const [draft, setDraft] = useState<McpServerConfig>(EMPTY_SERVER_DRAFT);
-  const [allowedToolsInput, setAllowedToolsInput] = useState('');
   const [editingServerId, setEditingServerId] = useState<string | null>(null);
   const [validationError, setValidationError] = useState('');
   const [discoveringServerId, setDiscoveringServerId] = useState<string | null>(null);
@@ -99,12 +80,6 @@ export const McpToolsSettings = ({ isDarkMode = false }: McpToolsSettingsProps) 
     setGeneralSettings(await generalSettingsStore.getSettings());
   }
 
-  const saveSettings = async (next: McpToolsSettingsConfig) => {
-    await mcpToolsSettingsStore.updateSettings(next);
-    const latest = await mcpToolsSettingsStore.getSettings();
-    setSettings(latest);
-  };
-
   const validateDraft = (candidate: McpServerConfig): string => {
     if (!candidate.name.trim()) {
       return tr('options_mcp_errors_nameRequired');
@@ -133,26 +108,17 @@ export const McpToolsSettings = ({ isDarkMode = false }: McpToolsSettingsProps) 
     if (candidate.authType === 'bearer' && !candidate.authToken.trim()) {
       return tr('options_mcp_errors_tokenRequired');
     }
-    if (candidate.toolAccessMode === 'allowlist' && candidate.allowedTools.length === 0) {
-      return tr('options_mcp_errors_allowlistRequired');
-    }
     return '';
-  };
-
-  const handleGlobalEnabledChange = async (enabled: boolean) => {
-    await saveSettings({ ...settings, enabled });
   };
 
   const resetDraft = () => {
     setDraft(EMPTY_SERVER_DRAFT);
-    setAllowedToolsInput('');
     setEditingServerId(null);
     setValidationError('');
   };
 
   const beginEdit = (server: McpServerConfig) => {
     setDraft(server);
-    setAllowedToolsInput(toAllowedToolsInput(server.allowedTools));
     setEditingServerId(server.id);
     setValidationError('');
   };
@@ -161,7 +127,6 @@ export const McpToolsSettings = ({ isDarkMode = false }: McpToolsSettingsProps) 
     const candidate: McpServerConfig = {
       ...draft,
       id: editingServerId || createServerId(draft.name),
-      allowedTools: parseAllowedTools(allowedToolsInput),
     };
     const error = validateDraft(candidate);
     if (error) {
@@ -206,30 +171,11 @@ export const McpToolsSettings = ({ isDarkMode = false }: McpToolsSettingsProps) 
         return;
       }
       setDiscoverySuccess({ serverId: server.id, tools: discoveredTools });
-
-      if (server.toolAccessMode === 'allowlist') {
-        const nextAllowedTools = Array.from(new Set([...server.allowedTools, ...discoveredTools]));
-        await mcpToolsSettingsStore.upsertServer({
-          ...server,
-          allowedTools: nextAllowedTools,
-        });
-        const latest = await mcpToolsSettingsStore.getSettings();
-        setSettings(latest);
-        if (editingServerId === server.id) {
-          setAllowedToolsInput(toAllowedToolsInput(nextAllowedTools));
-        }
-      }
     } catch (error) {
       setValidationError(error instanceof Error ? error.message : tr('options_mcp_errors_discoveryFailed'));
     } finally {
       setDiscoveringServerId(null);
     }
-  };
-
-  const toggleServerEnabled = async (server: McpServerConfig, enabled: boolean) => {
-    await mcpToolsSettingsStore.upsertServer({ ...server, enabled });
-    const latest = await mcpToolsSettingsStore.getSettings();
-    setSettings(latest);
   };
 
   return (
@@ -239,32 +185,10 @@ export const McpToolsSettings = ({ isDarkMode = false }: McpToolsSettingsProps) 
         <h2 className={`mb-1 text-left text-xl font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>
           {tr('options_mcp_header')}
         </h2>
-        <p className={`mb-6 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{tr('options_mcp_desc')}</p>
-
-        <div className="mb-6 flex items-center justify-between rounded-lg border border-dashed border-sky-300 p-4">
-          <div>
-            <h3 className={`text-base font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-              {tr('options_mcp_enable')}
-            </h3>
-            <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-              {tr('options_mcp_enable_desc')}
-            </p>
-          </div>
-          <div className="relative inline-flex cursor-pointer items-center">
-            <input
-              id="mcpEnabled"
-              type="checkbox"
-              checked={settings.enabled}
-              onChange={e => handleGlobalEnabledChange(e.target.checked)}
-              className="peer sr-only"
-            />
-            <label
-              htmlFor="mcpEnabled"
-              className={`peer h-6 w-11 rounded-full ${isDarkMode ? 'bg-slate-600' : 'bg-gray-200'} after:absolute after:left-[2px] after:top-[2px] after:size-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300`}>
-              <span className="sr-only">{tr('options_mcp_enable')}</span>
-            </label>
-          </div>
-        </div>
+        <p className={`mb-2 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{tr('options_mcp_desc')}</p>
+        <p className={`mb-6 text-xs ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>
+          {tr('options_mcp_perTool_hint')}
+        </p>
 
         <div className={`mb-6 space-y-4 rounded-lg border p-4 ${isDarkMode ? 'border-slate-700' : 'border-gray-200'}`}>
           <div>
@@ -430,25 +354,6 @@ export const McpToolsSettings = ({ isDarkMode = false }: McpToolsSettingsProps) 
                 isDarkMode ? 'border-slate-600 bg-slate-700 text-gray-200' : 'border-gray-300 bg-white text-gray-700'
               } disabled:opacity-50`}
             />
-            <select
-              value={draft.toolAccessMode}
-              onChange={e => setDraft(prev => ({ ...prev, toolAccessMode: e.target.value as McpToolAccessMode }))}
-              className={`rounded-md border px-3 py-2 text-sm ${
-                isDarkMode ? 'border-slate-600 bg-slate-700 text-gray-200' : 'border-gray-300 bg-white text-gray-700'
-              }`}>
-              <option value="all">{tr('options_mcp_access_all')}</option>
-              <option value="allowlist">{tr('options_mcp_access_allowlist')}</option>
-            </select>
-            <input
-              type="text"
-              value={allowedToolsInput}
-              onChange={e => setAllowedToolsInput(e.target.value)}
-              disabled={draft.toolAccessMode !== 'allowlist'}
-              placeholder={tr('options_mcp_allowedTools_placeholder')}
-              className={`rounded-md border px-3 py-2 text-sm ${
-                isDarkMode ? 'border-slate-600 bg-slate-700 text-gray-200' : 'border-gray-300 bg-white text-gray-700'
-              } disabled:opacity-50`}
-            />
           </div>
 
           {validationError && (
@@ -500,22 +405,9 @@ export const McpToolsSettings = ({ isDarkMode = false }: McpToolsSettingsProps) 
                       {server.transport === 'streamable_http'
                         ? tr('options_mcp_transport_streamableHttp')
                         : tr('options_mcp_transport_sse')}
-                      {' • '}
-                      {server.toolAccessMode === 'all'
-                        ? tr('options_mcp_access_all')
-                        : tr('options_mcp_access_allowlist')}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                      <input
-                        type="checkbox"
-                        className="mr-1"
-                        checked={server.enabled}
-                        onChange={e => toggleServerEnabled(server, e.target.checked)}
-                      />
-                      <span>{tr('options_mcp_serverEnabled')}</span>
-                    </div>
+                  <div className="flex flex-shrink-0 items-center gap-2">
                     <button
                       type="button"
                       onClick={() => beginEdit(server)}
@@ -569,17 +461,10 @@ export const McpToolsSettings = ({ isDarkMode = false }: McpToolsSettingsProps) 
                         </li>
                       ))}
                     </ul>
-                    {server.toolAccessMode === 'allowlist' && (
-                      <p className={`mt-2 ${isDarkMode ? 'text-emerald-300/90' : 'text-emerald-800'}`}>
-                        {tr('options_mcp_discover_allowlistHint')}
-                      </p>
-                    )}
+                    <p className={`mt-2 ${isDarkMode ? 'text-emerald-300/90' : 'text-emerald-800'}`}>
+                      {tr('options_mcp_discover_toolTogglesHint')}
+                    </p>
                   </div>
-                )}
-                {server.toolAccessMode === 'allowlist' && server.allowedTools.length > 0 && (
-                  <p className={`mt-2 text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                    {tr('options_mcp_allowedTools_label')}: {server.allowedTools.join(', ')}
-                  </p>
                 )}
               </div>
             ))

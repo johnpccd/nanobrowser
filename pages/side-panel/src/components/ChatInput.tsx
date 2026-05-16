@@ -27,6 +27,19 @@ interface PersonaOption {
   name: string;
 }
 
+/** MCP tool toggle panel for QA chat (discovery + enable flags). */
+export interface QaMcpToolsPanelState {
+  loading: boolean;
+  error: string | null;
+  servers: Array<{
+    id: string;
+    name: string;
+    endpoint: string;
+    tools: { name: string; enabled: boolean }[];
+    error?: string;
+  }>;
+}
+
 interface ChatInputProps {
   onSendMessage: (text: string, displayText?: string, imageDataList?: string[]) => void;
   onStopTask: () => void;
@@ -66,6 +79,15 @@ interface ChatInputProps {
   /** Number of QA tools/slots currently bound (built-in + MCP); null while loading. */
   qaEnabledToolCount?: number | null;
   onOpenQaToolSettings?: () => void;
+  qaMcpToolsPanel?: QaMcpToolsPanelState | null;
+  qaMcpToolsMenuOpen?: boolean;
+  onQaMcpToolsMenuOpenChange?: (open: boolean) => void;
+  onToggleQaMcpTool?: (payload: {
+    serverId: string;
+    toolName: string;
+    nextEnabled: boolean;
+    discoveredNames: string[];
+  }) => void;
 }
 
 // File attachment interface
@@ -106,6 +128,10 @@ export default function ChatInput({
   qaUiTheme = null,
   qaEnabledToolCount,
   onOpenQaToolSettings,
+  qaMcpToolsPanel = null,
+  qaMcpToolsMenuOpen = false,
+  onQaMcpToolsMenuOpenChange,
+  onToggleQaMcpTool,
 }: ChatInputProps) {
   const [text, setText] = useState('');
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
@@ -116,6 +142,7 @@ export default function ChatInput({
   );
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const qaMcpMenuRef = useRef<HTMLDivElement>(null);
 
   // Handle text changes and resize textarea
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -347,6 +374,28 @@ export default function ChatInput({
 
   /** Same “ON” treatment as page-content toggle so both read clearly as active. */
   const toggleOnControlStyle = accentControlStyle;
+
+  useEffect(() => {
+    if (!qaMcpToolsMenuOpen || !onQaMcpToolsMenuOpenChange) {
+      return;
+    }
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onQaMcpToolsMenuOpenChange(false);
+      }
+    };
+    const onPointerDown = (e: MouseEvent) => {
+      if (qaMcpMenuRef.current && !qaMcpMenuRef.current.contains(e.target as Node)) {
+        onQaMcpToolsMenuOpenChange(false);
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('mousedown', onPointerDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('mousedown', onPointerDown);
+    };
+  }, [qaMcpToolsMenuOpen, onQaMcpToolsMenuOpenChange]);
 
   return (
     <form
@@ -676,37 +725,144 @@ export default function ChatInput({
                         <span className="hidden sm:inline">{t('chat_imageCapture_label')}</span>
                       </button>
                     )}
-                    {onOpenQaToolSettings && (
-                      <button
-                        type="button"
-                        onClick={onOpenQaToolSettings}
-                        disabled={disabled}
-                        aria-label={
-                          qaEnabledToolCount != null
-                            ? t('chat_qaTools_tooltip', [String(qaEnabledToolCount)])
-                            : t('chat_qaTools_button')
-                        }
-                        title={
-                          qaEnabledToolCount != null
-                            ? t('chat_qaTools_tooltip', [String(qaEnabledToolCount)])
-                            : t('chat_qaTools_button')
-                        }
-                        className={`flex items-center gap-1 rounded-md px-2 py-1.5 text-xs transition-colors ${
-                          disabled
-                            ? 'cursor-not-allowed opacity-50'
-                            : isDarkMode
-                              ? 'border border-slate-600 bg-slate-700 text-gray-200 hover:bg-slate-600'
-                              : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-                        }`}
-                        style={neutralControlStyle}>
-                        <FiTool className="size-4 shrink-0" aria-hidden />
-                        <span
-                          className={`min-w-[1.15rem] rounded-full px-1 py-px text-center text-[10px] font-semibold leading-tight tabular-nums ${
-                            isDarkMode ? 'bg-sky-700 text-white' : 'bg-sky-600 text-white'
-                          }`}>
-                          {qaEnabledToolCount != null ? qaEnabledToolCount : t('chat_qaTools_countLoading')}
-                        </span>
-                      </button>
+                    {onOpenQaToolSettings && qaMcpToolsPanel && onQaMcpToolsMenuOpenChange && onToggleQaMcpTool && (
+                      <div className="relative" ref={qaMcpMenuRef}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (disabled) return;
+                            onQaMcpToolsMenuOpenChange(!qaMcpToolsMenuOpen);
+                          }}
+                          disabled={disabled}
+                          aria-expanded={qaMcpToolsMenuOpen}
+                          aria-haspopup="dialog"
+                          aria-label={
+                            qaEnabledToolCount != null
+                              ? t('chat_qaTools_tooltip', [String(qaEnabledToolCount)])
+                              : t('chat_qaTools_button')
+                          }
+                          title={
+                            qaEnabledToolCount != null
+                              ? t('chat_qaTools_tooltip', [String(qaEnabledToolCount)])
+                              : t('chat_qaTools_button')
+                          }
+                          className={`flex items-center gap-1 rounded-md px-2 py-1.5 text-xs transition-colors ${
+                            disabled
+                              ? 'cursor-not-allowed opacity-50'
+                              : isDarkMode
+                                ? `border ${qaMcpToolsMenuOpen ? 'border-sky-500' : 'border-slate-600'} bg-slate-700 text-gray-200 hover:bg-slate-600`
+                                : `border ${qaMcpToolsMenuOpen ? 'border-sky-500' : 'border-gray-300'} bg-white text-gray-700 hover:bg-gray-50`
+                          }`}
+                          style={
+                            qaUiTheme?.inputBorder || qaUiTheme?.inputSurface
+                              ? {
+                                  ...(qaUiTheme.inputBorder
+                                    ? {
+                                        borderColor: qaMcpToolsMenuOpen ? qaUiTheme.accentColor : qaUiTheme.inputBorder,
+                                      }
+                                    : {}),
+                                  ...(qaUiTheme.inputSurface ? { backgroundColor: `${qaUiTheme.inputSurface}ee` } : {}),
+                                  ...(qaUiTheme.inputText ? { color: qaUiTheme.inputText } : {}),
+                                }
+                              : undefined
+                          }>
+                          <FiTool className="size-4 shrink-0" aria-hidden />
+                          <span
+                            className={`min-w-[1.15rem] rounded-full px-1 py-px text-center text-[10px] font-semibold leading-tight tabular-nums ${
+                              isDarkMode ? 'bg-sky-700 text-white' : 'bg-sky-600 text-white'
+                            }`}>
+                            {qaEnabledToolCount != null ? qaEnabledToolCount : t('chat_qaTools_countLoading')}
+                          </span>
+                        </button>
+                        {qaMcpToolsMenuOpen && (
+                          <div
+                            role="dialog"
+                            aria-label={t('chat_mcpTools_menu_title')}
+                            className={`absolute bottom-full left-0 z-[100] mb-1 flex max-h-72 min-w-[18rem] max-w-[min(22rem,calc(100vw-3rem))] flex-col rounded-lg border text-left shadow-lg ${
+                              isDarkMode
+                                ? 'border-slate-600 bg-slate-800 text-gray-100'
+                                : 'border-gray-200 bg-white text-gray-900'
+                            }`}
+                            style={
+                              qaUiTheme?.inputBorder
+                                ? {
+                                    borderColor: qaUiTheme.inputBorder,
+                                    backgroundColor: qaUiTheme.inputSurface ?? undefined,
+                                  }
+                                : undefined
+                            }>
+                            <div className="border-b border-inherit px-3 py-2 text-xs font-semibold">
+                              {t('chat_mcpTools_menu_title')}
+                            </div>
+                            <div className="flex-1 overflow-y-auto px-2 py-2">
+                              {qaMcpToolsPanel.loading && qaMcpToolsPanel.servers.length === 0 && (
+                                <div className="flex items-center gap-2 px-1 py-2 text-xs text-gray-400">
+                                  <AiOutlineLoading3Quarters className="size-3.5 shrink-0 animate-spin" aria-hidden />
+                                  {t('chat_mcpTools_loading')}
+                                </div>
+                              )}
+                              {qaMcpToolsPanel.error && !qaMcpToolsPanel.loading && (
+                                <p className={`px-1 py-1 text-xs ${isDarkMode ? 'text-rose-300' : 'text-rose-600'}`}>
+                                  {qaMcpToolsPanel.error}
+                                </p>
+                              )}
+                              {!qaMcpToolsPanel.loading &&
+                                !qaMcpToolsPanel.error &&
+                                qaMcpToolsPanel.servers.length === 0 && (
+                                  <p className="px-1 py-2 text-xs text-gray-400">{t('chat_mcpTools_empty')}</p>
+                                )}
+                              {qaMcpToolsPanel.servers.map(server => (
+                                <div key={server.id} className="mb-3 last:mb-0">
+                                  <p className="break-all px-1 font-mono text-[11px] font-semibold">{server.name}</p>
+                                  {server.error && (
+                                    <p
+                                      className={`mt-0.5 px-1 text-[11px] ${isDarkMode ? 'text-amber-300' : 'text-amber-700'}`}>
+                                      {server.error}
+                                    </p>
+                                  )}
+                                  <ul className="mt-1 space-y-0.5">
+                                    {server.tools.map(tool => (
+                                      <li key={`${server.id}:${tool.name}`}>
+                                        <label
+                                          className={`flex cursor-pointer items-center gap-2 rounded px-1 py-0.5 text-xs hover:bg-black/10 ${isDarkMode ? 'hover:bg-white/10' : ''}`}>
+                                          <input
+                                            type="checkbox"
+                                            checked={tool.enabled}
+                                            disabled={disabled || qaMcpToolsPanel.loading || Boolean(server.error)}
+                                            onChange={e =>
+                                              onToggleQaMcpTool({
+                                                serverId: server.id,
+                                                toolName: tool.name,
+                                                nextEnabled: e.target.checked,
+                                                discoveredNames: server.tools.map(t => t.name),
+                                              })
+                                            }
+                                            className="rounded border-gray-400"
+                                          />
+                                          <span className="truncate font-mono">{tool.name}</span>
+                                        </label>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="border-t border-inherit px-2 py-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  onQaMcpToolsMenuOpenChange(false);
+                                  onOpenQaToolSettings();
+                                }}
+                                className={`text-xs font-medium underline-offset-2 hover:underline ${
+                                  isDarkMode ? 'text-sky-400' : 'text-sky-600'
+                                }`}>
+                                {t('chat_mcpTools_manage_servers')}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     )}
                   </>
                 )}

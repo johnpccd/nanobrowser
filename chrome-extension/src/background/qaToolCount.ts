@@ -5,7 +5,7 @@ import { discoverMcpTools, type McpDiscoveredTool } from './services/mcpClient';
 
 /**
  * Count QA tools that can bind on the next reply: built-ins that pass registration
- * checks plus MCP tools from enabled servers (via discovery; failures count as 0 for that server).
+ * checks plus MCP tools explicitly enabled per tool (via discovery; failures count as 0 for that server).
  */
 export async function computeQaEnabledToolCount(): Promise<number> {
   const general = await generalSettingsStore.getSettings();
@@ -23,11 +23,7 @@ export async function computeQaEnabledToolCount(): Promise<number> {
     count += 1;
   }
 
-  if (!mcp.enabled) {
-    return count;
-  }
-
-  const servers = mcp.servers.filter(s => s.enabled && s.endpoint?.trim());
+  const servers = mcp.servers.filter(s => s.endpoint?.trim());
   const perServer = await Promise.all(servers.map(async server => countToolsForServer(server, { timeoutMs: 6000 })));
 
   return count + perServer.reduce((a, b) => a + b, 0);
@@ -40,12 +36,12 @@ async function countToolsForServer(server: McpServerConfig, opts: { timeoutMs: n
   } catch {
     return 0;
   }
-  const names = tools.map(t => t.name).filter(Boolean);
-  if (server.toolAccessMode === 'allowlist') {
-    const allowed = new Set(server.allowedTools);
-    return names.filter(n => allowed.has(n)).length;
+  const names = tools.map(t => String(t.name).trim()).filter(Boolean);
+  if (server.enabledToolNames === null) {
+    return names.length;
   }
-  return names.length;
+  const enabled = new Set(server.enabledToolNames);
+  return names.filter(n => enabled.has(n)).length;
 }
 
 let qaToolCountCache: { at: number; value: number } | null = null;
