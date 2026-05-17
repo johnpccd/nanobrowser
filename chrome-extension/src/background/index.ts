@@ -26,6 +26,12 @@ import { z } from 'zod';
 import { readUrlWithJina } from './services/jinaReader';
 import { discoverMcpTools, executeMcpTool } from './services/mcpClient';
 import { buildFoundryTurnInput, streamFoundryAgentResponse } from './services/foundryAgentClient';
+import {
+  deleteFoundryMemoryScope,
+  listFoundryMemoryStores,
+  searchFoundryMemories,
+  updateFoundryMemoriesFromText,
+} from './services/foundryMemoryClient';
 import { foundryAgentsStore } from '@extension/storage/lib/settings/foundryAgents';
 import { getQaEnabledToolCountCached, invalidateQaToolCountCache } from './qaToolCount';
 
@@ -567,6 +573,74 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         return {
           ok: false,
           error: error instanceof Error ? error.message : 'Failed to list MCP tool state.',
+        };
+      }
+    })();
+  }
+
+  if (
+    message?.type === 'foundry_memory_list_stores' ||
+    message?.type === 'foundry_memory_search' ||
+    message?.type === 'foundry_memory_update' ||
+    message?.type === 'foundry_memory_delete_scope'
+  ) {
+    return (async () => {
+      try {
+        const agentId = typeof message.agentId === 'string' ? message.agentId.trim() : '';
+        if (!agentId) {
+          return { ok: false, error: 'No Foundry agent id provided.' };
+        }
+        const agent = await foundryAgentsStore.getAgent(agentId);
+        if (!agent) {
+          return { ok: false, error: 'Azure Foundry agent not found.' };
+        }
+
+        const memoryStoreName =
+          (typeof message.memoryStoreName === 'string' ? message.memoryStoreName.trim() : '') ||
+          agent.memoryStoreName?.trim() ||
+          '';
+        const scope =
+          (typeof message.scope === 'string' ? message.scope.trim() : '') || agent.memoryScope?.trim() || '';
+
+        if (message.type === 'foundry_memory_list_stores') {
+          const stores = await listFoundryMemoryStores(agent);
+          return { ok: true, stores };
+        }
+
+        if (message.type === 'foundry_memory_search') {
+          const query = typeof message.query === 'string' ? message.query : undefined;
+          const maxMemories = typeof message.maxMemories === 'number' ? message.maxMemories : 50;
+          const memories = await searchFoundryMemories({
+            agent,
+            memoryStoreName,
+            scope,
+            query,
+            maxMemories,
+          });
+          return { ok: true, memories };
+        }
+
+        if (message.type === 'foundry_memory_update') {
+          const content = typeof message.content === 'string' ? message.content : '';
+          const operations = await updateFoundryMemoriesFromText({
+            agent,
+            memoryStoreName,
+            scope,
+            content,
+          });
+          return { ok: true, operations };
+        }
+
+        if (message.type === 'foundry_memory_delete_scope') {
+          await deleteFoundryMemoryScope({ agent, memoryStoreName, scope });
+          return { ok: true };
+        }
+
+        return { ok: false, error: 'Unknown Foundry memory action.' };
+      } catch (error) {
+        return {
+          ok: false,
+          error: error instanceof Error ? error.message : 'Foundry memory request failed.',
         };
       }
     })();

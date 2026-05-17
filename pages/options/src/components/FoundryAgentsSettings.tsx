@@ -7,6 +7,7 @@ import {
   foundryAgentsStore,
 } from '@extension/storage';
 import { t } from '@extension/i18n';
+import { FoundryAgentMemorySection } from './FoundryAgentMemorySection';
 
 interface FoundryAgentsSettingsProps {
   isDarkMode?: boolean;
@@ -139,6 +140,11 @@ export const FoundryAgentsSettings = ({ isDarkMode = false }: FoundryAgentsSetti
                 <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                   {t('options_foundry_resolvedEndpoint')}: {buildFoundryResponsesRequestUrl(agent)}
                 </p>
+                <FoundryAgentMemorySection
+                  agent={agent}
+                  isDarkMode={isDarkMode}
+                  onPatch={patch => updateAgentLocally(agent.id, patch)}
+                />
               </div>
             </div>
           ))}

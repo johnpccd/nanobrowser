@@ -1,8 +1,9 @@
 import type { ChatMessage, Message, ResolvedQaUiTheme } from '@extension/storage';
 import { Actors } from '@extension/storage';
 import { ACTOR_PROFILES } from '../types/message';
-import { memo, useState, useCallback, useMemo, useEffect } from 'react';
+import { memo, useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { t } from '@extension/i18n';
+import { FiEdit2 } from 'react-icons/fi';
 import ReactMarkdown from 'react-markdown';
 import type { Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -120,6 +121,16 @@ interface MessageListProps {
   isWaitingForResponse?: boolean;
   fontSize?: number;
   qaUiTheme?: ResolvedQaUiTheme | null;
+  canEditUserMessages?: boolean;
+  onEditAndResend?: (messageId: string, newContent: string, imageDataList?: string[]) => void | Promise<void>;
+}
+
+/** Strip UI-only attachment lines from stored display text before editing. */
+function contentForEditing(displayContent: string): string {
+  return displayContent
+    .replace(/\n\n📷[^\n]*$/g, '')
+    .replace(/\n\n(?:📎[^\n]+\n?)+$/g, '')
+    .trim();
 }
 
 export default memo(function MessageList({
@@ -129,6 +140,8 @@ export default memo(function MessageList({
   isWaitingForResponse = false,
   fontSize = 14,
   qaUiTheme = null,
+  canEditUserMessages = false,
+  onEditAndResend,
 }: MessageListProps) {
   const displayMessages = useMemo(() => mergeAdjacentToolCallResultPairs(messages), [messages]);
   const markdownComponents = useMemo(
@@ -155,6 +168,8 @@ export default memo(function MessageList({
           fontSize={fontSize}
           qaUiTheme={qaUiTheme}
           markdownComponents={markdownComponents}
+          canEdit={canEditUserMessages && message.actor === Actors.USER}
+          onEditAndResend={onEditAndResend}
         />
       ))}
       {/* Render waiting indicator while waiting for first response chunk */}
@@ -188,6 +203,8 @@ interface MessageBlockProps {
   fontSize?: number;
   qaUiTheme?: ResolvedQaUiTheme | null;
   markdownComponents: Components;
+  canEdit?: boolean;
+  onEditAndResend?: (messageId: string, newContent: string, imageDataList?: string[]) => void | Promise<void>;
 }
 
 function MessageBlock({
@@ -197,9 +214,15 @@ function MessageBlock({
   fontSize = 14,
   qaUiTheme = null,
   markdownComponents,
+  canEdit = false,
+  onEditAndResend,
 }: MessageBlockProps) {
   // Tracks which screenshot (by index) is open in the lightbox. `null` means closed.
   const [openImageIndex, setOpenImageIndex] = useState<number | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editDraft, setEditDraft] = useState('');
+  const [isResending, setIsResending] = useState(false);
+  const editTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleCloseModal = useCallback(() => {
     setOpenImageIndex(null);
@@ -217,9 +240,50 @@ function MessageBlock({
     return <div />;
   }
   const actor = ACTOR_PROFILES[message.actor as keyof typeof ACTOR_PROFILES];
-  const isProgress = message.content === 'Showing progress...';
+  const isProgress = message.content === t('chat_progress_message');
   const isUser = message.actor === Actors.USER;
+  const messageId =
+    'id' in message && typeof (message as ChatMessage).id === 'string' ? (message as ChatMessage).id : null;
   const { thoughtLine, body: bodyAfterThought } = partitionThoughtPrefix(message.content);
+
+  const handleStartEdit = useCallback(() => {
+    setEditDraft(contentForEditing(bodyAfterThought));
+    setIsEditing(true);
+  }, [bodyAfterThought]);
+
+  const handleCancelEdit = useCallback(() => {
+    setIsEditing(false);
+    setEditDraft('');
+  }, []);
+
+  const handleConfirmEdit = useCallback(async () => {
+    const trimmed = editDraft.trim();
+    if (!trimmed || !messageId || !onEditAndResend) return;
+    setIsResending(true);
+    try {
+      const images =
+        message.imageDataList && message.imageDataList.length > 0
+          ? message.imageDataList
+          : message.imageData
+            ? [message.imageData]
+            : undefined;
+      await onEditAndResend(messageId, trimmed, images);
+      setIsEditing(false);
+      setEditDraft('');
+    } finally {
+      setIsResending(false);
+    }
+  }, [editDraft, messageId, onEditAndResend, message.imageData, message.imageDataList]);
+
+  useEffect(() => {
+    if (!isEditing) return;
+    const textarea = editTextareaRef.current;
+    if (!textarea) return;
+    textarea.focus();
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    textarea.style.height = 'auto';
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 240)}px`;
+  }, [isEditing, editDraft]);
 
   const messageColor = qaUiTheme?.messageText ?? (isDarkMode ? '#d1d1d1' : '#374151');
   const mdWrapClass = `max-w-none [&_p]:mb-3 [&_p:last-child]:mb-0 [&_li>p]:mb-0 [&_li>p]:inline [&_ul]:my-2 [&_ol]:my-2 [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-5 [&_ol]:pl-5 [&_li]:my-0.5 [&_h1]:mt-6 [&_h1]:mb-2 [&_h1]:text-lg [&_h1]:font-semibold [&_h2]:mt-5 [&_h2]:mb-2 [&_h2]:text-base [&_h2]:font-semibold [&_h3]:mt-4 [&_h3]:mb-1.5 [&_h3]:text-sm [&_h3]:font-semibold [&_strong]:font-semibold [&_blockquote]:my-3 [&_blockquote]:border-l-2 [&_blockquote]:pl-3 ${
@@ -248,7 +312,7 @@ function MessageBlock({
         )}
         {isSameActor && <div className="w-8" />}
 
-        <div className="min-w-0 flex-1">
+        <div className="group min-w-0 flex-1">
           {!isSameActor && (
             <div
               className={`mb-1 text-[13px] font-medium ${
@@ -320,26 +384,92 @@ function MessageBlock({
                           : ''
                       }
                       style={!isUser ? { color: messageColor } : { color: messageColor }}>
-                      <div className={mdWrapClass}>
-                        <ReactMarkdown
-                          remarkPlugins={[remarkGfm]}
-                          rehypePlugins={[rehypeHighlight]}
-                          components={markdownComponents}>
-                          {bodyAfterThought}
-                        </ReactMarkdown>
-                      </div>
+                      {isUser && isEditing ? (
+                        <div className="space-y-2">
+                          <textarea
+                            ref={editTextareaRef}
+                            value={editDraft}
+                            onChange={e => setEditDraft(e.target.value)}
+                            onKeyDown={e => {
+                              if (e.key === 'Escape') {
+                                e.preventDefault();
+                                handleCancelEdit();
+                              } else if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+                                e.preventDefault();
+                                void handleConfirmEdit();
+                              }
+                            }}
+                            disabled={isResending}
+                            rows={3}
+                            className={`w-full resize-none rounded-md border bg-transparent px-1 py-0.5 outline-none focus:ring-1 ${
+                              isDarkMode
+                                ? 'border-[#44445a] text-[#e4e4ef] focus:ring-[#5b7cff]/50'
+                                : 'border-gray-300 text-gray-800 focus:ring-blue-400/50'
+                            }`}
+                            style={{ fontSize: `${fontSize}px` }}
+                            aria-label={t('chat_message_edit_a11y')}
+                          />
+                          <div className="flex flex-wrap justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={handleCancelEdit}
+                              disabled={isResending}
+                              className={`rounded-md px-2.5 py-1 text-[12px] ${
+                                isDarkMode ? 'text-[#b4b4c8] hover:bg-[#333344]' : 'text-gray-600 hover:bg-gray-200'
+                              }`}>
+                              {t('chat_message_edit_cancel')}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => void handleConfirmEdit()}
+                              disabled={isResending || !editDraft.trim()}
+                              className={`rounded-md px-2.5 py-1 text-[12px] font-medium ${
+                                isDarkMode
+                                  ? 'bg-[#5b7cff] text-white hover:bg-[#4a6ae8]'
+                                  : 'bg-blue-600 text-white hover:bg-blue-700'
+                              } disabled:opacity-50`}>
+                              {t('chat_message_edit_resend')}
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className={mdWrapClass}>
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            rehypePlugins={[rehypeHighlight]}
+                            components={markdownComponents}>
+                            {bodyAfterThought}
+                          </ReactMarkdown>
+                        </div>
+                      )}
                     </div>
                   </>
                 )}
               </div>
             )}
             {!isProgress && (
-              <div
-                className={`text-right text-[11px] tabular-nums ${
-                  qaUiTheme?.mutedText ? '' : isDarkMode ? 'text-[#6b6b7e]' : 'text-gray-400'
-                }`}
-                style={qaUiTheme?.mutedText ? { color: qaUiTheme.mutedText } : undefined}>
-                {formatTimestamp(message.timestamp)}
+              <div className="flex items-center justify-end gap-2">
+                {isUser && canEdit && messageId && onEditAndResend && !isEditing && (
+                  <button
+                    type="button"
+                    onClick={handleStartEdit}
+                    className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100 ${
+                      isDarkMode
+                        ? 'text-[#9b9bb0] hover:bg-[#333344] hover:text-[#e4e4ef]'
+                        : 'text-gray-500 hover:bg-gray-200 hover:text-gray-700'
+                    }`}
+                    aria-label={t('chat_message_edit_a11y')}>
+                    <FiEdit2 className="size-3" aria-hidden />
+                    {t('chat_message_edit')}
+                  </button>
+                )}
+                <div
+                  className={`text-[11px] tabular-nums ${
+                    qaUiTheme?.mutedText ? '' : isDarkMode ? 'text-[#6b6b7e]' : 'text-gray-400'
+                  }`}
+                  style={qaUiTheme?.mutedText ? { color: qaUiTheme.mutedText } : undefined}>
+                  {formatTimestamp(message.timestamp)}
+                </div>
               </div>
             )}
           </div>

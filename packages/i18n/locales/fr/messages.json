@@ -1,0 +1,1553 @@
+{
+  "app_metadata_description": {
+    "description": "Description de l'extension",
+    "message": "Automatisez les tâches Web avec l'IA ! NanoBrowser est une extension de navigateur open source qui vous permet d'extraire des données, de remplir des formulaires, etc."
+  },
+  "app_metadata_name": {
+    "description": "Nom de l’extension",
+    "message": "HR Browser Agent"
+  },
+  "errors_unknown": {
+    "message": "Une erreur inconnue s'est produite"
+  },
+  "errors_conn_serviceWorker": {
+    "message": "Échec de la connexion au technicien"
+  },
+  "errors_cmd_unknown": {
+    "message": "Commande non prise en charge : $COMMAND$.\n\nCommandes disponibles : /state, /nohighlight, /replay <historySessionId>",
+    "placeholders": {
+      "command": {
+        "content": "$1",
+        "example": "Inconnu"
+      }
+    }
+  },
+  "nav_newChat_a11y": {
+    "message": "Nouvelle discussion"
+  },
+  "nav_loadHistory_a11y": {
+    "message": "Charger l’historique des commandes..."
+  },
+  "nav_settings_a11y": {
+    "message": "Réglages"
+  },
+  "nav_back": {
+    "message": "retour"
+  },
+  "nav_back_a11y": {
+    "message": "Retour au chat"
+  },
+  "welcome_title": {
+    "message": "Bienvenue sur HR Browser Agent !"
+  },
+  "welcome_instruction": {
+    "message": "Pour commencer, veuillez configurer vos clés API dans la page des paramètres."
+  },
+  "welcome_openSettings": {
+    "message": "Ouvrez les paramètres"
+  },
+  "welcome_quickStart": {
+    "message": "Guide de démarrage rapide"
+  },
+  "welcome_joinCommunity": {
+    "message": "Joignez-vous à notre communauté"
+  },
+  "status_checkingConfig": {
+    "message": "Nous verifions votre configuration."
+  },
+  "chat_buttons_stop": {
+    "message": "Arrêter"
+  },
+  "chat_buttons_replay": {
+    "message": "Relire"
+  },
+  "chat_buttons_send": {
+    "message": "Envoyer"
+  },
+  "chat_message_edit": {
+    "message": "editer"
+  },
+  "chat_message_edit_a11y": {
+    "message": "Edit message"
+  },
+  "chat_message_edit_cancel": {
+    "message": "Annuler"
+  },
+  "chat_message_edit_resend": {
+    "message": "Save & resend"
+  },
+  "chat_input_placeholder": {
+    "message": "Comment puis-je vous aider ? "
+  },
+  "chat_input_placeholder_attachments": {
+    "message": "Ajouter un message (facultatif)"
+  },
+  "chat_select_model": {
+    "message": "Sélectionnez le modèle svp"
+  },
+  "chat_select_model_a11y": {
+    "message": "Sélectionner le modèle d'assurance qualité"
+  },
+  "chat_select_persona_a11y": {
+    "message": "Sélectionner un personnage AQ"
+  },
+  "chat_progress_message": {
+    "message": "Affichage de la progression..."
+  },
+  "chat_input_form": {
+    "message": "Formulaire de saisie"
+  },
+  "chat_input_editor": {
+    "message": "Entrée de message"
+  },
+  "chat_attach_files_button": {
+    "message": "Joindre"
+  },
+  "chat_attach_files_tooltip": {
+    "message": "Joindre des fichiers texte : txt, md, json, csv, log, xml, yaml (max 1 Mo chacun)"
+  },
+  "chat_history_title": {
+    "message": "Historique du chat"
+  },
+  "chat_history_empty": {
+    "message": "Aucun historique disponible"
+  },
+  "chat_history_bookmark": {
+    "message": "Session de signets"
+  },
+  "chat_history_delete": {
+    "message": "Supprimer la session"
+  },
+  "chat_bookmarks_header": {
+    "message": "  Démarrage rapide"
+  },
+  "chat_bookmarks_saveEdit": {
+    "message": "Enregistrer les changements"
+  },
+  "chat_bookmarks_cancelEdit": {
+    "message": "Annuler les modifications"
+  },
+  "chat_bookmarks_edit": {
+    "message": "Modifier le titre du signet"
+  },
+  "chat_bookmarks_delete": {
+    "message": "Effacer le signet"
+  },
+  "chat_replay_starting": {
+    "message": "Démarrage de la relecture de la tâche :\n\n\"$TASK$\"",
+    "placeholders": {
+      "task": {
+        "content": "$1",
+        "example": "Accédez à example.com"
+      }
+    }
+  },
+  "chat_replay_failed": {
+    "message": "Échec de la relecture : $ERROR_MESSAGE$",
+    "placeholders": {
+      "error_message": {
+        "content": "$1",
+        "example": "Timeout de connexion"
+      }
+    }
+  },
+  "chat_replay_invalidArgs": {
+    "message": "Arguments non valides. Veuillez utiliser le format : /replay <historySessionId>"
+  },
+  "chat_replay_disabled": {
+    "message": "La relecture est désactivée dans les paramètres généraux. Veuillez activer « Rejouer les tâches historiques » dans les paramètres de l'extension pour utiliser cette fonctionnalité."
+  },
+  "chat_replay_noHistory": {
+    "message": "Aucun historique d'actions trouvé pour la session « $SESSION_ID$... ». Cette session peut ne pas contenir d'actions rejouables.\n\nC'est une session de relecture elle-même (les sessions de relecture ne peuvent pas être rejouées), ou elle a été créée avant que la fonctionnalité de relecture ne soit disponible.",
+    "placeholders": {
+      "session_id": {
+        "content": "$1",
+        "example": "abc123def456789"
+      }
+    }
+  },
+  "chat_stt_processing": {
+    "message": "Traitement de la parole..."
+  },
+  "chat_stt_recording_stop": {
+    "message": "Arrêter l'enregistrement"
+  },
+  "chat_stt_input_start": {
+    "message": "Démarrer l'entrée vocale"
+  },
+  "chat_stt_processingFailed": {
+    "message": "Échec du traitement de l'enregistrement de la parole"
+  },
+  "chat_stt_model_notFound": {
+    "message": "Aucun modèle de synthèse vocale configuré ou pas un modèle Gemini. Veuillez configurer un modèle Gémeaux dans les paramètres."
+  },
+  "chat_stt_recognitionFailed": {
+    "message": "Échec de la reconnaissance vocale"
+  },
+  "chat_stt_microphone_permissionDenied": {
+    "message": "Accès au microphone refusé. Veuillez activer les autorisations de microphone dans les paramètres du navigateur."
+  },
+  "chat_stt_microphone_accessFailed": {
+    "message": "Impossible d'accéder au microphone"
+  },
+  "chat_stt_microphone_grantPermission": {
+    "message": "Veuillez accorder la permission du microphone."
+  },
+  "chat_stt_microphone_notFound": {
+    "message": "Aucun microphone trouvé."
+  },
+  "chat_imageCapture_button": {
+    "message": "Capture d'écran de la page de capture"
+  },
+  "chat_imageCapture_tooltip": {
+    "message": "Capturez une capture d'écran de la page actuelle à inclure dans votre message"
+  },
+  "chat_imageCapture_label": {
+    "message": "Saisie"
+  },
+  "chat_imageCapture_preview": {
+    "message": "Aperçu de la capture d'écran"
+  },
+  "chat_imageCapture_remove": {
+    "message": "Supprimer la capture d'écran"
+  },
+  "chat_imageCapture_attached": {
+    "message": "Capture d'écran jointe"
+  },
+  "chat_imageCapture_failed": {
+    "message": "Échec de la capture d'écran. Veuillez réessayer."
+  },
+  "chat_imageCapture_viewFull": {
+    "message": "Voir l'Image complète"
+  },
+  "chat_imageCapture_clickToExpand": {
+    "message": "Cliquez pour agrandir"
+  },
+  "chat_imageCapture_closeModal": {
+    "message": "Fermer l’image"
+  },
+  "chat_imageCapture_fullImage": {
+    "message": "Capture d'écran en taille réelle"
+  },
+  "chat_qaTools_button": {
+    "message": "Paramètres des outils"
+  },
+  "chat_qaTools_tooltip": {
+    "message": "$COUNT$ Le ou les outils d'assurance qualité sont actuellement exposés au modèle (intégré + MCP). Ouvrez ce menu ou ces paramètres pour basculer entre les outils MCP individuels et réduire l'utilisation des jetons.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "5"
+      }
+    }
+  },
+  "chat_qaTools_countLoading": {
+    "message": "…"
+  },
+  "chat_mcpTools_menu_title": {
+    "message": "Outils"
+  },
+  "chat_mcpTools_loading": {
+    "message": "Chargement des outils depuis les serveurs..."
+  },
+  "chat_mcpTools_loadError": {
+    "message": "Impossible de charger les outils MCP. Vérifiez vos serveurs ou réessayez."
+  },
+  "chat_mcpTools_empty": {
+    "message": "Aucun serveur MCP avec un point de terminaison n'est encore configuré."
+  },
+  "chat_mcpTools_manage_servers": {
+    "message": "Gérer les serveurs MCP..."
+  },
+  "chat_mcpTools_builtins_heading": {
+    "message": "Outils intégrés"
+  },
+  "chat_mcpTools_mcpServers_heading": {
+    "message": "Serveurs MCP distants"
+  },
+  "chat_mcpTools_builtin_needsSearxng": {
+    "message": "Configurez une URL de base SearXNG dans les paramètres généraux pour que cet outil soit exposé au modèle."
+  },
+  "chat_mcpTools_noMcpServers": {
+    "message": "Aucun serveur MCP avec un point de terminaison n'est configuré."
+  },
+  "chat_mcpTools_builtin_desc_thinking": {
+    "message": "Texte de raisonnement étendu que le modèle peut émettre avant de répondre."
+  },
+  "chat_mcpTools_builtin_desc_webSearch": {
+    "message": "Recherchez sur le Web via votre instance SearXNG."
+  },
+  "chat_mcpTools_builtin_desc_fetchUrl": {
+    "message": "Récupérez et lisez le contenu de la page via votre instance SearXNG."
+  },
+  "chat_pageContent_toggle": {
+    "message": "Basculer le contenu de la page"
+  },
+  "chat_pageContent_enabled": {
+    "message": "Contenu de la page inclus"
+  },
+  "chat_pageContent_disabled": {
+    "message": "Mode de chat générique"
+  },
+  "chat_pageContent_tooltip_enabled": {
+    "message": "Cliquez pour désactiver le contenu de la page - les réponses seront génériques LLM chat sans contexte de page"
+  },
+  "chat_pageContent_tooltip_disabled": {
+    "message": "Cliquez pour activer le contenu de la page - les réponses seront basées sur la page actuelle"
+  },
+  "permissions_microphone_title": {
+    "message": "Activer la saisie vocale"
+  },
+  "permissions_microphone_description": {
+    "message": "Nanobrowser a besoin d'un accès au microphone pour convertir votre discours en texte."
+  },
+  "permissions_microphone_grantButton": {
+    "message": "Autoriser le microphone"
+  },
+  "permissions_microphone_requesting": {
+    "message": "Demande d'autorisation de microphone..."
+  },
+  "permissions_microphone_grantedSuccess": {
+    "message": "Autorisation ✅ du microphone accordée ! Vous pouvez maintenant utiliser la saisie vocale."
+  },
+  "permissions_microphone_grantedButton": {
+    "message": "Permission accordée"
+  },
+  "permissions_microphone_denied": {
+    "message": "Permission denied."
+  },
+  "permissions_microphone_allowHelp": {
+    "message": "Veuillez cliquer sur « Autoriser » lorsque vous êtes invité à accéder au microphone."
+  },
+  "permissions_microphone_notFound": {
+    "message": "Aucun microphone trouvé. Veuillez vérifier vos appareils audio."
+  },
+  "permissions_microphone_alreadyGranted": {
+    "message": "Autorisation de ✅ microphone déjà accordée !"
+  },
+  "permissions_microphone_alreadyGrantedButton": {
+    "message": "Autorisation déjà accordée"
+  },
+  "options_nav_header": {
+    "message": "Réglages"
+  },
+  "options_tabs_general": {
+    "message": "Général"
+  },
+  "options_tabs_models": {
+    "message": "Modèles"
+  },
+  "options_tabs_personas": {
+    "message": "Personas "
+  },
+  "options_tabs_firewall": {
+    "message": "Pare-feu"
+  },
+  "options_tabs_mcp": {
+    "message": "Outils MCP"
+  },
+  "options_tabs_foundry": {
+    "message": "Fonderie Azure"
+  },
+  "options_foundry_header": {
+    "message": "Azure Foundry Agents"
+  },
+  "options_foundry_desc": {
+    "message": "Configurez les agents Azure Foundry pour le mode AQ. Utilise l'API du projet openai/v1 conversations + responses (identique à l'application Web de l'agent Foundry). Les agents apparaissent dans la liste des personnages avec un préfixe AzF : ; les outils sont désactivés."
+  },
+  "options_foundry_namePlaceholder": {
+    "message": "Afficher le nom"
+  },
+  "options_foundry_projectEndpointPlaceholder": {
+    "message": "Point de terminaison du projet (https ://…/api/projects/…)"
+  },
+  "options_foundry_agentNamePlaceholder": {
+    "message": "Nom de l'agent (par exemple, eng-agent-impact-analysis ou eng-agent-impact-analysis :1)"
+  },
+  "options_foundry_agentVersionPlaceholder": {
+    "message": "Version de l'agent (facultatif si vous utilisez le nom :version ci-dessus)"
+  },
+  "options_foundry_apiKeyPlaceholder": {
+    "message": "Clé de l’API"
+  },
+  "options_foundry_responsesEndpointPlaceholder": {
+    "message": "Remplacement du point de terminaison des réponses (facultatif)"
+  },
+  "options_foundry_openaiBaseUrlPlaceholder": {
+    "message": "URL de base OpenAI v1 (facultatif)"
+  },
+  "options_foundry_apiVersionPlaceholder": {
+    "message": "Param de requête de version API (par défaut : v1)"
+  },
+  "options_foundry_resolvedEndpoint": {
+    "message": "URL des réponses résolues"
+  },
+  "options_foundry_addHeading": {
+    "message": "Ajouter un agent de fonderie Azure"
+  },
+  "options_foundry_save": {
+    "message": "Sauvegarder"
+  },
+  "options_foundry_delete": {
+    "message": "Effacer"
+  },
+  "options_foundry_add": {
+    "message": "Ajouter un Thérapeute"
+  },
+  "options_foundry_memory_header": {
+    "message": "Gestion de la mémoire"
+  },
+  "options_foundry_memory_desc": {
+    "message": "Gérer les mémoires à long terme pour le magasin de mémoire et la portée de cet agent (API Foundry Memory Store). Enregistrez l'agent après avoir changé de magasin ou de portée."
+  },
+  "options_foundry_memory_storeLabel": {
+    "message": "Enregistrer en mémoire"
+  },
+  "options_foundry_memory_storePlaceholder": {
+    "message": "par exemple my_memory_store"
+  },
+  "options_foundry_memory_scopeLabel": {
+    "message": "Périmètre"
+  },
+  "options_foundry_memory_scopePlaceholder": {
+    "message": "par exemple user_123 ou nanobrowser"
+  },
+  "options_foundry_memory_listStores": {
+    "message": "Lister les magasins"
+  },
+  "options_foundry_memory_load": {
+    "message": "Charger les mémoires"
+  },
+  "options_foundry_memory_clearScope": {
+    "message": "Effacer le champ d'application"
+  },
+  "options_foundry_memory_searchPlaceholder": {
+    "message": "Requête de recherche facultative (sémantique)"
+  },
+  "options_foundry_memory_addLabel": {
+    "message": "Ajouter de la mémoire à partir du texte"
+  },
+  "options_foundry_memory_addPlaceholder": {
+    "message": "par exemple, je préfère le café torréfié foncé le matin"
+  },
+  "options_foundry_memory_add": {
+    "message": "<g id=\"1\">Ajouter de la mémoire</g>"
+  },
+  "options_foundry_memory_listHeader": {
+    "message": "Souvenirs"
+  },
+  "options_foundry_memory_edit": {
+    "message": "editer"
+  },
+  "options_foundry_memory_forget": {
+    "message": "Supprimer"
+  },
+  "options_foundry_memory_cancel": {
+    "message": "Annuler"
+  },
+  "options_foundry_memory_saveEdit": {
+    "message": "Sauvegarder"
+  },
+  "options_foundry_memory_storesLoaded": {
+    "message": "Mémoire (s) $COUNT$ trouvée (s).",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "options_foundry_memory_loaded": {
+    "message": "Élément(s) de mémoire $COUNT$ chargé (s).",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "5"
+      }
+    }
+  },
+  "options_foundry_memory_added": {
+    "message": "Mise à jour de la mémoire soumise. Le traitement peut prendre jusqu'à une minute."
+  },
+  "options_foundry_memory_updated": {
+    "message": "Mise à jour de la mémoire soumise."
+  },
+  "options_foundry_memory_forgetSubmitted": {
+    "message": "Demande de suppression envoyée. Rechargez les mémoires pour confirmer."
+  },
+  "options_foundry_memory_scopeCleared": {
+    "message": "Tous les souvenirs de cette portée ont été supprimés."
+  },
+  "options_foundry_memory_forgetConfirm": {
+    "message": "Demander à Foundry de supprimer ce souvenir ? Cela utilise une demande de mise à jour et peut prendre jusqu'à une minute."
+  },
+  "options_foundry_memory_clearScopeConfirm": {
+    "message": "Supprimer TOUS LES souvenirs pour cette portée ? Cela ne peut pas être annulé."
+  },
+  "options_foundry_memory_errors_bgUnreachable": {
+    "message": "L'agent de service d'arrière-plan n'est pas joignable. Rechargez l'extension."
+  },
+  "options_foundry_memory_errors_requestFailed": {
+    "message": "Échec de la demande de mémoire."
+  },
+  "options_foundry_memory_errors_notConfigured": {
+    "message": "Définissez d'abord le nom et la portée du magasin de mémoire, puis enregistrez l'agent."
+  },
+  "options_foundry_memory_errors_contentRequired": {
+    "message": "Entrez le texte de la mémoire à ajouter."
+  },
+  "options_foundry_memory_errors_agentNotReady": {
+    "message": "Save project endpoint and API key before listing memory stores."
+  },
+  "options_foundry_memory_storeSelectPlaceholder": {
+    "message": "Select a memory store…"
+  },
+  "options_foundry_memory_configureHint": {
+    "message": "Choose a memory store and enter a scope to enable load and add actions."
+  },
+  "chat_qaTools_disabledFoundry": {
+    "message": "Les outils ne sont pas disponibles pour les agents Azure Foundry"
+  },
+  "options_tabs_help": {
+    "message": "aide"
+  },
+  "options_tabs_about": {
+    "message": "À propos"
+  },
+  "options_about_header": {
+    "message": "À propos"
+  },
+  "options_about_buildSha": {
+    "message": "Build SHA-1"
+  },
+  "options_mcp_header": {
+    "message": "Outils MCP"
+  },
+  "options_mcp_desc": {
+    "message": "Configurez les serveurs MCP distants et exposez leurs outils au mode d'assurance qualité. HTTP Streamable utilise une URL DE PUBLICATION. Legacy SSE utilise une URL GET SSE plus une URL JSON-RPC POST distincte (ou l'événement de point de terminaison du flux)."
+  },
+  "options_mcp_perTool_hint": {
+    "message": "Les outils MCP que le modèle peut appeler sont configurés par outil dans le chat QA — ouvrez le bouton d'outil à côté de la boîte de message."
+  },
+  "options_mcp_enable": {
+    "message": "Activer les outils MCP en mode AQ"
+  },
+  "options_mcp_enable_desc": {
+    "message": "Lorsqu'elle est activée, l'assurance qualité peut appeler les outils découverts à partir de vos serveurs MCP actifs."
+  },
+  "options_mcp_qaBuiltin_header": {
+    "message": "Outils intégrés"
+  },
+  "options_mcp_qaBuiltin_desc": {
+    "message": "Choisissez les outils d'assurance qualité de première partie que le modèle peut utiliser aux côtés des serveurs MCP. Penser est un raisonnement uniquement ; les outils Web nécessitent un mode QA « recherche Web » dans le chat (bascule de la barre d'outils/préférence par défaut) et une URL de base SearXNG configurée dans les paramètres généraux."
+  },
+  "options_mcp_qaBuiltin_thinking": {
+    "message": "Penser (« penser »)"
+  },
+  "options_mcp_qaBuiltin_thinking_desc": {
+    "message": "Laissez le modèle appeler l'outil de raisonnement interne avant de répondre."
+  },
+  "options_mcp_qaBuiltin_webSearch": {
+    "message": "Recherche Web (`web_search`)"
+  },
+  "options_mcp_qaBuiltin_webSearch_desc": {
+    "message": "Lorsque l'assistance Web est activée pour une réponse, exposez la recherche Web SearXNG."
+  },
+  "options_mcp_qaBuiltin_fetchUrl": {
+    "message": "Extraire l'URL (`fetch_url`)"
+  },
+  "options_mcp_qaBuiltin_fetchUrl_desc": {
+    "message": "Lorsque l'assistance Web est activée pour une réponse, exposez la récupération de page lisible via Jina Reader pour les URL http(s)."
+  },
+  "options_mcp_addServer": {
+    "message": "Ajouter un serveur"
+  },
+  "options_mcp_editServer": {
+    "message": "Modification de serveur"
+  },
+  "options_mcp_name_placeholder": {
+    "message": "Nom du serveur"
+  },
+  "options_mcp_transport_streamableHttp": {
+    "message": "HTTP Streamable"
+  },
+  "options_mcp_transport_sse": {
+    "message": "SSE"
+  },
+  "options_mcp_endpoint_placeholder_streamable": {
+    "message": "POST endpoint (par exemple https ://host/mcp)"
+  },
+  "options_mcp_endpoint_placeholder_sse": {
+    "message": "URL du flux SSE — GET only (par exemple https ://host/sse)"
+  },
+  "options_mcp_sseMessageEndpoint_placeholder": {
+    "message": "URL de PUBLICATION JSON-RPC si elle n'est pas envoyée en flux (par exemple https ://host/messages)"
+  },
+  "options_mcp_sse_hint": {
+    "message": "Ne PUBLIEZ PAS SUR l'URL SSE — cela provoque 405. L'extension ouvre le flux ici et envoie le RPC à l'URL du message (ou à l'URL de l'événement de point de terminaison)."
+  },
+  "options_mcp_auth_none": {
+    "message": ": Pas d’authentification,"
+  },
+  "options_mcp_auth_bearer": {
+    "message": "Jeton au porteur"
+  },
+  "options_mcp_authToken_placeholder": {
+    "message": "Jeton au porteur"
+  },
+  "options_mcp_access_all": {
+    "message": "Autoriser tous les outils découverts"
+  },
+  "options_mcp_access_allowlist": {
+    "message": "Autoriser uniquement les outils répertoriés"
+  },
+  "options_mcp_allowedTools_placeholder": {
+    "message": "Noms d'outils autorisés (séparés par des virgules)"
+  },
+  "options_mcp_addButton": {
+    "message": "Enregistrer sur le serveur"
+  },
+  "options_mcp_saveChanges": {
+    "message": "Serveur de mise à jour debian"
+  },
+  "options_mcp_cancelEdit": {
+    "message": "Annuler la modification"
+  },
+  "options_mcp_servers": {
+    "message": "Serveurs configurés"
+  },
+  "options_mcp_empty": {
+    "message": "Aucun serveur MCP n'est encore configuré."
+  },
+  "options_mcp_serverEnabled": {
+    "message": "Actif"
+  },
+  "options_mcp_edit": {
+    "message": "editer"
+  },
+  "options_mcp_discoverTools": {
+    "message": "Découvrir les outils"
+  },
+  "options_mcp_discovering": {
+    "message": "Découvrir... "
+  },
+  "options_mcp_remove": {
+    "message": "Supprimer"
+  },
+  "options_mcp_allowedTools_label": {
+    "message": "Outils autorisés"
+  },
+  "options_mcp_errors_nameRequired": {
+    "message": "Le nom du serveur SMTP est obligatoire"
+  },
+  "options_mcp_errors_endpointRequired": {
+    "message": "Le point de terminaison du serveur est requis."
+  },
+  "options_mcp_errors_endpointProtocol": {
+    "message": "Le point de terminaison du serveur doit utiliser http ou https."
+  },
+  "options_mcp_errors_endpointInvalid": {
+    "message": "Le point de terminaison du serveur n'est pas une URL valide."
+  },
+  "options_mcp_errors_sseMessageProtocol": {
+    "message": "Le point de terminaison du message SSE doit utiliser http ou https."
+  },
+  "options_mcp_errors_sseMessageInvalid": {
+    "message": "Le point de terminaison du message SSE n'est pas une URL valide."
+  },
+  "options_mcp_errors_tokenRequired": {
+    "message": "Le jeton du porteur est requis lorsque l'authentification du porteur est sélectionnée."
+  },
+  "options_mcp_errors_allowlistRequired": {
+    "message": "Ajoutez au moins un outil autorisé lorsque le mode allowlist est sélectionné."
+  },
+  "options_mcp_errors_discoveryFailed": {
+    "message": "La découverte de l'outil a échoué."
+  },
+  "options_mcp_errors_discoveryEmpty": {
+    "message": "Aucun outil n'a été découvert à partir de ce serveur."
+  },
+  "options_mcp_discover_success": {
+    "message": "Découverte de $COUNT$ outil(s) sur ce serveur.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "5"
+      }
+    }
+  },
+  "options_mcp_discover_allowlistHint": {
+    "message": "Mode Allowlist : des noms ont été ajoutés à votre champ allowed-tools (enregistrez le serveur si vous modifiez)."
+  },
+  "options_mcp_discover_toolTogglesHint": {
+    "message": "Activez ou désactivez les outils individuels à partir du chat d'assurance qualité à l'aide du menu Outils MCP à côté du compositeur."
+  },
+  "options_mcp_errors_bgUnreachable": {
+    "message": "Impossible d'atteindre l'arrière-plan de l'extension. Ouvrez les extensions chrome ://, rechargez cette extension, puis réessayez."
+  },
+  "options_general_header": {
+    "message": "Général"
+  },
+  "options_general_maxSteps": {
+    "message": "Nombre maximal d'étapes par tâche"
+  },
+  "options_general_maxSteps_desc": {
+    "message": "Limite d'étapes par tâche"
+  },
+  "options_general_maxActions": {
+    "message": "Nombre maximum d'actions par étape"
+  },
+  "options_general_maxActions_desc": {
+    "message": "Limite d'action par étape"
+  },
+  "options_general_maxFailures": {
+    "message": "Tolérance aux défaillances"
+  },
+  "options_general_maxFailures_desc": {
+    "message": "Combien de pannes consécutives avant l'arrêt"
+  },
+  "options_general_enableVision": {
+    "message": "Activer I-Vision"
+  },
+  "options_general_enableVision_desc": {
+    "message": "Utiliser la capacité de vision des LLM (consomme plus de jetons pour de meilleurs résultats)"
+  },
+  "options_general_displayHighlights": {
+    "message": "Afficher les points forts"
+  },
+  "options_general_displayHighlights_desc": {
+    "message": "Afficher les surlignages visuels sur les éléments interactifs (par exemple, boutons, liens, etc.)"
+  },
+  "options_general_planningInterval": {
+    "message": "Fréquence de replanification"
+  },
+  "options_general_planningInterval_desc": {
+    "message": "Reconsidérer et mettre à jour le plan toutes les [Number] étapes"
+  },
+  "options_general_minWaitPageLoad": {
+    "message": "Temps de chargement de la page"
+  },
+  "options_general_minWaitPageLoad_desc": {
+    "message": "Temps d'attente minimum après le chargement des pages (250-5000 ms)"
+  },
+  "options_general_replayHistoricalTasks": {
+    "message": "Rejouer les tâches historiques ( expérimentales )"
+  },
+  "options_general_replayHistoricalTasks_desc": {
+    "message": "Activer le stockage et la relecture de l'historique des étapes de l'agent (expérimental, peut avoir des problèmes)"
+  },
+  "options_general_includePageContent": {
+    "message": "Inclure le contenu de la page en mode AQ"
+  },
+  "options_general_includePageContent_desc": {
+    "message": "Lorsque cette option est activée, le contenu de la page est envoyé avec des requêtes d'assurance qualité pour obtenir des réponses tenant compte du contexte. Désactiver pour le chat LLM générique."
+  },
+  "options_general_enableWebSearch": {
+    "message": "Activer la recherche Web AQ"
+  },
+  "options_general_enableWebSearch_desc": {
+    "message": "Autorisez le mode AQ à récupérer de nouveaux résultats de recherche à partir de votre instance SearXNG pour les questions Web/actuelles."
+  },
+  "options_general_enableWebSearch_a11y": {
+    "message": "Activer la recherche Web AQ"
+  },
+  "options_general_searxngBaseUrl": {
+    "message": "URL de base SearXNG"
+  },
+  "options_general_searxngBaseUrl_desc": {
+    "message": "Exemple : https://search.yourdomain.com"
+  },
+  "options_general_searxngBaseUrl_placeholder": {
+    "message": "https://search.yourdomain.com"
+  },
+  "options_general_searxngBaseUrl_a11y": {
+    "message": "URL de base SearXNG"
+  },
+  "options_general_searxngApiKey": {
+    "message": "Clé API SearXNG"
+  },
+  "options_general_searxngApiKey_desc": {
+    "message": "Facultatif. Laissez vide si votre instance autorise les requêtes de recherche JSON publiques."
+  },
+  "options_general_searxngApiKey_a11y": {
+    "message": "Clé API SearXNG"
+  },
+  "options_general_optionalPlaceholder": {
+    "message": "En option"
+  },
+  "options_general_jinaReaderApiKey": {
+    "message": "Clé API Jina Reader"
+  },
+  "options_general_jinaReaderApiKey_desc": {
+    "message": "Facultatif. Utilisé par l'outil QA read_url pour ouvrir des liens de résultats avec des limites de taux Jina Reader plus élevées."
+  },
+  "options_general_jinaReaderApiKey_a11y": {
+    "message": "Clé API Jina Reader"
+  },
+  "options_general_searxngMaxResults": {
+    "message": "Nombre de résultat"
+  },
+  "options_general_searxngMaxResults_desc": {
+    "message": "Combien de résultats Web le mode QA doit inclure à partir de SearXNG par recherche."
+  },
+  "options_general_searxngMaxResults_a11y": {
+    "message": "Nombre de résultat"
+  },
+  "options_general_searxngIntegrationTest": {
+    "message": "Test d'intégration"
+  },
+  "options_general_searxngIntegrationTest_desc": {
+    "message": "Envoie une recherche de test réel via l'outil de travail en arrière-plan de l'extension et vérifie que les résultats utilisables reviennent."
+  },
+  "options_general_searxngTestButton": {
+    "message": "Test SearXNG"
+  },
+  "options_general_searxngTestTesting": {
+    "message": "Test en cours…"
+  },
+  "options_general_searxngTest_noUrl": {
+    "message": "Saisissez d'abord une URL de base SearXNG."
+  },
+  "options_general_searxngTest_failed": {
+    "message": "Le test SearXNG a échoué."
+  },
+  "options_general_searxngTest_ok": {
+    "message": "Test d'intégration SearXNG réussi en utilisant « $QUERY$ ». Résultat(s) $COUNT$ analysé (s).$FIRST$",
+    "placeholders": {
+      "query": {
+        "content": "$1",
+        "example": "essai"
+      },
+      "count": {
+        "content": "$2",
+        "example": "3"
+      },
+      "first": {
+        "content": "$3",
+        "example": "Premier résultat : Exemple (https://example.com)"
+      }
+    }
+  },
+  "options_general_fontSize": {
+    "message": "Taille de la police du chat"
+  },
+  "options_general_fontSize_desc": {
+    "message": "Ajustez la taille de la police des messages de discussion (en pixels). Les modifications s'appliquent immédiatement au chat visible."
+  },
+  "options_general_maxInputTokens": {
+    "message": "Jetons d'entrée max."
+  },
+  "options_general_maxInputTokens_desc": {
+    "message": "Nombre maximum de jetons autorisés dans le contexte de l'historique des discussions. En cas de dépassement, les messages plus anciens sont rognés. Par défaut : 1 000 000 de jetons."
+  },
+  "options_general_qaMaxNonThinkingToolCalls": {
+    "message": "AQ : nombre maximal d'appels d'outils sans réflexion par réponse"
+  },
+  "options_general_qaMaxNonThinkingToolCalls_desc": {
+    "message": "Cap for web_search, fetch_url, MCP, and similar tools in QA mode per assistant reply (the thinking tool has its own limit). Plage 1–50. Par défaut : 3."
+  },
+  "options_general_qaMaxThinkingCalls": {
+    "message": "AQ : max d'appels d'outils de réflexion par réponse"
+  },
+  "options_general_qaMaxThinkingCalls_desc": {
+    "message": "Combien de fois le modèle peut appeler l'outil de réflexion interne par réponse. Plage de 0 à 30. Par défaut : 5."
+  },
+  "options_general_qaMaxToolRounds": {
+    "message": "AQ : nombre maximal de tours d'outils par réponse"
+  },
+  "options_general_qaMaxToolRounds_desc": {
+    "message": "Limite supérieure sur les invocations de modèle aller-retour avec des outils pour une réponse. Plage 1–64. Par défaut : 16."
+  },
+  "options_qa_appearance_header": {
+    "message": "Apparence du mode AQ"
+  },
+  "options_qa_appearance_description": {
+    "message": "Personnalisez les polices et les couleurs pour le panneau latéral lorsque le mode AQ est sélectionné. Laissez une couleur vide pour utiliser le thème clair/foncé par défaut. Les modifications s'appliquent après votre retour au panneau latéral."
+  },
+  "options_qa_fontFamily": {
+    "message": "Famille de polices"
+  },
+  "options_qa_fontFamily_desc": {
+    "message": "Pile de polices CSS pour le panneau de discussion QA (par exemple, system-ui ou \"Inter\", sans-serif). Laissez vide pour la valeur par défaut."
+  },
+  "options_qa_chromeFontSize": {
+    "message": "Taille de police de l'interface utilisateur"
+  },
+  "options_qa_chromeFontSize_desc": {
+    "message": "Taille de la police en pixels pour les signets, les étiquettes et les contrôles de la barre d'outils (10–22). 0 utilise 13px."
+  },
+  "options_qa_inputFontSize": {
+    "message": "Taille de police d’entrée"
+  },
+  "options_qa_inputFontSize_desc": {
+    "message": "Taille de la police en pixels pour la boîte de message (10–28). 0 correspond à la taille du message de discussion."
+  },
+  "options_qa_reset": {
+    "message": "Réinitialiser l'apparence de l'assurance qualité"
+  },
+  "options_qa_reset_desc": {
+    "message": "Effacer les polices et les couleurs personnalisées pour le mode AQ."
+  },
+  "options_qa_color_panel": {
+    "message": "Arrière-plan du panneau"
+  },
+  "options_qa_color_panel_desc": {
+    "message": "Arrière-plan du panneau latéral extérieur (remplace le papier peint par défaut ou le remplissage foncé)."
+  },
+  "options_qa_color_chat": {
+    "message": "Arrière-plan"
+  },
+  "options_qa_color_chat_desc": {
+    "message": "Arrière-plan de la liste de messages."
+  },
+  "options_qa_color_message": {
+    "message": "Texte du message"
+  },
+  "options_qa_color_message_desc": {
+    "message": "Couleur du texte principal pour le contenu du chat."
+  },
+  "options_qa_color_heading": {
+    "message": "En-tête Intervenant"
+  },
+  "options_qa_color_heading_desc": {
+    "message": "Couleur pour les noms d'acteurs et les en-têtes de section dans le chat."
+  },
+  "options_qa_color_muted": {
+    "message": "Texte muet"
+  },
+  "options_qa_color_muted_desc": {
+    "message": "Horodatages et indices secondaires."
+  },
+  "options_qa_color_link": {
+    "message": "Liens"
+  },
+  "options_qa_color_link_desc": {
+    "message": "Couleur pour les liens à l'intérieur des messages de l'assistant."
+  },
+  "options_qa_color_separator": {
+    "message": "Séparateurs & bordures"
+  },
+  "options_qa_color_separator_desc": {
+    "message": "Séparateurs de messages et bordures de cartes de signets."
+  },
+  "options_qa_color_inputSurface": {
+    "message": "Arrière-plan de la zone de saisie"
+  },
+  "options_qa_color_inputSurface_desc": {
+    "message": "Arrière-plan pour la boîte de composition et la bande de fixation."
+  },
+  "options_qa_color_inputBorder": {
+    "message": "Plan d'entrée"
+  },
+  "options_qa_color_inputBorder_desc": {
+    "message": "Bordure autour de la boîte de composition."
+  },
+  "options_qa_color_inputText": {
+    "message": "Taper du texte"
+  },
+  "options_qa_color_inputText_desc": {
+    "message": "Couleur du texte lors de la saisie d'un message."
+  },
+  "options_qa_color_accent": {
+    "message": "Accent"
+  },
+  "options_qa_color_accent_desc": {
+    "message": "Points forts tels que le curseur de streaming et les indicateurs d'attente."
+  },
+  "options_qa_colors_section": {
+    "message": "Couleurs"
+  },
+  "options_qa_color_clear": {
+    "message": "Vide"
+  },
+  "options_prompts_header": {
+    "message": "Invites de démarrage rapide"
+  },
+  "options_prompts_description": {
+    "message": "Gérez les invites prédéfinies qui apparaissent dans la section Démarrage rapide sous le chat. Ces invites vous aident à démarrer rapidement les tâches courantes."
+  },
+  "options_prompts_add": {
+    "message": "Ajouter une invite"
+  },
+  "options_prompts_title": {
+    "message": "Titre"
+  },
+  "options_prompts_titlePlaceholder": {
+    "message": "Entrez le titre de l'invite"
+  },
+  "options_prompts_content": {
+    "message": "Contenu"
+  },
+  "options_prompts_contentPlaceholder": {
+    "message": "Entrez le contenu de l'invite"
+  },
+  "options_prompts_save": {
+    "message": "Sauvegarder"
+  },
+  "options_prompts_cancel": {
+    "message": "Annuler"
+  },
+  "options_prompts_edit": {
+    "message": "Modifier l'invite"
+  },
+  "options_prompts_delete": {
+    "message": "Supprimer l'invite"
+  },
+  "options_prompts_confirmDelete": {
+    "message": "Confirmez-vous la suppression ?"
+  },
+  "options_prompts_empty": {
+    "message": "Aucune invite pour le moment. Cliquez sur « Ajouter une invite » pour créer votre première invite de démarrage rapide."
+  },
+  "options_personas_header": {
+    "message": "Personas "
+  },
+  "options_personas_desc": {
+    "message": "Configurez les personas d'assurance qualité. Chaque persona définit un nom et une invite système."
+  },
+  "options_personas_default": {
+    "message": "Personnage par défaut"
+  },
+  "options_personas_label": {
+    "message": "Persona"
+  },
+  "options_personas_activeBadge": {
+    "message": "Actif"
+  },
+  "options_personas_setActive": {
+    "message": "Définir actif"
+  },
+  "options_personas_save": {
+    "message": "Sauvegarder"
+  },
+  "options_personas_delete": {
+    "message": "Effacer"
+  },
+  "options_personas_namePlaceholder": {
+    "message": "Nom de la personne"
+  },
+  "options_personas_systemPromptPlaceholder": {
+    "message": "invite système"
+  },
+  "options_personas_addHeading": {
+    "message": "Ajouter un personnage"
+  },
+  "options_personas_add": {
+    "message": "Ajouter un personnage"
+  },
+  "options_models_providers_header": {
+    "message": "Fournisseurs LLM"
+  },
+  "options_models_providers_notConfigured": {
+    "message": "Aucun fournisseur configuré pour le moment. Ajoutez un fournisseur pour commencer."
+  },
+  "options_models_providers_btnCancel": {
+    "message": "Annuler"
+  },
+  "options_models_providers_btnSave": {
+    "message": "Sauvegarder"
+  },
+  "options_models_providers_btnDelete": {
+    "message": "Effacer"
+  },
+  "options_models_providers_setupInstructions": {
+    "message": "Entrez votre clé API et cliquez sur Enregistrer pour la configurer."
+  },
+  "options_models_providers_custom_name": {
+    "message": "Nom"
+  },
+  "options_models_providers_custom_name_desc": {
+    "message": "Nom du fournisseur (les espaces ne sont pas autorisés lors de l'enregistrement)"
+  },
+  "options_models_providers_custom_name_placeholder": {
+    "message": "Nom du fournisseur"
+  },
+  "options_models_providers_apiKey": {
+    "message": "Clé API"
+  },
+  "options_models_providers_apiKey_placeholder_optional": {
+    "message": "Clé API (facultative)"
+  },
+  "options_models_providers_apiKey_placeholder_required": {
+    "message": "Clé API (obligatoire)"
+  },
+  "options_models_providers_apiKey_placeholder_ollama": {
+    "message": "Clé API (laisser vide pour Ollama)"
+  },
+  "options_models_providers_apiKey_hide": {
+    "message": "Masquer la clé API"
+  },
+  "options_models_providers_apiKey_show": {
+    "message": "Afficher la clé API"
+  },
+  "options_models_selection_header": {
+    "message": "Sélection du modèle"
+  },
+  "options_models_speechToText_header": {
+    "message": "Modèle Speech-to-Text"
+  },
+  "options_models_agents_navigator": {
+    "message": "Navigue sur les sites Web et effectue des actions"
+  },
+  "options_models_agents_planner": {
+    "message": "Élabore et affine des stratégies pour accomplir les tâches"
+  },
+  "options_models_agents_qa": {
+    "message": "Mode AQ - Réponse directe aux questions en fonction du contenu de la page"
+  },
+  "options_models_labels_model": {
+    "message": "Modèle"
+  },
+  "options_models_labels_temperature": {
+    "message": "Température"
+  },
+  "options_models_labels_topP": {
+    "message": "Haut P"
+  },
+  "options_models_labels_reasoning": {
+    "message": "Raisonnement"
+  },
+  "options_models_stt_desc": {
+    "message": "Configurez le modèle Gemini utilisé pour convertir la parole en texte lors de l'utilisation de la fonction microphone."
+  },
+  "options_models_chooseModel": {
+    "message": "Choisissez votre modèle"
+  },
+  "options_models_addNewProvider": {
+    "message": "Nouveau fournisseur"
+  },
+  "options_models_providers_openaiCompatible": {
+    "message": "Fournisseur d'API compatible OpenAI"
+  },
+  "options_models_providers_baseUrl": {
+    "message": "URL de base"
+  },
+  "options_models_providers_endpoint": {
+    "message": "Critère d'évaluation"
+  },
+  "options_models_providers_deployment": {
+    "message": "Déploiement"
+  },
+  "options_models_providers_apiVersion": {
+    "message": "Version API"
+  },
+  "options_models_providers_models": {
+    "message": "Modèles"
+  },
+  "options_models_providers_placeholders_baseUrl_custom": {
+    "message": "Point de terminaison API compatible OpenAI requis"
+  },
+  "options_models_providers_placeholders_baseUrl_azure": {
+    "message": "https://YOUR_RESOURCE_NAME.openai.azure.com/"
+  },
+  "options_models_providers_placeholders_baseUrl_openrouter": {
+    "message": "URL de base OpenRouter (facultatif, par défaut https://openrouter.ai/api/v1)"
+  },
+  "options_models_providers_placeholders_baseUrl_llama": {
+    "message": "URL de base de l'API Llama (par défaut https://api.llama.com/v1)"
+  },
+  "options_models_providers_placeholders_baseUrl_ollama": {
+    "message": "URL de base Ollama"
+  },
+  "options_models_providers_placeholders_azureDeployment": {
+    "message": "Entrez le nom du modèle Azure (par exemple gpt-4o, gpt-4o-mini)"
+  },
+  "options_models_providers_placeholders_azureApiVersion": {
+    "message": "par exemple, 2025-04-01-preview"
+  },
+  "options_models_providers_deployment_desc": {
+    "message": "Tapez le nom du modèle et appuyez sur Entrée ou Espace pour définir. Le nom du déploiement doit correspondre au nom du modèle OpenAI (par exemple, gpt-4o) pour une meilleure compatibilité."
+  },
+  "options_models_providers_models_instructions": {
+    "message": "Tapez et appuyez sur Entrée ou Espace pour ajouter."
+  },
+  "options_models_providers_models_openrouter_empty": {
+    "message": "Aucun modèle sélectionné. Ajoutez des noms de modèles manuellement si nécessaire."
+  },
+  "options_models_providers_ollama_reminder": {
+    "message": "la variable d'environnement DOIT être définie pour le serveur Ollama."
+  },
+  "options_models_providers_ollama_learnMore": {
+    "message": "En savoir plus"
+  },
+  "options_models_providers_errors_spacesNotAllowed": {
+    "message": "Les espaces ne sont pas autorisés dans les noms de fournisseurs. Veuillez utiliser des traits de soulignement ou d'autres caractères à la place."
+  },
+  "options_models_providers_errors_baseUrlRequired": {
+    "message": "L'URL de base est requise pour $PROVIDER$. Veuillez le saisir.",
+    "placeholders": {
+      "provider": {
+        "content": "$1",
+        "example": "OpenAI personnalisé"
+      }
+    }
+  },
+  "options_firewall_header": {
+    "message": "Pare-feu"
+  },
+  "options_firewall_enableToggle": {
+    "message": "Activez le Firewall."
+  },
+  "options_firewall_toggleFirewall_a11y": {
+    "message": "Basculer le pare-feu"
+  },
+  "options_firewall_allowList_header": {
+    "message": "Autoriser la liste"
+  },
+  "options_firewall_allowList_empty": {
+    "message": "Aucun domaine dans la liste d'autorisation. La liste d'autorisation vide signifie que tous les domaines non refusés sont autorisés."
+  },
+  "options_firewall_denyList_header": {
+    "message": "Refuser la liste"
+  },
+  "options_firewall_denyList_empty": {
+    "message": "Aucun domaine dans la liste de refus"
+  },
+  "options_firewall_placeholders_domainUrl": {
+    "message": "Entrez le domaine ou l'URL (par exemple, example.com, localhost, 127.0.0.1)"
+  },
+  "options_firewall_btnAdd": {
+    "message": "Ajouter"
+  },
+  "options_firewall_btnRemove": {
+    "message": "Supprimer"
+  },
+  "options_firewall_howItWorks_header": {
+    "message": "Fonctionnement du pare-feu"
+  },
+  "options_firewall_howItWorks": {
+    "message": "Le pare-feu contient une liste de refus et une liste d'autorisation.\nSi les deux listes sont vides, toutes les URL sont autorisées\nLa liste de refus est prioritaire - si une URL correspond à une entrée de liste de refus, elle est bloquée\nLorsque la liste d'autorisation est vide, toutes les URL non refusées sont autorisées\nLorsque la liste d'autorisation n'est pas vide, seules les URL correspondantes sont autorisées\nLes caractères génériques NE SONT PAS encore pris en charge\nLa liste d'autorisation est préférée à la liste de refus"
+  },
+  "bg_errors_noTabId": {
+    "message": "Aucun ID d'onglet fourni"
+  },
+  "bg_errors_noTaskId": {
+    "message": "Aucun ID de tâche fourni"
+  },
+  "bg_errors_noRunningTask": {
+    "message": "Tâche en cours"
+  },
+  "bg_cmd_newTask_noTask": {
+    "message": "Aucune tâche fournie"
+  },
+  "bg_cmd_followUpTask_noTask": {
+    "message": "Aucune tâche de suivi fournie"
+  },
+  "bg_cmd_followUpTask_cleaned": {
+    "message": "L'exécuteur a été nettoyé, impossible d'ajouter une tâche de suivi"
+  },
+  "bg_cmd_resumeTask_noTask": {
+    "message": "Aucune tâche à reprendre"
+  },
+  "bg_cmd_state_printed": {
+    "message": "État imprimé sur la console"
+  },
+  "bg_cmd_state_failed": {
+    "message": "Impossible d'obtenir l'état"
+  },
+  "bg_cmd_nohighlight_ok": {
+    "message": "mettre en surbrillance supprimé"
+  },
+  "bg_cmd_stt_noAudioData": {
+    "message": "Aucune donnée audio fournie"
+  },
+  "bg_cmd_stt_failed": {
+    "message": "Échec de la reconnaissance vocale"
+  },
+  "bg_cmd_replay_noHistory": {
+    "message": "Aucun ID de session d'historique fourni"
+  },
+  "bg_cmd_replay_failed": {
+    "message": "La relecture a échoué"
+  },
+  "bg_setup_noApiKeys": {
+    "message": "Veuillez d'abord configurer les clés API dans les paramètres"
+  },
+  "bg_setup_noProvider": {
+    "message": "Fournisseur $PROVIDER$ introuvable dans les paramètres",
+    "placeholders": {
+      "provider": {
+        "content": "$1",
+        "example": "openai"
+      }
+    }
+  },
+  "bg_setup_noNavigatorModel": {
+    "message": "Veuillez d'abord choisir un modèle pour le navigateur dans les paramètres"
+  },
+  "exec_errors_maxStepsReached": {
+    "message": "Nombre maximal de pas atteints"
+  },
+  "exec_errors_maxFailuresReached": {
+    "message": "Défaillances maximales atteintes"
+  },
+  "exec_task_cancel": {
+    "message": "Tâche annulée"
+  },
+  "exec_task_pause": {
+    "message": "Tâche en pause"
+  },
+  "exec_task_fail": {
+    "message": "La tâche a échoué : \n\n$ERROR_MESSAGE$",
+    "placeholders": {
+      "error_message": {
+        "content": "$1",
+        "example": "Timeout de connexion"
+      }
+    }
+  },
+  "exec_replay_cancel": {
+    "message": "Relecture annulée"
+  },
+  "exec_replay_ok": {
+    "message": "Relecture terminée"
+  },
+  "exec_replay_fail": {
+    "message": "La relecture a échoué : \n\n$ERROR_MESSAGE$",
+    "placeholders": {
+      "error_message": {
+        "content": "$1",
+        "example": "Erreur de réseau"
+      }
+    }
+  },
+  "exec_replay_historyNotFound": {
+    "message": "Historique introuvable"
+  },
+  "exec_replay_historyEmpty": {
+    "message": "L'historique est vide"
+  },
+  "act_searchGoogle_start": {
+    "message": "Recherche de « $QUERY$ » dans Google",
+    "placeholders": {
+      "query": {
+        "content": "$1",
+        "example": "La météo d'aujourd'hui"
+      }
+    }
+  },
+  "act_searchGoogle_ok": {
+    "message": "Recherche de « $QUERY$ » dans Google",
+    "placeholders": {
+      "query": {
+        "content": "$1",
+        "example": "La météo d'aujourd'hui"
+      }
+    }
+  },
+  "act_goToUrl_start": {
+    "message": "Navigation vers $URL$",
+    "placeholders": {
+      "url": {
+        "content": "$1",
+        "example": "https://exemple.com"
+      }
+    }
+  },
+  "act_goToUrl_ok": {
+    "message": "Navigué vers $URL$",
+    "placeholders": {
+      "url": {
+        "content": "$1",
+        "example": "https://exemple.com"
+      }
+    }
+  },
+  "act_goBack_start": {
+    "message": "Naviguer en arrière"
+  },
+  "act_goBack_ok": {
+    "message": "Navigué en arrière"
+  },
+  "act_wait_start": {
+    "message": "Attente de $SECONDS$ secondes",
+    "placeholders": {
+      "seconds": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "act_wait_ok": {
+    "message": "$SECONDS$ secondes écoulées",
+    "placeholders": {
+      "seconds": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "act_click_start": {
+    "message": "Cliquez sur l'élément avec l'index $INDEX$",
+    "placeholders": {
+      "index": {
+        "content": "$1",
+        "example": "5"
+      }
+    }
+  },
+  "act_errors_elementNotExist": {
+    "message": "L'élément avec l'index $INDEX$ n'existe pas - réessayez ou utilisez des actions alternatives",
+    "placeholders": {
+      "index": {
+        "content": "$1",
+        "example": "5"
+      }
+    }
+  },
+  "act_errors_elementNoLongerAvailable": {
+    "message": "L'élément n'est plus disponible avec l'index $INDEX$ - très probablement la page a changé",
+    "placeholders": {
+      "index": {
+        "content": "$1",
+        "example": "5"
+      }
+    }
+  },
+  "act_click_fileUploader": {
+    "message": "Index $INDEX$ - a un élément qui ouvre la boîte de dialogue de téléchargement de fichier. Pour télécharger des fichiers, veuillez utiliser une fonction spécifique pour télécharger des fichiers",
+    "placeholders": {
+      "index": {
+        "content": "$1",
+        "example": "5"
+      }
+    }
+  },
+  "act_click_ok": {
+    "message": "Bouton cliqué avec l'index $INDEX$ : $TEXT$",
+    "placeholders": {
+      "index": {
+        "content": "$1",
+        "example": "5"
+      },
+      "text": {
+        "content": "$2",
+        "example": "Bouton d’envoi"
+      }
+    }
+  },
+  "act_click_newTabOpened": {
+    "message": "Nouvel onglet ouvert - basculer vers celui-ci"
+  },
+  "act_inputText_start": {
+    "message": "Saisir le texte dans l'index $INDEX$",
+    "placeholders": {
+      "index": {
+        "content": "$1",
+        "example": "5"
+      }
+    }
+  },
+  "act_inputText_ok": {
+    "message": "Saisissez $TEXT$ dans l'index $INDEX$",
+    "placeholders": {
+      "text": {
+        "content": "$1",
+        "example": "سلام دنیا"
+      },
+      "index": {
+        "content": "$2",
+        "example": "5"
+      }
+    }
+  },
+  "act_switchTab_start": {
+    "message": "Passer à l'onglet $TAB_ID$",
+    "placeholders": {
+      "tab_id": {
+        "content": "$1",
+        "example": "123456"
+      }
+    }
+  },
+  "act_switchTab_ok": {
+    "message": "Passé à l'onglet $TAB_ID$",
+    "placeholders": {
+      "tab_id": {
+        "content": "$1",
+        "example": "123456"
+      }
+    }
+  },
+  "act_openTab_start": {
+    "message": "Ouverture de $URL$ dans un nouvel onglet",
+    "placeholders": {
+      "url": {
+        "content": "$1",
+        "example": "https://exemple.com"
+      }
+    }
+  },
+  "act_openTab_ok": {
+    "message": "Ouvert $URL$ dans un nouvel onglet",
+    "placeholders": {
+      "url": {
+        "content": "$1",
+        "example": "https://exemple.com"
+      }
+    }
+  },
+  "act_closeTab_start": {
+    "message": "Onglet de fermeture $TAB_ID$",
+    "placeholders": {
+      "tab_id": {
+        "content": "$1",
+        "example": "123456"
+      }
+    }
+  },
+  "act_closeTab_ok": {
+    "message": "Onglet fermé $TAB_ID$",
+    "placeholders": {
+      "tab_id": {
+        "content": "$1",
+        "example": "123456"
+      }
+    }
+  },
+  "act_cache_start": {
+    "message": "Résultats de la mise en cache : $CONTENT$",
+    "placeholders": {
+      "content": {
+        "content": "$1",
+        "example": "Préférences enregistrées@info: tooltip {planet} {longitude}"
+      }
+    }
+  },
+  "act_cache_ok": {
+    "message": "Résultats mis en cache : $CONTENT$",
+    "placeholders": {
+      "content": {
+        "content": "$1",
+        "example": "Préférences enregistrées@info: tooltip {planet} {longitude}"
+      }
+    }
+  },
+  "act_scrollToPercent_start": {
+    "message": "Faites défiler jusqu'au pourcentage : $PERCENT$",
+    "placeholders": {
+      "percent": {
+        "content": "$1",
+        "example": "50"
+      }
+    }
+  },
+  "act_scrollToPercent_ok": {
+    "message": "Faites défiler jusqu'au pourcentage : $PERCENT$",
+    "placeholders": {
+      "percent": {
+        "content": "$1",
+        "example": "50"
+      }
+    }
+  },
+  "act_scrollToTop_start": {
+    "message": "Haut de la page"
+  },
+  "act_scrollToTop_ok": {
+    "message": "Faire défiler vers le haut"
+  },
+  "act_scrollToBottom_start": {
+    "message": "Scroll to bottom"
+  }
+}

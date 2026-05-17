@@ -974,7 +974,7 @@ export const ModelSettings = ({ isDarkMode = false }: ModelSettingsProps) => {
       case AgentNameEnum.Planner:
         return t('options_models_agents_planner');
       case AgentNameEnum.QA:
-        return 'QA Mode - Direct question answering based on page content';
+        return t('options_models_agents_qa');
       default:
         return '';
     }

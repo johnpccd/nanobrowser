@@ -25,6 +25,10 @@ export interface FoundryAgent {
   responsesEndpoint?: string;
   /** @deprecated Not used by the project responses API. */
   openaiBaseUrl?: string;
+  /** Memory store attached to the agent (memory_search_preview tool). */
+  memoryStoreName?: string;
+  /** Scope for memory APIs (user id or stable identifier). */
+  memoryScope?: string;
 }
 
 export interface FoundryAgentsConfig {
@@ -121,6 +125,8 @@ function normalizeAgent(agent: FoundryAgent): FoundryAgent | null {
     apiKey: agent.apiKey.trim(),
     responsesEndpoint: agent.responsesEndpoint?.trim() || undefined,
     openaiBaseUrl: agent.openaiBaseUrl?.trim().replace(/\/+$/, '') || undefined,
+    memoryStoreName: agent.memoryStoreName?.trim() || undefined,
+    memoryScope: agent.memoryScope?.trim() || undefined,
   };
 }
 

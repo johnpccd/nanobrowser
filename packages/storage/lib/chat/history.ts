@@ -204,7 +204,11 @@ export function createChatHistoryStorage(): ChatHistoryStorage {
       return newMessage;
     },
 
-    updateMessage: async (sessionId: string, messageId: string, patch: Partial<Message>): Promise<ChatMessage | null> => {
+    updateMessage: async (
+      sessionId: string,
+      messageId: string,
+      patch: Partial<Message>,
+    ): Promise<ChatMessage | null> => {
       const messagesStorage = getSessionMessagesStorage(sessionId);
       let updated: ChatMessage | null = null;
 
@@ -257,6 +261,32 @@ export function createChatHistoryStorage(): ChatHistoryStorage {
           return session;
         });
       });
+    },
+
+    truncateMessagesFrom: async (sessionId: string, messageId: string): Promise<ChatMessage[]> => {
+      const messagesStorage = getSessionMessagesStorage(sessionId);
+      const currentMessages = await messagesStorage.get();
+      const index = currentMessages.findIndex(msg => msg.id === messageId);
+      if (index === -1) {
+        return currentMessages;
+      }
+
+      const remaining = currentMessages.slice(0, index);
+      await messagesStorage.set(remaining);
+
+      await chatSessionsMetaStorage.set(prevSessions =>
+        prevSessions.map(session =>
+          session.id === sessionId
+            ? {
+                ...session,
+                updatedAt: getCurrentTimestamp(),
+                messageCount: remaining.length,
+              }
+            : session,
+        ),
+      );
+
+      return remaining;
     },
 
     storeAgentStepHistory: async (sessionId: string, task: string, history: string): Promise<void> => {

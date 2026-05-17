@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@extension/ui';
 import { DEFAULT_PERSONA_ID, type Persona, personasStore } from '@extension/storage';
+import { t } from '@extension/i18n';
 
 interface PersonasSettingsProps {
   isDarkMode?: boolean;
@@ -49,10 +50,10 @@ export const PersonasSettings = ({ isDarkMode = false }: PersonasSettingsProps) 
     <section className="space-y-6">
       <div
         className={`rounded-lg border ${isDarkMode ? 'border-slate-700 bg-slate-800' : 'border-blue-100 bg-white'} p-6 text-left shadow-sm`}>
-        <h2 className={`mb-2 text-xl font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>Personas</h2>
-        <p className={`mb-4 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-          Configure QA personas. Each persona defines a name and system prompt.
-        </p>
+        <h2 className={`mb-2 text-xl font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+          {t('options_personas_header')}
+        </h2>
+        <p className={`mb-4 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{t('options_personas_desc')}</p>
 
         <div className="mb-6 space-y-4">
           {personas.map(persona => {
@@ -66,10 +67,12 @@ export const PersonasSettings = ({ isDarkMode = false }: PersonasSettingsProps) 
                 <div className="mb-3 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className={`text-sm font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>
-                      {isDefault ? 'Default persona' : 'Persona'}
+                      {isDefault ? t('options_personas_default') : t('options_personas_label')}
                     </span>
                     {activePersonaId === persona.id && (
-                      <span className="rounded-full bg-sky-600 px-2 py-0.5 text-xs text-white">Active</span>
+                      <span className="rounded-full bg-sky-600 px-2 py-0.5 text-xs text-white">
+                        {t('options_personas_activeBadge')}
+                      </span>
                     )}
                   </div>
                   <div className="flex gap-2">
@@ -77,16 +80,16 @@ export const PersonasSettings = ({ isDarkMode = false }: PersonasSettingsProps) 
                       variant="secondary"
                       disabled={activePersonaId === persona.id}
                       onClick={() => personasStore.setActivePersona(persona.id)}>
-                      Set Active
+                      {t('options_personas_setActive')}
                     </Button>
                     <Button variant="primary" disabled={!canSave} onClick={() => savePersona(persona)}>
-                      Save
+                      {t('options_personas_save')}
                     </Button>
                     <Button
                       variant="danger"
                       disabled={isDefault}
                       onClick={() => personasStore.removePersona(persona.id)}>
-                      Delete
+                      {t('options_personas_delete')}
                     </Button>
                   </div>
                 </div>
@@ -97,14 +100,14 @@ export const PersonasSettings = ({ isDarkMode = false }: PersonasSettingsProps) 
                     disabled={isDefault}
                     value={persona.name}
                     onChange={e => updatePersonaLocally(persona.id, { name: e.target.value })}
-                    placeholder="Persona name"
+                    placeholder={t('options_personas_namePlaceholder')}
                     className={`w-full rounded-md border px-3 py-2 text-sm ${isDarkMode ? 'border-slate-500 bg-slate-800 text-gray-200' : 'border-gray-300 bg-white text-gray-700'}`}
                   />
                   <textarea
                     rows={4}
                     value={persona.systemPrompt}
                     onChange={e => updatePersonaLocally(persona.id, { systemPrompt: e.target.value })}
-                    placeholder="System prompt"
+                    placeholder={t('options_personas_systemPromptPlaceholder')}
                     className={`w-full rounded-md border px-3 py-2 text-sm ${isDarkMode ? 'border-slate-500 bg-slate-800 text-gray-200' : 'border-gray-300 bg-white text-gray-700'}`}
                   />
                 </div>
@@ -113,21 +116,24 @@ export const PersonasSettings = ({ isDarkMode = false }: PersonasSettingsProps) 
           })}
         </div>
 
-        <div className={`rounded-lg border p-4 ${isDarkMode ? 'border-slate-600 bg-slate-700' : 'border-gray-200 bg-gray-50'}`}>
-          <h3 className={`mb-3 text-base font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>Add Persona</h3>
+        <div
+          className={`rounded-lg border p-4 ${isDarkMode ? 'border-slate-600 bg-slate-700' : 'border-gray-200 bg-gray-50'}`}>
+          <h3 className={`mb-3 text-base font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+            {t('options_personas_addHeading')}
+          </h3>
           <div className="space-y-3">
             <input
               type="text"
               value={newPersona.name}
               onChange={e => setNewPersona(prev => ({ ...prev, name: e.target.value }))}
-              placeholder="Persona name"
+              placeholder={t('options_personas_namePlaceholder')}
               className={`w-full rounded-md border px-3 py-2 text-sm ${isDarkMode ? 'border-slate-500 bg-slate-800 text-gray-200' : 'border-gray-300 bg-white text-gray-700'}`}
             />
             <textarea
               rows={4}
               value={newPersona.systemPrompt}
               onChange={e => setNewPersona(prev => ({ ...prev, systemPrompt: e.target.value }))}
-              placeholder="System prompt"
+              placeholder={t('options_personas_systemPromptPlaceholder')}
               className={`w-full rounded-md border px-3 py-2 text-sm ${isDarkMode ? 'border-slate-500 bg-slate-800 text-gray-200' : 'border-gray-300 bg-white text-gray-700'}`}
             />
             <div className="flex justify-end">
@@ -138,7 +144,7 @@ export const PersonasSettings = ({ isDarkMode = false }: PersonasSettingsProps) 
                   await personasStore.upsertPersona(newPersona);
                   setNewPersona(createPersonaDraft());
                 }}>
-                Add Persona
+                {t('options_personas_add')}
               </Button>
             </div>
           </div>

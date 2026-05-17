@@ -89,6 +89,7 @@ Success means a user can install Nanobrowser, configure one QA model, and get ac
 - As a user, I can register **Azure Foundry agents** (project endpoint, agent name, API key) in Settings → Azure Foundry.
 - As a user, I can pick a Foundry agent from the persona list (`AzF:` prefix) so answers come from the hosted agent responses API.
 - As a user, I understand that **tools are disabled** when a Foundry agent is selected.
+- As a user, I can manage **long-term memories** for a configured agent (memory store name + scope): list/search, add from text, edit, request removal, or clear an entire scope via the Foundry Memory Store API.
 
 ### Appearance
 

@@ -38,7 +38,7 @@ export const GeneralSettings = ({ isDarkMode = false }: GeneralSettingsProps) =>
     if (!settings.searxngBaseUrl.trim()) {
       setSearxngTestResult({
         ok: false,
-        message: 'Enter a SearXNG base URL first.',
+        message: t('options_general_searxngTest_noUrl'),
       });
       return;
     }
@@ -59,23 +59,23 @@ export const GeneralSettings = ({ isDarkMode = false }: GeneralSettingsProps) =>
       if (!response?.ok) {
         setSearxngTestResult({
           ok: false,
-          message: response?.error || 'SearXNG test failed.',
+          message: response?.error || t('options_general_searxngTest_failed'),
         });
         return;
       }
 
       const firstResult = response.firstResult
-        ? ` First result: ${response.firstResult.title} (${response.firstResult.url})`
+        ? t('options_general_searxngTest_firstResult', [response.firstResult.title, response.firstResult.url])
         : '';
 
       setSearxngTestResult({
         ok: true,
-        message: `SearXNG integration test passed using "${response.query}". Parsed ${response.resultCount} result(s).${firstResult}`,
+        message: t('options_general_searxngTest_ok', [response.query, String(response.resultCount), firstResult]),
       });
     } catch (error) {
       setSearxngTestResult({
         ok: false,
-        message: error instanceof Error ? error.message : 'SearXNG test failed.',
+        message: error instanceof Error ? error.message : t('options_general_searxngTest_failed'),
       });
     } finally {
       setIsTestingSearxng(false);
@@ -381,10 +381,10 @@ export const GeneralSettings = ({ isDarkMode = false }: GeneralSettingsProps) =>
           <div className="flex items-center justify-between">
             <div>
               <h3 className={`text-base font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                Enable QA Web Search
+                {t('options_general_enableWebSearch')}
               </h3>
               <p className={`text-sm font-normal ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                Allow QA mode to fetch fresh search results from your SearXNG instance for web/current questions.
+                {t('options_general_enableWebSearch_desc')}
               </p>
             </div>
             <div className="relative inline-flex cursor-pointer items-center">
@@ -398,7 +398,7 @@ export const GeneralSettings = ({ isDarkMode = false }: GeneralSettingsProps) =>
               <label
                 htmlFor="enableWebSearch"
                 className={`peer h-6 w-11 rounded-full ${isDarkMode ? 'bg-slate-600' : 'bg-gray-200'} after:absolute after:left-[2px] after:top-[2px] after:size-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300`}>
-                <span className="sr-only">Enable QA Web Search</span>
+                <span className="sr-only">{t('options_general_enableWebSearch_a11y')}</span>
               </label>
             </div>
           </div>
@@ -407,21 +407,21 @@ export const GeneralSettings = ({ isDarkMode = false }: GeneralSettingsProps) =>
             <div className="flex items-center justify-between gap-4">
               <div className="flex-1">
                 <h3 className={`text-base font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  SearXNG Base URL
+                  {t('options_general_searxngBaseUrl')}
                 </h3>
                 <p className={`text-sm font-normal ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  Example: `https://search.yourdomain.com`
+                  {t('options_general_searxngBaseUrl_desc')}
                 </p>
               </div>
               <label htmlFor="searxngBaseUrl" className="sr-only">
-                SearXNG Base URL
+                {t('options_general_searxngBaseUrl_a11y')}
               </label>
               <input
                 id="searxngBaseUrl"
                 type="url"
                 value={settings.searxngBaseUrl}
                 onChange={e => updateSetting('searxngBaseUrl', e.target.value)}
-                placeholder="https://search.yourdomain.com"
+                placeholder={t('options_general_searxngBaseUrl_placeholder')}
                 className={`w-72 rounded-md border ${isDarkMode ? 'border-slate-600 bg-slate-700 text-gray-200' : 'border-gray-300 bg-white text-gray-700'} px-3 py-2`}
               />
             </div>
@@ -429,21 +429,21 @@ export const GeneralSettings = ({ isDarkMode = false }: GeneralSettingsProps) =>
             <div className="flex items-center justify-between gap-4">
               <div className="flex-1">
                 <h3 className={`text-base font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  SearXNG API Key
+                  {t('options_general_searxngApiKey')}
                 </h3>
                 <p className={`text-sm font-normal ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  Optional. Leave blank if your instance allows public JSON search requests.
+                  {t('options_general_searxngApiKey_desc')}
                 </p>
               </div>
               <label htmlFor="searxngApiKey" className="sr-only">
-                SearXNG API Key
+                {t('options_general_searxngApiKey_a11y')}
               </label>
               <input
                 id="searxngApiKey"
                 type="password"
                 value={settings.searxngApiKey}
                 onChange={e => updateSetting('searxngApiKey', e.target.value)}
-                placeholder="Optional"
+                placeholder={t('options_general_optionalPlaceholder')}
                 className={`w-72 rounded-md border ${isDarkMode ? 'border-slate-600 bg-slate-700 text-gray-200' : 'border-gray-300 bg-white text-gray-700'} px-3 py-2`}
               />
             </div>
@@ -451,21 +451,21 @@ export const GeneralSettings = ({ isDarkMode = false }: GeneralSettingsProps) =>
             <div className="flex items-center justify-between gap-4">
               <div className="flex-1">
                 <h3 className={`text-base font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  Jina Reader API Key
+                  {t('options_general_jinaReaderApiKey')}
                 </h3>
                 <p className={`text-sm font-normal ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  Optional. Used by the QA `read_url` tool to open result links with higher Jina Reader rate limits.
+                  {t('options_general_jinaReaderApiKey_desc')}
                 </p>
               </div>
               <label htmlFor="jinaReaderApiKey" className="sr-only">
-                Jina Reader API Key
+                {t('options_general_jinaReaderApiKey_a11y')}
               </label>
               <input
                 id="jinaReaderApiKey"
                 type="password"
                 value={settings.jinaReaderApiKey}
                 onChange={e => updateSetting('jinaReaderApiKey', e.target.value)}
-                placeholder="Optional"
+                placeholder={t('options_general_optionalPlaceholder')}
                 className={`w-72 rounded-md border ${isDarkMode ? 'border-slate-600 bg-slate-700 text-gray-200' : 'border-gray-300 bg-white text-gray-700'} px-3 py-2`}
               />
             </div>
@@ -473,14 +473,14 @@ export const GeneralSettings = ({ isDarkMode = false }: GeneralSettingsProps) =>
             <div className="flex items-center justify-between gap-4">
               <div className="flex-1">
                 <h3 className={`text-base font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  Search Result Count
+                  {t('options_general_searxngMaxResults')}
                 </h3>
                 <p className={`text-sm font-normal ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  How many web results QA mode should include from SearXNG per search.
+                  {t('options_general_searxngMaxResults_desc')}
                 </p>
               </div>
               <label htmlFor="searxngMaxResults" className="sr-only">
-                Search Result Count
+                {t('options_general_searxngMaxResults_a11y')}
               </label>
               <input
                 id="searxngMaxResults"
@@ -496,11 +496,10 @@ export const GeneralSettings = ({ isDarkMode = false }: GeneralSettingsProps) =>
             <div className="flex items-center justify-between gap-4">
               <div className="flex-1">
                 <h3 className={`text-base font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  Integration Test
+                  {t('options_general_searxngIntegrationTest')}
                 </h3>
                 <p className={`text-sm font-normal ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  Sends a real test search through the extension background worker and verifies usable results come
-                  back.
+                  {t('options_general_searxngIntegrationTest_desc')}
                 </p>
               </div>
               <button
@@ -514,7 +513,7 @@ export const GeneralSettings = ({ isDarkMode = false }: GeneralSettingsProps) =>
                       ? 'bg-sky-600 text-white hover:bg-sky-500'
                       : 'bg-sky-500 text-white hover:bg-sky-600'
                 }`}>
-                {isTestingSearxng ? 'Testing...' : 'Test SearXNG'}
+                {isTestingSearxng ? t('options_general_searxngTestTesting') : t('options_general_searxngTestButton')}
               </button>
             </div>
 

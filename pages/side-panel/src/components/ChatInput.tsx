@@ -288,7 +288,7 @@ export default function ChatInput({
 
   const selectedModelLabel = useMemo(() => {
     if (!currentQAModel) {
-      return 'Select model...';
+      return t('chat_select_model');
     }
     const [provider, model] = currentQAModel.split('>');
     return availableModels.find(m => m.provider === provider && m.model === model)?.displayName ?? currentQAModel;
@@ -716,7 +716,7 @@ export default function ChatInput({
                   : 'bg-white'
           }`}
           style={textareaStyle}
-          placeholder={attachedFiles.length > 0 ? 'Add a message (optional)...' : t('chat_input_placeholder')}
+          placeholder={attachedFiles.length > 0 ? t('chat_input_placeholder_attachments') : t('chat_input_placeholder')}
           aria-label={t('chat_input_editor')}
         />
 
@@ -839,10 +839,10 @@ export default function ChatInput({
                             ? { width: `${qaSelectWidths.modelWidthPx}px` }
                             : { minWidth: `${QA_SELECT_MIN_MODEL_PX}px` }),
                         }}
-                        aria-label="Select QA model">
+                        aria-label={t('chat_select_model_a11y')}>
                         {!currentQAModel && (
                           <option value="" disabled>
-                            Select model...
+                            {t('chat_select_model')}
                           </option>
                         )}
                         {availableModels.map(option => {
@@ -868,7 +868,7 @@ export default function ChatInput({
                               ? { width: `${qaSelectWidths.personaWidthPx}px` }
                               : { minWidth: `${QA_SELECT_MIN_PERSONA_PX}px` }),
                           }}
-                          aria-label="Select QA persona">
+                          aria-label={t('chat_select_persona_a11y')}>
                           {personas.map(persona => (
                             <option key={persona.id} value={persona.id}>
                               {persona.name}

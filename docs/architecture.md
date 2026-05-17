@@ -216,7 +216,7 @@ Tab id is threaded through messages so multi-tab side-panel usage does not cross
 | `agentModelStore` | agent models | `AgentNameEnum.QA` → provider + model + parameters |
 | `llmProviderStore` | providers | API keys, base URLs |
 | `personasStore` | `personas-settings` | Named system prompts; `activePersonaId` |
-| `foundryAgentsStore` | `foundry-agents-settings` | Azure Foundry agent endpoints and keys |
+| `foundryAgentsStore` | `foundry-agents-settings` | Azure Foundry agent endpoints, keys, optional `memoryStoreName` / `memoryScope` |
 | `mcpToolsSettingsStore` | MCP servers | Transport, auth, per-server `enabledToolNames` |
 | `tabModes` | per-tab keys | `automation` \| `qa` |
 
@@ -258,6 +258,7 @@ Tabs: General, Models, Personas, Azure Foundry, MCP, About. QA configuration is 
 | Jina Reader | `services/jinaReader.ts` | `fetch_url` tool |
 | MCP servers | `services/mcpClient.ts` | Dynamic tools |
 | Azure Foundry | `services/foundryAgentClient.ts` | Hosted agents via Responses API |
+| Azure Foundry Memory | `services/foundryMemoryClient.ts` | Memory store list/search/update/delete-scope (options UI) |
 | LLM providers | LangChain chat models via `createChatModel` | Primary QA inference |
 
 All network calls originate from the **background worker** (extension permissions), not from the side-panel page.
@@ -285,6 +286,8 @@ pages/side-panel/src/SidePanel.tsx          # QA UX orchestration
 pages/side-panel/src/components/ChatInput.tsx
 chrome-extension/src/background/index.ts    # qa_query handler
 chrome-extension/src/background/services/foundryAgentClient.ts
+chrome-extension/src/background/services/foundryMemoryClient.ts
+pages/options/src/components/FoundryAgentMemorySection.tsx
 chrome-extension/src/background/services/mcpClient.ts
 chrome-extension/src/background/services/searxng.ts
 chrome-extension/src/background/services/jinaReader.ts

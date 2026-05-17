@@ -91,6 +91,9 @@ export interface ChatHistoryStorage {
   // Delete a message from a chat session
   deleteMessage: (sessionId: string, messageId: string) => Promise<void>;
 
+  /** Remove a message and all messages after it (for edit-and-resend). Returns the remaining messages. */
+  truncateMessagesFrom: (sessionId: string, messageId: string) => Promise<ChatMessage[]>;
+
   // Store the history of the agent's state
   storeAgentStepHistory: (sessionId: string, task: string, history: string) => Promise<void>;
 

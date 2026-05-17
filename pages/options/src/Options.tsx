@@ -15,7 +15,7 @@ type TabTypes = 'general' | 'models' | 'personas' | 'foundry' | 'mcp' | 'about';
 const TABS: { id: TabTypes; icon: React.ComponentType<{ className?: string }>; label: string }[] = [
   { id: 'general', icon: FiSettings, label: t('options_tabs_general') },
   { id: 'models', icon: FiCpu, label: t('options_tabs_models') },
-  { id: 'personas', icon: FiUser, label: 'Personas' },
+  { id: 'personas', icon: FiUser, label: t('options_tabs_personas') },
   { id: 'foundry', icon: FiCloud, label: t('options_tabs_foundry' as never) },
   { id: 'mcp', icon: FiTool, label: t('options_tabs_mcp' as never) },
   { id: 'about', icon: FiInfo, label: t('options_tabs_about' as never) },

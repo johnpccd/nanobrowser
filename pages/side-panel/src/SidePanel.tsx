@@ -112,7 +112,7 @@ interface TabStreamingState {
 }
 
 const SidePanel = () => {
-  const progressMessage = 'Showing progress...';
+  const progressMessage = t('chat_progress_message');
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputEnabled, setInputEnabled] = useState(true);
   const [showStopButton, setShowStopButton] = useState(false);
@@ -983,12 +983,16 @@ const SidePanel = () => {
             // Get the accumulated buffer for this tab and save to storage
             const tabBuffer = tabBuffersRef.current.get(msgTabId);
             if (tabBuffer && msgSessionId) {
-              // Save the completed message to chat history storage
-              chatHistoryStore
+              void chatHistoryStore
                 .addMessage(msgSessionId, {
                   actor: Actors.SYSTEM,
                   content: tabBuffer,
                   timestamp: Date.now(),
+                })
+                .then(saved => {
+                  if (msgSessionId === sessionIdRef.current && msgTabId === currentTabIdRef.current) {
+                    setMessages(prev => [...prev, saved]);
+                  }
                 })
                 .catch(err => console.error('Failed to save completed message to history:', err));
             }
@@ -999,17 +1003,6 @@ const SidePanel = () => {
 
             // Only update UI state if this is the active tab and session
             if (msgSessionId === sessionIdRef.current && msgTabId === currentTabIdRef.current) {
-              // Add message to UI if we have content
-              if (tabBuffer) {
-                setMessages(prev => [
-                  ...prev,
-                  {
-                    actor: Actors.SYSTEM,
-                    content: tabBuffer,
-                    timestamp: Date.now(),
-                  },
-                ]);
-              }
               setQaResponseBuffer('');
               qaResponseBufferRef.current = '';
               setIsWaitingForQaResponse(false);
@@ -1348,9 +1341,9 @@ const SidePanel = () => {
       // Show stop button but keep input enabled so users can prepare next message
       setShowStopButton(true);
 
-      // Create a new chat session for this task if not in follow-up mode
-      // For QA mode, always ensure we have a session (create if missing)
-      if (!isFollowUpMode || (mode === 'qa' && !sessionIdRef.current)) {
+      // Create a new chat session when none exists, or for automation tasks outside follow-up mode
+      const needsNewSession = !sessionIdRef.current || (mode !== 'qa' && !isFollowUpMode);
+      if (needsNewSession) {
         // Use display text for session title if available, otherwise use full text
         const titleText = displayText || text;
         const newSession = await chatHistoryStore.createSession(
@@ -1392,9 +1385,9 @@ const SidePanel = () => {
         // `imageData` so older readers (and code paths still consulting it) continue to work.
         const messageToStore =
           imageCount > 0 ? { ...userMessage, imageData: imageDataList![0], imageDataList } : userMessage;
-        await chatHistoryStore.addMessage(sessionIdRef.current, messageToStore);
+        const savedUserMessage = await chatHistoryStore.addMessage(sessionIdRef.current, messageToStore);
 
-        setMessages(prev => [...prev, messageToStore]);
+        setMessages(prev => [...prev, savedUserMessage]);
 
         // Clear captured images after sending
         setCapturedImages([]);
@@ -1482,6 +1475,36 @@ const SidePanel = () => {
       setInputEnabled(true);
       setShowStopButton(false);
       stopConnection();
+    }
+  };
+
+  const handleEditAndResend = async (messageId: string, newContent: string, imageDataList?: string[]) => {
+    if (isHistoricalSession || mode !== 'qa' || !sessionIdRef.current) {
+      return;
+    }
+
+    const trimmed = newContent.trim();
+    const imageCount = imageDataList?.length ?? 0;
+    if (!trimmed && imageCount === 0) {
+      return;
+    }
+
+    await handleStopTask();
+
+    try {
+      const remaining = await chatHistoryStore.truncateMessagesFrom(sessionIdRef.current, messageId);
+      setMessages(remaining);
+      setIsFollowUpMode(true);
+
+      await handleSendMessage(trimmed, trimmed, imageCount > 0 ? imageDataList : undefined);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      console.error('Edit and resend error', errorMessage);
+      appendMessage({
+        actor: Actors.SYSTEM,
+        content: errorMessage,
+        timestamp: Date.now(),
+      });
     }
   };
 
@@ -2423,6 +2446,10 @@ const SidePanel = () => {
                       isWaitingForResponse={isWaitingForQaResponse}
                       fontSize={fontSize}
                       qaUiTheme={mode === 'qa' ? qaUiTheme : null}
+                      canEditUserMessages={
+                        mode === 'qa' && !isHistoricalSession && !isQaStreaming && !isWaitingForQaResponse
+                      }
+                      onEditAndResend={handleEditAndResend}
                     />
                     <div ref={messagesEndRef} />
                   </div>
