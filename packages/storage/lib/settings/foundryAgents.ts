@@ -13,12 +13,17 @@ export interface FoundryAgent {
   name: string;
   /** e.g. https://{account}.services.ai.azure.com/api/projects/{project} */
   projectEndpoint: string;
-  /** Agent resource name, e.g. eng-agent-impact-analysis */
+  /**
+   * Agent resource name, e.g. eng-agent-impact-analysis.
+   * Portal format `name:version` (e.g. eng-agent-impact-analysis:1) is also accepted.
+   */
   agentName: string;
+  /** Optional agent version when not using the name:version suffix. */
+  agentVersion?: string;
   apiKey: string;
-  /** Optional override for the responses protocol URL. */
+  /** @deprecated Advanced override only; normal path uses project openai/v1/responses. */
   responsesEndpoint?: string;
-  /** Optional Azure OpenAI v1 base URL for the project resource. */
+  /** @deprecated Not used by the project responses API. */
   openaiBaseUrl?: string;
 }
 
@@ -54,13 +59,48 @@ export function isFoundrySelectionId(selectionId: string): boolean {
   return selectionId.trim().startsWith(FOUNDRY_SELECTION_PREFIX);
 }
 
+export interface FoundryAgentReference {
+  name: string;
+  version?: string;
+}
+
+/** Split portal-style `agent:version` or use explicit agentVersion. */
+export function resolveFoundryAgentReference(agent: FoundryAgent): FoundryAgentReference {
+  const explicitVersion = agent.agentVersion?.trim();
+  const rawName = agent.agentName.trim();
+  if (explicitVersion) {
+    return { name: rawName.split(':')[0]!.trim() || rawName, version: explicitVersion };
+  }
+  const parts = rawName.split(':', 2);
+  if (parts.length > 1 && parts[1]?.trim()) {
+    return { name: parts[0]!.trim(), version: parts[1]!.trim() };
+  }
+  return { name: rawName };
+}
+
+export function buildFoundryProjectOpenAiUrl(projectEndpoint: string, path: string): string {
+  const base = projectEndpoint.trim().replace(/\/+$/, '');
+  const suffix = path.startsWith('/') ? path : `/${path}`;
+  return `${base}${suffix}`;
+}
+
+/** Resolved POST URL for streaming responses (project openai/v1 API). */
+export function buildFoundryResponsesRequestUrl(agent: FoundryAgent): string {
+  const override = agent.responsesEndpoint?.trim();
+  if (override) {
+    return override.replace(/\/+$/, '');
+  }
+  return buildFoundryProjectOpenAiUrl(agent.projectEndpoint, '/openai/v1/responses');
+}
+
+/** @deprecated Legacy agent protocol URL; shown for reference only. */
 export function buildFoundryResponsesEndpoint(agent: FoundryAgent): string {
   const override = agent.responsesEndpoint?.trim();
   if (override) {
     return override.replace(/\/+$/, '');
   }
   const base = agent.projectEndpoint.trim().replace(/\/+$/, '');
-  const name = agent.agentName.trim();
+  const { name } = resolveFoundryAgentReference(agent);
   return `${base}/agents/${encodeURIComponent(name)}/endpoint/protocols/openai/v1/responses`;
 }
 
@@ -74,9 +114,10 @@ function normalizeAgent(agent: FoundryAgent): FoundryAgent | null {
 
   return {
     id,
-    name: agent.name.trim() || agentName,
+    name: agent.name.trim() || agentName.split(':')[0]!.trim() || agentName,
     projectEndpoint,
     agentName,
+    agentVersion: agent.agentVersion?.trim() || undefined,
     apiKey: agent.apiKey.trim(),
     responsesEndpoint: agent.responsesEndpoint?.trim() || undefined,
     openaiBaseUrl: agent.openaiBaseUrl?.trim().replace(/\/+$/, '') || undefined,

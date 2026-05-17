@@ -101,7 +101,7 @@ interface ChatInputProps {
     discoveredNames: string[];
   }) => void;
   onToggleQaBuiltinTool?: (id: QaBuiltinToolToggleId, nextEnabled: boolean) => void;
-  /** When true (e.g. Azure Foundry agent selected), QA tools menu is disabled. */
+  /** When true (e.g. Azure Foundry agent selected), QA model + tools controls are disabled. */
   qaToolsDisabled?: boolean;
 }
 
@@ -830,9 +830,9 @@ export default function ChatInput({
                             }
                           }
                         }}
-                        disabled={disabled}
-                        title={selectedModelLabel}
-                        className={qaSelectClass(disabled)}
+                        disabled={disabled || qaToolsDisabled}
+                        title={qaToolsDisabled ? t('chat_qaTools_disabledFoundry') : selectedModelLabel}
+                        className={qaSelectClass(disabled || qaToolsDisabled)}
                         style={{
                           ...neutralControlStyle,
                           ...(qaSelectWidths.modelWidthPx != null

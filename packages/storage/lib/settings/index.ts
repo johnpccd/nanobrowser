@@ -10,3 +10,4 @@ export * from './tabModes';
 export * from './mcpTools';
 export * from './personas';
 export * from './foundryAgents';
+export * from './foundryConversations';

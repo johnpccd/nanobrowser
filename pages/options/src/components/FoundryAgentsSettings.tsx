@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@extension/ui';
-import { type FoundryAgent, buildFoundryResponsesEndpoint, foundryAgentsStore } from '@extension/storage';
+import {
+  type FoundryAgent,
+  buildFoundryResponsesEndpoint,
+  buildFoundryResponsesRequestUrl,
+  foundryAgentsStore,
+} from '@extension/storage';
 import { t } from '@extension/i18n';
 
 interface FoundryAgentsSettingsProps {
@@ -12,6 +17,7 @@ const createAgentDraft = (): FoundryAgent => ({
   name: '',
   projectEndpoint: '',
   agentName: '',
+  agentVersion: '',
   apiKey: '',
   responsesEndpoint: '',
   openaiBaseUrl: '',
@@ -102,6 +108,13 @@ export const FoundryAgentsSettings = ({ isDarkMode = false }: FoundryAgentsSetti
                   className={inputClass}
                 />
                 <input
+                  type="text"
+                  value={agent.agentVersion ?? ''}
+                  onChange={e => updateAgentLocally(agent.id, { agentVersion: e.target.value })}
+                  placeholder={t('options_foundry_agentVersionPlaceholder')}
+                  className={inputClass}
+                />
+                <input
                   type="password"
                   value={agent.apiKey}
                   onChange={e => updateAgentLocally(agent.id, { apiKey: e.target.value })}
@@ -124,7 +137,7 @@ export const FoundryAgentsSettings = ({ isDarkMode = false }: FoundryAgentsSetti
                   className={inputClass}
                 />
                 <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  {t('options_foundry_resolvedEndpoint')}: {buildFoundryResponsesEndpoint(agent)}
+                  {t('options_foundry_resolvedEndpoint')}: {buildFoundryResponsesRequestUrl(agent)}
                 </p>
               </div>
             </div>
@@ -155,6 +168,13 @@ export const FoundryAgentsSettings = ({ isDarkMode = false }: FoundryAgentsSetti
               value={newAgent.agentName}
               onChange={e => setNewAgent(prev => ({ ...prev, agentName: e.target.value }))}
               placeholder={t('options_foundry_agentNamePlaceholder')}
+              className={inputClass}
+            />
+            <input
+              type="text"
+              value={newAgent.agentVersion ?? ''}
+              onChange={e => setNewAgent(prev => ({ ...prev, agentVersion: e.target.value }))}
+              placeholder={t('options_foundry_agentVersionPlaceholder')}
               className={inputClass}
             />
             <input

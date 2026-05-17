@@ -25,7 +25,7 @@ import { Actors, type ToolEvent } from '@extension/storage/lib/chat/types';
 import { z } from 'zod';
 import { readUrlWithJina } from './services/jinaReader';
 import { discoverMcpTools, executeMcpTool } from './services/mcpClient';
-import { buildFoundryResponseInput, streamFoundryAgentResponse } from './services/foundryAgentClient';
+import { buildFoundryTurnInput, streamFoundryAgentResponse } from './services/foundryAgentClient';
 import { foundryAgentsStore } from '@extension/storage/lib/settings/foundryAgents';
 import { getQaEnabledToolCountCached, invalidateQaToolCountCache } from './qaToolCount';
 
@@ -898,8 +898,7 @@ chrome.runtime.onConnect.addListener(port => {
                     throw new Error('Azure Foundry agent not found. Add or update it in Settings → Azure Foundry.');
                   }
 
-                  const foundryInput = buildFoundryResponseInput({
-                    messages: session?.messages ?? [],
+                  const foundryInput = buildFoundryTurnInput({
                     userQuery,
                     pageContent,
                     includePageContent,
@@ -907,6 +906,7 @@ chrome.runtime.onConnect.addListener(port => {
 
                   await streamFoundryAgentResponse({
                     agent: foundryAgent,
+                    sessionId,
                     input: foundryInput,
                     signal: abortController.signal,
                     onDelta: content => {

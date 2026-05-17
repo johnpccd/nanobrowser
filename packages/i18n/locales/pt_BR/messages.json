@@ -335,7 +335,10 @@
     "message": "Endpoint do projeto (https://…/api/projects/…)"
   },
   "options_foundry_agentNamePlaceholder": {
-    "message": "Nome do agente (recurso no Foundry)"
+    "message": "Nome do agente (ex.: eng-agent-impact-analysis ou eng-agent-impact-analysis:1)"
+  },
+  "options_foundry_agentVersionPlaceholder": {
+    "message": "Versão do agente (opcional se usar name:version acima)"
   },
   "options_foundry_apiKeyPlaceholder": {
     "message": "Chave de API"
@@ -345,6 +348,9 @@
   },
   "options_foundry_openaiBaseUrlPlaceholder": {
     "message": "URL base OpenAI v1 (opcional)"
+  },
+  "options_foundry_apiVersionPlaceholder": {
+    "message": "Parâmetro api-version (padrão: v1)"
   },
   "options_foundry_resolvedEndpoint": {
     "message": "URL responses resolvida"

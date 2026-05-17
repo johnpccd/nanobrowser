@@ -323,7 +323,7 @@
     "message": "Azure Foundry Agents"
   },
   "options_foundry_desc": {
-    "message": "Configure Azure Foundry agents for QA mode. They appear in the persona list with an AzF: prefix and use the agent responses endpoint (tools are disabled)."
+    "message": "Configure Azure Foundry agents for QA mode. Uses the project openai/v1 conversations + responses API (same as the Foundry agent webapp). Agents appear in the persona list with an AzF: prefix; tools are disabled."
   },
   "options_foundry_namePlaceholder": {
     "message": "Display name"
@@ -332,7 +332,10 @@
     "message": "Project endpoint (https://…/api/projects/…)"
   },
   "options_foundry_agentNamePlaceholder": {
-    "message": "Agent name (resource name in Foundry)"
+    "message": "Agent name (e.g. eng-agent-impact-analysis or eng-agent-impact-analysis:1)"
+  },
+  "options_foundry_agentVersionPlaceholder": {
+    "message": "Agent version (optional if using name:version above)"
   },
   "options_foundry_apiKeyPlaceholder": {
     "message": "API key"
@@ -342,6 +345,9 @@
   },
   "options_foundry_openaiBaseUrlPlaceholder": {
     "message": "OpenAI v1 base URL (optional)"
+  },
+  "options_foundry_apiVersionPlaceholder": {
+    "message": "API version query param (default: v1)"
   },
   "options_foundry_resolvedEndpoint": {
     "message": "Resolved responses URL"

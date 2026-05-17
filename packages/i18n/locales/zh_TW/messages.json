@@ -335,7 +335,10 @@
     "message": "專案端點 (https://…/api/projects/…)"
   },
   "options_foundry_agentNamePlaceholder": {
-    "message": "代理名稱（Foundry 資源名稱）"
+    "message": "代理名稱（例如 eng-agent-impact-analysis 或 eng-agent-impact-analysis:1）"
+  },
+  "options_foundry_agentVersionPlaceholder": {
+    "message": "代理版本（若上方已使用 name:version 則可省略）"
   },
   "options_foundry_apiKeyPlaceholder": {
     "message": "API 金鑰"
@@ -345,6 +348,9 @@
   },
   "options_foundry_openaiBaseUrlPlaceholder": {
     "message": "OpenAI v1 基底 URL（選填）"
+  },
+  "options_foundry_apiVersionPlaceholder": {
+    "message": "api-version 查詢參數（預設：v1）"
   },
   "options_foundry_resolvedEndpoint": {
     "message": "解析後的 responses URL"
