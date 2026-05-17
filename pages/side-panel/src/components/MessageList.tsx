@@ -281,6 +281,12 @@ function MessageBlock({
     if (!textarea) return;
     textarea.focus();
     textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+  }, [isEditing]);
+
+  useEffect(() => {
+    if (!isEditing) return;
+    const textarea = editTextareaRef.current;
+    if (!textarea) return;
     textarea.style.height = 'auto';
     textarea.style.height = `${Math.min(textarea.scrollHeight, 240)}px`;
   }, [isEditing, editDraft]);

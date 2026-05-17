@@ -79,7 +79,10 @@ export function formatMemoryOperationError(payload: unknown): string {
   }
 
   parts.push(
-    'Memory add/edit runs on the memory store’s chat and embedding deployments (not your agent model). In Azure Foundry, open the memory store and ensure those deployments exist and accept this API key.',
+    'Memory extraction runs server-side using your Foundry project managed identity (not your API key). ' +
+      'In Azure Portal: enable system-assigned managed identity on the project, then assign the Foundry User ' +
+      '(Azure AI User) role to that identity on the parent AI Services / Foundry resource so it can call the ' +
+      'memory store chat and embedding deployments. See: https://learn.microsoft.com/en-us/azure/foundry/agents/how-to/memory-usage#authorization-and-permissions',
   );
   return parts.join(' ');
 }

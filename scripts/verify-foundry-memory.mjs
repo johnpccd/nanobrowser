@@ -5,7 +5,7 @@
  */
 const API_VERSION = 'v1';
 const FEATURE = 'MemoryStores=V1Preview';
-const SCOPE = process.argv[3]?.trim() || '47382906548372';
+const SCOPE = process.argv[3]?.trim() || '55555555555';
 
 const endpoint = (process.env.FOUNDRY_PROJECT_ENDPOINT || '').replace(/\/+$/, '');
 const apiKey = (process.env.FOUNDRY_API_KEY || '').trim();
@@ -64,6 +64,18 @@ async function pollUpdate(storeName, updateId) {
     }
     if (status === 'failed') {
       console.log('  FAILED:', JSON.stringify(r.json?.error ?? r.json, null, 2));
+      console.log(
+        '\n  Likely fix: enable system-assigned managed identity on the Foundry project and assign',
+      );
+      console.log(
+        '  Foundry User (Azure AI User) on the parent AI Services resource — memory runtime uses',
+      );
+      console.log(
+        '  the project identity to call chat/embedding deployments, not your API key.',
+      );
+      console.log(
+        '  https://learn.microsoft.com/en-us/azure/foundry/agents/how-to/memory-usage#authorization-and-permissions',
+      );
       return r;
     }
     await sleep(2000);

@@ -534,8 +534,14 @@ export default function ChatInput({
     document.body.appendChild(root);
   }, []);
 
+  const showAgentGlow = isQAMode && showStopButton;
+
+  const agentGlowSpinBackground = isDarkMode
+    ? 'conic-gradient(from 0deg, #38bdf8, #0ea5e9, #818cf8, #22d3ee, #38bdf8)'
+    : 'conic-gradient(from 0deg, #19c2ff, #0073dc, #6366f1, #38bdf8, #19c2ff)';
+
   const formStyle: CSSProperties = {
-    ...(qaUiTheme?.inputBorder ? { borderColor: qaUiTheme.inputBorder } : {}),
+    ...(qaUiTheme?.inputBorder && !showAgentGlow ? { borderColor: qaUiTheme.inputBorder } : {}),
   };
 
   const textareaStyle: CSSProperties = {
@@ -632,18 +638,21 @@ export default function ChatInput({
     };
   }, [qaMcpToolsMenuOpen, onQaMcpToolsMenuOpenChange]);
 
-  return (
+  const form = (
     <form
       onSubmit={handleSubmit}
       className={`overflow-hidden rounded-xl border transition-colors ${disabled ? 'cursor-not-allowed' : ''} ${
-        qaUiTheme?.inputBorder
-          ? ''
-          : isDarkMode
-            ? 'border-[#333344] focus-within:border-[#4d4d60] hover:border-[#4d4d60]'
-            : 'focus-within:border-sky-400 hover:border-sky-400'
+        showAgentGlow
+          ? 'relative z-10 border-transparent'
+          : qaUiTheme?.inputBorder
+            ? ''
+            : isDarkMode
+              ? 'border-[#333344] focus-within:border-[#4d4d60] hover:border-[#4d4d60]'
+              : 'focus-within:border-sky-400 hover:border-sky-400'
       }`}
       style={formStyle}
-      aria-label={t('chat_input_form')}>
+      aria-label={t('chat_input_form')}
+      aria-busy={showAgentGlow || undefined}>
       <div className="flex flex-col">
         {/* File attachments and captured image display */}
         {(attachedFiles.length > 0 || hasCapturedImages) && (
@@ -1183,5 +1192,20 @@ export default function ChatInput({
         </div>
       </div>
     </form>
+  );
+
+  if (!showAgentGlow) {
+    return form;
+  }
+
+  return (
+    <div className="relative isolate overflow-hidden rounded-xl p-[2px] animate-qa-input-glow">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-1/2 z-0 aspect-square w-[280%] max-w-none animate-qa-glow-spin"
+        style={{ background: agentGlowSpinBackground }}
+      />
+      {form}
+    </div>
   );
 }

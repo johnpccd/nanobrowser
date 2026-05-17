@@ -43,6 +43,6 @@ describe('foundryMemoryClient', () => {
       },
     });
     expect(message).toContain('gpt-5.4-mini');
-    expect(message).toContain('memory store');
+    expect(message).toContain('managed identity');
   });
 });
