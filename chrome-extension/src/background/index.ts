@@ -8,7 +8,7 @@ import {
   chatHistoryStore,
 } from '@extension/storage';
 import { mcpToolsSettingsStore, type McpServerConfig } from '@extension/storage/lib/settings/mcpTools';
-import { t } from '@extension/i18n';
+import { setUiLocalePreference, t } from '@extension/i18n';
 import BrowserContext from './browser/context';
 import { Executor } from './agent/executor';
 import { createLogger } from './log';
@@ -1997,3 +1997,14 @@ async function subscribeToExecutorEvents(executor: Executor, tabId: number) {
     }
   });
 }
+
+void (async () => {
+  const settings = await generalSettingsStore.getSettings();
+  setUiLocalePreference(settings.uiLocale);
+})();
+
+generalSettingsStore.subscribe(() => {
+  void generalSettingsStore.getSettings().then(settings => {
+    setUiLocalePreference(settings.uiLocale);
+  });
+});

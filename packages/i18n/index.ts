@@ -1,6 +1,18 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
-import { t as t_dev_or_prod } from './lib/i18n';
-import type { t as t_dev } from './lib/i18n-dev';
+import { t as tBuilt } from './lib/i18n';
+import type { t as tDev } from './lib/i18n-dev';
 
-export const t = t_dev_or_prod as unknown as typeof t_dev;
+export const t = tBuilt as unknown as typeof tDev;
+
+export {
+  browserLocaleToDevLocale,
+  getResolvedUiLocale,
+  getUiLocalePreference,
+  isUiLocalePreference,
+  setUiLocalePreference,
+  subscribeUiLocaleChange,
+  UI_DEV_LOCALES,
+} from './lib/uiLocale';
+export type { UiLocalePreference } from './lib/uiLocale';
+export type { DevLocale, MessageKey } from './lib/type';

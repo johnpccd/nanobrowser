@@ -56,7 +56,7 @@ flowchart TB
 | Path | Role |
 |------|------|
 | `pages/side-panel/` | Chat UI, mode toggle, QA toolbar (model, persona, tools, page-content toggle) |
-| `pages/options/` | Settings: General (SearXNG, QA budgets, appearance), Models (QA agent), Personas, Azure Foundry, MCP |
+| `pages/options/` | Settings: General (SearXNG, QA budgets), Appearance (QA fonts/colors), Prompts (Quick Start list), Models (QA agent), Personas, Azure Foundry, MCP |
 | `chrome-extension/src/background/` | Service worker: `qa_query` handler, tool loop, streaming |
 | `packages/storage/` | Typed Chrome storage for settings and chat sessions |
 | `packages/i18n/` | User-facing strings (`chat_*`, `options_*`, `bg_*`) |
@@ -224,7 +224,7 @@ Personas and Foundry agents share the **persona dropdown**: Foundry entries use 
 
 ### QA appearance
 
-`resolveQaUiTheme` (`qaAppearance.ts`) maps `generalSettings` QA color/font fields into CSS variables for the side panel when `mode === 'qa'`. Configured on the options **General** tab (`QaAppearanceSettings.tsx`).
+`resolveQaUiTheme` (`qaAppearance.ts`) maps `generalSettings` QA color/font fields into CSS variables for the side panel when `mode === 'qa'`. Configured on the options **Appearance** tab (`QaAppearanceSettings.tsx` via `AppearanceSettings.tsx`).
 
 ## UI layer
 
@@ -248,7 +248,7 @@ QA-only toolbar:
 
 ### Options page (`Options.tsx`)
 
-Tabs: General, Models, Personas, Azure Foundry, MCP, About. QA configuration is spread across General (SearXNG, budgets, appearance), Models (QA agent), Personas, Foundry, and MCP.
+Tabs: General, Appearance, Prompts, Models, Personas, Azure Foundry, MCP, About. QA configuration is spread across General (SearXNG, budgets), Appearance (fonts/colors), Prompts (Quick Start favorites), Models (QA agent), Personas, Foundry, and MCP.
 
 ## External integrations
 

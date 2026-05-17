@@ -175,7 +175,9 @@ Success means a user can install Nanobrowser, configure one QA model, and get ac
 
 | Setting area | QA-related configuration |
 |--------------|-------------------------|
-| General | Include page content default, SearXNG, Jina key, QA tool enable flags, tool budgets, QA appearance |
+| General | Include page content default, SearXNG, Jina key, QA tool enable flags, tool budgets |
+| Appearance | QA mode fonts and colors for the side panel |
+| Prompts | Quick Start prompt list (add, edit, reorder, delete) |
 | Models | QA agent provider/model/parameters |
 | Personas | CRUD + active persona |
 | Azure Foundry | Agent registry |

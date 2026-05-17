@@ -52,6 +52,7 @@ import ChatHistoryList from './components/ChatHistoryList';
 import BookmarkList from './components/BookmarkList';
 import { EventType, type AgentEvent, ExecutionState } from './types/event';
 import './SidePanel.css';
+import { useUiLocaleSync } from './hooks/useUiLocaleSync';
 
 function qaBuiltinRowsFromGeneral(g: GeneralSettingsConfig): QaBuiltinToolPanelRow[] {
   const hasSearxng = Boolean(g.searxngBaseUrl?.trim());
@@ -112,6 +113,7 @@ interface TabStreamingState {
 }
 
 const SidePanel = () => {
+  useUiLocaleSync();
   const progressMessage = t('chat_progress_message');
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputEnabled, setInputEnabled] = useState(true);
@@ -163,6 +165,8 @@ const SidePanel = () => {
   const tabBuffersRef = useRef<Map<number, string>>(new Map());
   // Track streaming state per tab (allows streaming to continue in background when switching tabs)
   const tabStreamingStatesRef = useRef<Map<number, TabStreamingState>>(new Map());
+  // Incremented on each tab load so stale async loads cannot overwrite UI state
+  const tabLoadGenerationRef = useRef(0);
   // Track current buffer value to access it in callbacks without dependency issues
   const qaResponseBufferRef = useRef<string>('');
   const heartbeatIntervalRef = useRef<number | null>(null);
@@ -251,109 +255,104 @@ const SidePanel = () => {
     }
   }, [isFoundryAgentActive]);
 
+  const isTabQaInFlight = useCallback((tabId: number): boolean => {
+    const streamState = tabStreamingStatesRef.current.get(tabId);
+    return Boolean(streamState?.isStreaming || streamState?.isWaiting);
+  }, []);
+
+  const isLoadStale = useCallback((loadId: number): boolean => {
+    return loadId !== tabLoadGenerationRef.current;
+  }, []);
+
+  const isViewingTab = useCallback((loadId: number, tabId: number): boolean => {
+    return loadId === tabLoadGenerationRef.current && tabId === currentTabIdRef.current;
+  }, []);
+
   // Load current tab and its state
   const loadCurrentTabState = useCallback(async () => {
+    const loadId = ++tabLoadGenerationRef.current;
+
     try {
       const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
       const tabId = tabs[0]?.id;
-      if (!tabId) return;
+      // Only check generation here — currentTabIdRef is assigned below
+      if (!tabId || isLoadStale(loadId)) return;
 
-      // Save current buffer for the previous tab before switching (only if it has a streaming state)
-      const previousTabId = currentTabIdRef.current;
-      if (previousTabId !== null && previousTabId !== tabId) {
-        const prevStreamingState = tabStreamingStatesRef.current.get(previousTabId);
-        if (prevStreamingState?.isStreaming) {
-          // Only save buffer if the previous tab was actively streaming
-          tabBuffersRef.current.set(previousTabId, qaResponseBufferRef.current);
-        }
-      }
-
-      // Get streaming state for the new tab FIRST (before updating refs)
       const tabStreamingState = tabStreamingStatesRef.current.get(tabId);
-      const isTabStreaming = tabStreamingState?.isStreaming || false;
-      const isTabWaiting = tabStreamingState?.isWaiting || false;
+      const isTabStreaming = tabStreamingState?.isStreaming ?? false;
+      const isTabWaiting = tabStreamingState?.isWaiting ?? false;
+      const hasActiveStream = isTabStreaming || isTabWaiting;
+      const savedBuffer = tabBuffersRef.current.get(tabId) ?? '';
+      const hasBuffer = savedBuffer.trim().length > 0;
 
-      // CRITICAL: Update refs IMMEDIATELY before any async operations
-      // This ensures incoming chunks will be processed correctly
+      // Update refs before any await so incoming chunks target the correct tab
       currentTabIdRef.current = tabId;
       setCurrentTabId(tabId);
 
-      // If this tab has an active streaming session, use that session ID immediately
-      // This prevents race conditions where chunks arrive before async session loading completes
       if (tabStreamingState?.sessionId) {
         sessionIdRef.current = tabStreamingState.sessionId;
         setCurrentSessionId(tabStreamingState.sessionId);
       }
 
-      // NOW read the buffer (after refs are updated, so new chunks will update React state)
-      const savedBuffer = tabBuffersRef.current.get(tabId) || '';
       setQaResponseBuffer(savedBuffer);
       qaResponseBufferRef.current = savedBuffer;
+      setIsQaStreaming(isTabStreaming || (hasActiveStream && hasBuffer));
+      setIsWaitingForQaResponse(isTabWaiting && !hasBuffer);
+      setShowStopButton(hasActiveStream);
+      setInputEnabled(!hasActiveStream);
 
-      // Update streaming state based on per-tab streaming state
-      setIsQaStreaming(isTabStreaming);
-      setIsWaitingForQaResponse(isTabWaiting);
-      setShowStopButton(isTabStreaming || isTabWaiting);
-      // Only enable input if not streaming or waiting
-      setInputEnabled(!isTabStreaming && !isTabWaiting);
-
-      // Update streaming tab ref if this tab is streaming
-      if (isTabStreaming) {
+      if (hasActiveStream) {
         streamingTabIdRef.current = tabId;
+      } else if (streamingTabIdRef.current === tabId) {
+        streamingTabIdRef.current = null;
       }
 
-      // Keep the side panel in QA mode and sync per-tab mode storage.
       const tabMode: TabMode = 'qa';
       setMode(tabMode);
       modeRef.current = tabMode;
       await setTabMode(tabId, tabMode);
+      if (!isViewingTab(loadId, tabId)) return;
 
-      // Load chat sessions for this tab
       const sessions = await chatHistoryStore.getSessionsMetadata(tabId);
+      if (!isViewingTab(loadId, tabId)) return;
       setChatSessions(sessions);
 
-      // If this tab is actively streaming, we already set the session ID from tabStreamingState
-      // Just load the messages from storage to show existing conversation
       if (tabStreamingState?.sessionId) {
         const session = await chatHistoryStore.getSession(tabStreamingState.sessionId);
+        if (!isViewingTab(loadId, tabId)) return;
         if (session) {
           setMessages(session.messages);
           setIsHistoricalSession(false);
+          setIsFollowUpMode(session.messages.length > 0);
         }
-        // Don't overwrite sessionIdRef - it was already set correctly above
       } else {
-        // No active streaming, load session from storage normally
         const activeSessionId = await getTabActiveSession(tabId);
+        if (!isViewingTab(loadId, tabId)) return;
+
         if (activeSessionId) {
           const session = await chatHistoryStore.getSession(activeSessionId);
+          if (!isViewingTab(loadId, tabId)) return;
           if (session) {
             setCurrentSessionId(activeSessionId);
             sessionIdRef.current = activeSessionId;
             setMessages(session.messages);
             setIsHistoricalSession(false);
-            // Enable follow-up mode if there are existing messages
-            if (session.messages.length > 0) {
-              setIsFollowUpMode(true);
-            }
+            setIsFollowUpMode(session.messages.length > 0);
           }
         } else {
-          // No active session, clear messages
           setCurrentSessionId(null);
           sessionIdRef.current = null;
           setMessages([]);
-          // Reset follow-up mode when there's no active session
           setIsFollowUpMode(false);
-          // Respect global QA preference (avoid racing loadGeneralSettings and overwriting with true)
-          if (tabMode === 'qa') {
-            const g = await generalSettingsStore.getSettings();
-            setIncludePageContent(g.includePageContent);
-          }
+          const g = await generalSettingsStore.getSettings();
+          if (!isViewingTab(loadId, tabId)) return;
+          setIncludePageContent(g.includePageContent);
         }
       }
     } catch (error) {
       console.error('Error loading tab state:', error);
     }
-  }, []);
+  }, [isLoadStale, isViewingTab]);
 
   // Save current tab's active session
   const saveCurrentTabActiveSession = useCallback(
@@ -595,9 +594,11 @@ const SidePanel = () => {
     };
 
     const handleTabUpdated = async (tabId: number, changeInfo: chrome.tabs.TabChangeInfo) => {
-      if (changeInfo.status === 'complete' && tabId === currentTabId) {
-        await loadCurrentTabState();
-      }
+      if (changeInfo.status !== 'complete') return;
+      // Do not reload mid-stream — it resets messages and can race with chunk buffers
+      if (isTabQaInFlight(tabId)) return;
+      if (tabId !== currentTabIdRef.current) return;
+      await loadCurrentTabState();
     };
 
     chrome.tabs.onActivated.addListener(handleTabActivated);
@@ -607,7 +608,7 @@ const SidePanel = () => {
       chrome.tabs.onActivated.removeListener(handleTabActivated);
       chrome.tabs.onUpdated.removeListener(handleTabUpdated);
     };
-  }, [currentTabId, loadCurrentTabState]);
+  }, [isTabQaInFlight, loadCurrentTabState]);
 
   // Re-check model configuration when the side panel becomes visible again
   useEffect(() => {
@@ -891,6 +892,7 @@ const SidePanel = () => {
               isWaiting: false,
               sessionId: message.sessionId,
             });
+            streamingTabIdRef.current = msgTabId;
 
             // Only update React UI state if this is the active tab and session
             if (message.sessionId === sessionIdRef.current && msgTabId === currentTabIdRef.current) {
@@ -990,9 +992,15 @@ const SidePanel = () => {
                   timestamp: Date.now(),
                 })
                 .then(saved => {
-                  if (msgSessionId === sessionIdRef.current && msgTabId === currentTabIdRef.current) {
-                    setMessages(prev => [...prev, saved]);
+                  if (msgSessionId !== sessionIdRef.current || msgTabId !== currentTabIdRef.current) {
+                    return;
                   }
+                  setMessages(prev => {
+                    if (prev.some(m => 'id' in m && m.id === saved.id)) {
+                      return prev;
+                    }
+                    return [...prev, saved];
+                  });
                 })
                 .catch(err => console.error('Failed to save completed message to history:', err));
             }
@@ -1000,6 +1008,9 @@ const SidePanel = () => {
             // Clear per-tab buffer and streaming state
             tabBuffersRef.current.delete(msgTabId);
             tabStreamingStatesRef.current.delete(msgTabId);
+            if (streamingTabIdRef.current === msgTabId) {
+              streamingTabIdRef.current = null;
+            }
 
             // Only update UI state if this is the active tab and session
             if (msgSessionId === sessionIdRef.current && msgTabId === currentTabIdRef.current) {
@@ -1009,7 +1020,6 @@ const SidePanel = () => {
               setIsQaStreaming(false);
               setInputEnabled(true);
               setShowStopButton(false);
-              streamingTabIdRef.current = null;
               // Enable follow-up mode so next message continues the same session
               setIsFollowUpMode(true);
               // Focus textarea after streaming completes in QA mode
@@ -1041,6 +1051,9 @@ const SidePanel = () => {
             // Clear per-tab buffer and streaming state
             tabBuffersRef.current.delete(msgTabId);
             tabStreamingStatesRef.current.delete(msgTabId);
+            if (streamingTabIdRef.current === msgTabId) {
+              streamingTabIdRef.current = null;
+            }
 
             // Only update UI state if this is the active tab and session
             if (msgSessionId === sessionIdRef.current && msgTabId === currentTabIdRef.current) {
@@ -1058,7 +1071,6 @@ const SidePanel = () => {
               setIsQaStreaming(false);
               setInputEnabled(true);
               setShowStopButton(false);
-              streamingTabIdRef.current = null;
               // Enable follow-up mode so next message continues the same session
               setIsFollowUpMode(true);
               // Focus textarea after error in QA mode
@@ -1338,6 +1350,9 @@ const SidePanel = () => {
         throw new Error('No active tab found');
       }
 
+      currentTabIdRef.current = tabId;
+      setCurrentTabId(tabId);
+
       // Show stop button but keep input enabled so users can prepare next message
       setShowStopButton(true);
 
@@ -1509,9 +1524,17 @@ const SidePanel = () => {
   };
 
   const handleStopTask = async () => {
+    let tabId = streamingTabIdRef.current ?? currentTabIdRef.current;
+    if (tabId === null) {
+      try {
+        const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+        tabId = tabs[0]?.id ?? null;
+      } catch {
+        tabId = null;
+      }
+    }
+
     try {
-      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-      const tabId = tabs[0]?.id;
       if (!tabId) {
         throw new Error('No active tab found');
       }
@@ -1528,18 +1551,23 @@ const SidePanel = () => {
         timestamp: Date.now(),
       });
     }
-    setIsWaitingForQaResponse(false);
-    setIsQaStreaming(false);
-    setQaResponseBuffer('');
-    qaResponseBufferRef.current = '';
-    // Clear buffer and streaming state from per-tab storage
-    if (currentTabIdRef.current !== null) {
-      tabBuffersRef.current.delete(currentTabIdRef.current);
-      tabStreamingStatesRef.current.delete(currentTabIdRef.current);
+
+    if (tabId !== null) {
+      tabBuffersRef.current.delete(tabId);
+      tabStreamingStatesRef.current.delete(tabId);
+      if (streamingTabIdRef.current === tabId) {
+        streamingTabIdRef.current = null;
+      }
     }
-    streamingTabIdRef.current = null; // Clear streaming tab tracking
-    setInputEnabled(true);
-    setShowStopButton(false);
+
+    if (tabId !== null && currentTabIdRef.current === tabId) {
+      setIsWaitingForQaResponse(false);
+      setIsQaStreaming(false);
+      setQaResponseBuffer('');
+      qaResponseBufferRef.current = '';
+      setInputEnabled(true);
+      setShowStopButton(false);
+    }
   };
 
   const handleNewChat = async () => {
@@ -2442,8 +2470,8 @@ const SidePanel = () => {
                     <MessageList
                       messages={messages}
                       isDarkMode={isDarkMode}
-                      streamingContent={isQaStreaming ? qaResponseBuffer : undefined}
-                      isWaitingForResponse={isWaitingForQaResponse}
+                      streamingContent={qaResponseBuffer.trim() ? qaResponseBuffer : undefined}
+                      isWaitingForResponse={isWaitingForQaResponse && !qaResponseBuffer.trim()}
                       fontSize={fontSize}
                       qaUiTheme={mode === 'qa' ? qaUiTheme : null}
                       canEditUserMessages={

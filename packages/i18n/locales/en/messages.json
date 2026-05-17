@@ -334,6 +334,12 @@
   "options_tabs_general": {
     "message": "General"
   },
+  "options_tabs_appearance": {
+    "message": "Appearance"
+  },
+  "options_tabs_prompts": {
+    "message": "Prompts"
+  },
   "options_tabs_models": {
     "message": "Models"
   },
@@ -687,6 +693,27 @@
   },
   "options_general_header": {
     "message": "General"
+  },
+  "options_general_uiLocale": {
+    "message": "Language"
+  },
+  "options_general_uiLocale_desc": {
+    "message": "Language for extension menus and messages. Auto uses your browser language when supported (English, French, German, Italian)."
+  },
+  "options_general_uiLocale_auto": {
+    "message": "Auto (browser)"
+  },
+  "options_general_uiLocale_en": {
+    "message": "English"
+  },
+  "options_general_uiLocale_fr": {
+    "message": "French"
+  },
+  "options_general_uiLocale_de": {
+    "message": "German"
+  },
+  "options_general_uiLocale_it": {
+    "message": "Italian"
   },
   "options_general_maxSteps": {
     "message": "Max Steps per Task"

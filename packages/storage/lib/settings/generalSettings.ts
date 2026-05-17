@@ -3,6 +3,11 @@ import { createStorage } from '../base/base';
 import type { BaseStorage } from '../base/types';
 import { clampOptionalFontSize, normalizeHexColor, sanitizeQaFontFamily } from './qaAppearanceUtils';
 
+/** Matches @extension/i18n UiLocalePreference */
+export type UiLocalePreference = 'auto' | 'en' | 'fr' | 'de' | 'it';
+
+const UI_LOCALE_VALUES: UiLocalePreference[] = ['auto', 'en', 'fr', 'de', 'it'];
+
 // Interface for general settings configuration
 export interface GeneralSettingsConfig {
   maxSteps: number;
@@ -55,6 +60,8 @@ export interface GeneralSettingsConfig {
   qaColorInputBorder: string;
   qaColorInputText: string;
   qaColorAccent: string;
+  /** Extension UI language; `auto` follows the browser locale. */
+  uiLocale: UiLocalePreference;
 }
 
 export type GeneralSettingsStorage = BaseStorage<GeneralSettingsConfig> & {
@@ -102,6 +109,7 @@ export const DEFAULT_GENERAL_SETTINGS: GeneralSettingsConfig = {
   qaColorInputBorder: '#334155',
   qaColorInputText: '#f9fafb',
   qaColorAccent: '#38bdf8',
+  uiLocale: 'auto',
 };
 
 function applyQaAppearanceDefaultsIfEmpty(settings: GeneralSettingsConfig): GeneralSettingsConfig {
@@ -177,6 +185,10 @@ export const generalSettingsStore: GeneralSettingsStorage = {
       updatedSettings.searxngMaxResults = Math.min(10, Math.max(1, Math.round(updatedSettings.searxngMaxResults)));
     }
 
+    if (typeof updatedSettings.uiLocale === 'string' && !UI_LOCALE_VALUES.includes(updatedSettings.uiLocale)) {
+      updatedSettings.uiLocale = DEFAULT_GENERAL_SETTINGS.uiLocale;
+    }
+
     if (typeof updatedSettings.qaFontFamily === 'string') {
       updatedSettings.qaFontFamily = sanitizeQaFontFamily(updatedSettings.qaFontFamily);
     }
@@ -241,6 +253,11 @@ export const generalSettingsStore: GeneralSettingsStorage = {
       storedRecord && typeof storedRecord.qaEnableFetchUrlTool === 'boolean'
         ? storedRecord.qaEnableFetchUrlTool
         : merged.enableWebSearch;
+
+    merged.uiLocale =
+      storedRecord && typeof storedRecord.uiLocale === 'string' && UI_LOCALE_VALUES.includes(storedRecord.uiLocale)
+        ? storedRecord.uiLocale
+        : DEFAULT_GENERAL_SETTINGS.uiLocale;
 
     return clampQaToolBudgets(applyQaAppearanceDefaultsIfEmpty(merged));
   },

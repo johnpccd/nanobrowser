@@ -334,6 +334,12 @@
   "options_tabs_general": {
     "message": "General"
   },
+  "options_tabs_appearance": {
+    "message": "Darstellung"
+  },
+  "options_tabs_prompts": {
+    "message": "Prompts"
+  },
   "options_tabs_models": {
     "message": "Models"
   },
@@ -686,7 +692,28 @@
     "message": "Could not reach the extension background. Open chrome://extensions, reload this extension, then try again."
   },
   "options_general_header": {
-    "message": "General"
+    "message": "Allgemein"
+  },
+  "options_general_uiLocale": {
+    "message": "Sprache"
+  },
+  "options_general_uiLocale_desc": {
+    "message": "Sprache für Menüs und Meldungen der Erweiterung. Auto verwendet die Browsersprache, sofern unterstützt (Englisch, Französisch, Deutsch, Italienisch)."
+  },
+  "options_general_uiLocale_auto": {
+    "message": "Auto (Browser)"
+  },
+  "options_general_uiLocale_en": {
+    "message": "Englisch"
+  },
+  "options_general_uiLocale_fr": {
+    "message": "Französisch"
+  },
+  "options_general_uiLocale_de": {
+    "message": "Deutsch"
+  },
+  "options_general_uiLocale_it": {
+    "message": "Italienisch"
   },
   "options_general_maxSteps": {
     "message": "Max Steps per Task"

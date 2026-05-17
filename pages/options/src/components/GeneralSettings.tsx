@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
-import { type GeneralSettingsConfig, generalSettingsStore, DEFAULT_GENERAL_SETTINGS } from '@extension/storage';
+import {
+  type GeneralSettingsConfig,
+  type UiLocalePreference,
+  generalSettingsStore,
+  DEFAULT_GENERAL_SETTINGS,
+} from '@extension/storage';
 import { t } from '@extension/i18n';
-import { QuickStartPromptsSettings } from './QuickStartPromptsSettings';
-import { QaAppearanceSettings } from './QaAppearanceSettings';
-
 interface GeneralSettingsProps {
   isDarkMode?: boolean;
 }
@@ -91,6 +93,33 @@ export const GeneralSettings = ({ isDarkMode = false }: GeneralSettingsProps) =>
         </h2>
 
         <div className="space-y-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex-1">
+              <h3 className={`text-base font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                {t('options_general_uiLocale')}
+              </h3>
+              <p className={`text-sm font-normal ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                {t('options_general_uiLocale_desc')}
+              </p>
+            </div>
+            <label htmlFor="uiLocale" className="sr-only">
+              {t('options_general_uiLocale')}
+            </label>
+            <select
+              id="uiLocale"
+              value={settings.uiLocale}
+              onChange={e => updateSetting('uiLocale', e.target.value as UiLocalePreference)}
+              className={`w-48 rounded-md border px-3 py-2 text-sm ${
+                isDarkMode ? 'border-slate-600 bg-slate-700 text-gray-200' : 'border-gray-300 bg-white text-gray-700'
+              }`}>
+              <option value="auto">{t('options_general_uiLocale_auto')}</option>
+              <option value="en">{t('options_general_uiLocale_en')}</option>
+              <option value="fr">{t('options_general_uiLocale_fr')}</option>
+              <option value="de">{t('options_general_uiLocale_de')}</option>
+              <option value="it">{t('options_general_uiLocale_it')}</option>
+            </select>
+          </div>
+
           <div className="flex items-center justify-between">
             <div>
               <h3 className={`text-base font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
@@ -561,11 +590,6 @@ export const GeneralSettings = ({ isDarkMode = false }: GeneralSettingsProps) =>
           </div>
         </div>
       </div>
-
-      <QaAppearanceSettings isDarkMode={isDarkMode} />
-
-      {/* Quick Start Prompts Settings */}
-      <QuickStartPromptsSettings isDarkMode={isDarkMode} />
     </section>
   );
 };

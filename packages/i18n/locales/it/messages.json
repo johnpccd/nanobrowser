@@ -334,6 +334,12 @@
   "options_tabs_general": {
     "message": "Generale"
   },
+  "options_tabs_appearance": {
+    "message": "Aspetto"
+  },
+  "options_tabs_prompts": {
+    "message": "Prompt"
+  },
   "options_tabs_models": {
     "message": "Modelli"
   },
@@ -687,6 +693,27 @@
   },
   "options_general_header": {
     "message": "Generale"
+  },
+  "options_general_uiLocale": {
+    "message": "Lingua"
+  },
+  "options_general_uiLocale_desc": {
+    "message": "Lingua per menu e messaggi dell’estensione. Auto usa la lingua del browser se supportata (inglese, francese, tedesco, italiano)."
+  },
+  "options_general_uiLocale_auto": {
+    "message": "Auto (browser)"
+  },
+  "options_general_uiLocale_en": {
+    "message": "Inglese"
+  },
+  "options_general_uiLocale_fr": {
+    "message": "Francese"
+  },
+  "options_general_uiLocale_de": {
+    "message": "Tedesco"
+  },
+  "options_general_uiLocale_it": {
+    "message": "Italiano"
   },
   "options_general_maxSteps": {
     "message": "Passi massimi per attività"

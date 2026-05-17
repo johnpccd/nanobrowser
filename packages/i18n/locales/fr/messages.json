@@ -334,6 +334,12 @@
   "options_tabs_general": {
     "message": "Général"
   },
+  "options_tabs_appearance": {
+    "message": "Apparence"
+  },
+  "options_tabs_prompts": {
+    "message": "Invites"
+  },
   "options_tabs_models": {
     "message": "Modèles"
   },
@@ -687,6 +693,27 @@
   },
   "options_general_header": {
     "message": "Général"
+  },
+  "options_general_uiLocale": {
+    "message": "Langue"
+  },
+  "options_general_uiLocale_desc": {
+    "message": "Langue des menus et messages de l’extension. Auto utilise la langue du navigateur si elle est prise en charge (anglais, français, allemand, italien)."
+  },
+  "options_general_uiLocale_auto": {
+    "message": "Auto (navigateur)"
+  },
+  "options_general_uiLocale_en": {
+    "message": "Anglais"
+  },
+  "options_general_uiLocale_fr": {
+    "message": "Français"
+  },
+  "options_general_uiLocale_de": {
+    "message": "Allemand"
+  },
+  "options_general_uiLocale_it": {
+    "message": "Italien"
   },
   "options_general_maxSteps": {
     "message": "Nombre max d'étapes par tâche"

@@ -3,17 +3,23 @@ import '@src/Options.css';
 import { Button } from '@extension/ui';
 import { withErrorBoundary, withSuspense } from '@extension/shared';
 import { t } from '@extension/i18n';
-import { FiSettings, FiCpu, FiInfo, FiTool, FiUser, FiCloud } from 'react-icons/fi';
+import { FiSettings, FiCpu, FiInfo, FiTool, FiUser, FiCloud, FiLayout, FiMessageSquare } from 'react-icons/fi';
 import { GeneralSettings } from './components/GeneralSettings';
 import { ModelSettings } from './components/ModelSettings';
 import { McpToolsSettings } from './components/McpToolsSettings';
 import { PersonasSettings } from './components/PersonasSettings';
 import { FoundryAgentsSettings } from './components/FoundryAgentsSettings';
 import { AboutSettings } from './components/AboutSettings';
-type TabTypes = 'general' | 'models' | 'personas' | 'foundry' | 'mcp' | 'about';
+import { AppearanceSettings } from './components/AppearanceSettings';
+import { PromptsSettings } from './components/PromptsSettings';
+import { useUiLocaleSync } from './hooks/useUiLocaleSync';
+
+type TabTypes = 'general' | 'appearance' | 'prompts' | 'models' | 'personas' | 'foundry' | 'mcp' | 'about';
 
 const TABS: { id: TabTypes; icon: React.ComponentType<{ className?: string }>; label: string }[] = [
   { id: 'general', icon: FiSettings, label: t('options_tabs_general') },
+  { id: 'appearance', icon: FiLayout, label: t('options_tabs_appearance') },
+  { id: 'prompts', icon: FiMessageSquare, label: t('options_tabs_prompts') },
   { id: 'models', icon: FiCpu, label: t('options_tabs_models') },
   { id: 'personas', icon: FiUser, label: t('options_tabs_personas') },
   { id: 'foundry', icon: FiCloud, label: t('options_tabs_foundry' as never) },
@@ -26,11 +32,12 @@ function tabFromLocationHash(): TabTypes | null {
     return null;
   }
   const h = window.location.hash.replace(/^#/, '').trim();
-  const ids: TabTypes[] = ['general', 'models', 'personas', 'foundry', 'mcp', 'about'];
+  const ids: TabTypes[] = ['general', 'appearance', 'prompts', 'models', 'personas', 'foundry', 'mcp', 'about'];
   return ids.includes(h as TabTypes) ? (h as TabTypes) : null;
 }
 
 const Options = () => {
+  useUiLocaleSync();
   const [activeTab, setActiveTab] = useState<TabTypes>(() => tabFromLocationHash() ?? 'models');
   const [isDarkMode, setIsDarkMode] = useState(false);
 
@@ -71,6 +78,10 @@ const Options = () => {
     switch (activeTab) {
       case 'general':
         return <GeneralSettings isDarkMode={isDarkMode} />;
+      case 'appearance':
+        return <AppearanceSettings isDarkMode={isDarkMode} />;
+      case 'prompts':
+        return <PromptsSettings isDarkMode={isDarkMode} />;
       case 'models':
         return <ModelSettings isDarkMode={isDarkMode} />;
       case 'personas':
