@@ -1,6 +1,7 @@
 import { StorageEnum } from '../base/enums';
 import { createStorage } from '../base/base';
 import type { BaseStorage } from '../base/types';
+import { isFoundrySelectionId } from './foundryAgents';
 
 export const DEFAULT_PERSONA_ID = 'default';
 
@@ -71,9 +72,11 @@ function normalizePersonas(personas: Persona[]): Persona[] {
 
 function normalizeSettings(settings: PersonasConfig): PersonasConfig {
   const personas = normalizePersonas(settings.personas);
-  const activePersonaId = personas.some(persona => persona.id === settings.activePersonaId)
-    ? settings.activePersonaId
-    : DEFAULT_PERSONA_ID;
+  const requestedActiveId = settings.activePersonaId?.trim() || DEFAULT_PERSONA_ID;
+  const activePersonaId =
+    isFoundrySelectionId(requestedActiveId) || personas.some(persona => persona.id === requestedActiveId)
+      ? requestedActiveId
+      : DEFAULT_PERSONA_ID;
   return {
     personas,
     activePersonaId,
@@ -98,7 +101,8 @@ export const personasStore: PersonasStorage = {
   async setActivePersona(personaId: string) {
     const current = await this.getSettings();
     const id = personaId.trim();
-    const nextId = current.personas.some(persona => persona.id === id) ? id : DEFAULT_PERSONA_ID;
+    const nextId =
+      isFoundrySelectionId(id) || current.personas.some(persona => persona.id === id) ? id : DEFAULT_PERSONA_ID;
     await storage.set({
       ...current,
       activePersonaId: nextId,

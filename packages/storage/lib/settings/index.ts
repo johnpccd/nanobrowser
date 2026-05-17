@@ -9,3 +9,4 @@ export * from './speechToText';
 export * from './tabModes';
 export * from './mcpTools';
 export * from './personas';
+export * from './foundryAgents';

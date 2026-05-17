@@ -319,6 +319,51 @@
   "options_tabs_about": {
     "message": "關於"
   },
+  "options_tabs_foundry": {
+    "message": "Azure Foundry"
+  },
+  "options_foundry_header": {
+    "message": "Azure Foundry 代理"
+  },
+  "options_foundry_desc": {
+    "message": "設定 QA 模式使用的 Azure Foundry 代理。它們會以 AzF: 前綴顯示在角色清單中，並使用代理的 responses 端點（工具已停用）。"
+  },
+  "options_foundry_namePlaceholder": {
+    "message": "顯示名稱"
+  },
+  "options_foundry_projectEndpointPlaceholder": {
+    "message": "專案端點 (https://…/api/projects/…)"
+  },
+  "options_foundry_agentNamePlaceholder": {
+    "message": "代理名稱（Foundry 資源名稱）"
+  },
+  "options_foundry_apiKeyPlaceholder": {
+    "message": "API 金鑰"
+  },
+  "options_foundry_responsesEndpointPlaceholder": {
+    "message": "Responses 端點覆寫（選填）"
+  },
+  "options_foundry_openaiBaseUrlPlaceholder": {
+    "message": "OpenAI v1 基底 URL（選填）"
+  },
+  "options_foundry_resolvedEndpoint": {
+    "message": "解析後的 responses URL"
+  },
+  "options_foundry_addHeading": {
+    "message": "新增 Azure Foundry 代理"
+  },
+  "options_foundry_save": {
+    "message": "儲存"
+  },
+  "options_foundry_delete": {
+    "message": "刪除"
+  },
+  "options_foundry_add": {
+    "message": "新增代理"
+  },
+  "chat_qaTools_disabledFoundry": {
+    "message": "Azure Foundry 代理無法使用工具"
+  },
   "options_about_header": {
     "message": "關於"
   },

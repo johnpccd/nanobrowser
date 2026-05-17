@@ -316,6 +316,51 @@
   "options_tabs_mcp": {
     "message": "MCP Tools"
   },
+  "options_tabs_foundry": {
+    "message": "Azure Foundry"
+  },
+  "options_foundry_header": {
+    "message": "Azure Foundry Agents"
+  },
+  "options_foundry_desc": {
+    "message": "Configure Azure Foundry agents for QA mode. They appear in the persona list with an AzF: prefix and use the agent responses endpoint (tools are disabled)."
+  },
+  "options_foundry_namePlaceholder": {
+    "message": "Display name"
+  },
+  "options_foundry_projectEndpointPlaceholder": {
+    "message": "Project endpoint (https://…/api/projects/…)"
+  },
+  "options_foundry_agentNamePlaceholder": {
+    "message": "Agent name (resource name in Foundry)"
+  },
+  "options_foundry_apiKeyPlaceholder": {
+    "message": "API key"
+  },
+  "options_foundry_responsesEndpointPlaceholder": {
+    "message": "Responses endpoint override (optional)"
+  },
+  "options_foundry_openaiBaseUrlPlaceholder": {
+    "message": "OpenAI v1 base URL (optional)"
+  },
+  "options_foundry_resolvedEndpoint": {
+    "message": "Resolved responses URL"
+  },
+  "options_foundry_addHeading": {
+    "message": "Add Azure Foundry Agent"
+  },
+  "options_foundry_save": {
+    "message": "Save"
+  },
+  "options_foundry_delete": {
+    "message": "Delete"
+  },
+  "options_foundry_add": {
+    "message": "Add Agent"
+  },
+  "chat_qaTools_disabledFoundry": {
+    "message": "Tools are not available for Azure Foundry agents"
+  },
   "options_tabs_help": {
     "message": "Help"
   },

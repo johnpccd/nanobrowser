@@ -32,6 +32,12 @@ import {
   personasStore,
   DEFAULT_PERSONA_ID,
   type Persona,
+  foundryAgentsStore,
+  type FoundryAgent,
+  FOUNDRY_DISPLAY_PREFIX,
+  isFoundrySelectionId,
+  parseFoundrySelectionId,
+  toFoundrySelectionId,
 } from '@extension/storage';
 import { mcpToolsSettingsStore, nextEnabledToolNamesForToggle } from '@extension/storage/lib/settings/mcpTools';
 import favoritesStorage, { type FavoritePrompt, favoritesBaseStorage } from '@extension/storage/lib/prompt/favorites';
@@ -176,6 +182,7 @@ const SidePanel = () => {
   const [currentQAModel, setCurrentQAModel] = useState<string>('');
   const [openRouterModels, setOpenRouterModels] = useState<Array<{ id: string; name: string }>>([]);
   const [personas, setPersonas] = useState<Persona[]>([]);
+  const [foundryAgents, setFoundryAgents] = useState<FoundryAgent[]>([]);
   const [activePersonaId, setActivePersonaId] = useState<string>(DEFAULT_PERSONA_ID);
 
   // Check if models are configured
@@ -219,6 +226,30 @@ const SidePanel = () => {
     () => personas.find(persona => persona.id === activePersonaId) ?? personas[0] ?? null,
     [personas, activePersonaId],
   );
+  const activeFoundryAgent = useMemo(() => {
+    const agentId = parseFoundrySelectionId(activePersonaId);
+    if (!agentId) {
+      return null;
+    }
+    return foundryAgents.find(agent => agent.id === agentId) ?? null;
+  }, [foundryAgents, activePersonaId]);
+  const isFoundryAgentActive = isFoundrySelectionId(activePersonaId);
+  const qaPersonaOptions = useMemo(
+    () => [
+      ...personas.map(persona => ({ id: persona.id, name: persona.name })),
+      ...foundryAgents.map(agent => ({
+        id: toFoundrySelectionId(agent.id),
+        name: `${FOUNDRY_DISPLAY_PREFIX}${agent.name}`,
+      })),
+    ],
+    [personas, foundryAgents],
+  );
+
+  useEffect(() => {
+    if (isFoundryAgentActive) {
+      setQaMcpToolsMenuOpen(false);
+    }
+  }, [isFoundryAgentActive]);
 
   // Load current tab and its state
   const loadCurrentTabState = useCallback(async () => {
@@ -461,12 +492,17 @@ const SidePanel = () => {
 
   const loadPersonas = useCallback(async () => {
     try {
-      const settings = await personasStore.getSettings();
-      setPersonas(settings.personas);
-      setActivePersonaId(settings.activePersonaId);
+      const [personaSettings, foundrySettings] = await Promise.all([
+        personasStore.getSettings(),
+        foundryAgentsStore.getSettings(),
+      ]);
+      setPersonas(personaSettings.personas);
+      setFoundryAgents(foundrySettings.agents);
+      setActivePersonaId(personaSettings.activePersonaId);
     } catch (error) {
       console.error('Error loading personas:', error);
       setPersonas([]);
+      setFoundryAgents([]);
       setActivePersonaId(DEFAULT_PERSONA_ID);
     }
   }, []);
@@ -610,10 +646,16 @@ const SidePanel = () => {
   }, [loadGeneralSettings]);
 
   useEffect(() => {
-    const unsubscribe = personasStore.subscribe(() => {
+    const unsubscribePersonas = personasStore.subscribe(() => {
       void loadPersonas();
     });
-    return () => unsubscribe();
+    const unsubscribeFoundry = foundryAgentsStore.subscribe(() => {
+      void loadPersonas();
+    });
+    return () => {
+      unsubscribePersonas();
+      unsubscribeFoundry();
+    };
   }, [loadPersonas]);
 
   useEffect(() => {
@@ -1381,8 +1423,13 @@ const SidePanel = () => {
           imageDataList: imageCount > 0 ? imageDataList : undefined,
           includePageContent, // Whether to include page content in the query
           enableWebSearch, // Whether to include web search in the query
-          personaSystemPrompt: activePersona?.systemPrompt || undefined,
-          personaName: activePersona?.name || undefined,
+          personaSystemPrompt: isFoundryAgentActive ? undefined : activePersona?.systemPrompt || undefined,
+          personaName: isFoundryAgentActive
+            ? activeFoundryAgent
+              ? `${FOUNDRY_DISPLAY_PREFIX}${activeFoundryAgent.name}`
+              : undefined
+            : activePersona?.name || undefined,
+          foundryAgentId: activeFoundryAgent?.id,
         });
         console.log(
           'qa_query sent',
@@ -2338,9 +2385,10 @@ const SidePanel = () => {
                         availableModels={availableModels}
                         currentQAModel={currentQAModel}
                         onQAModelChange={handleQAModelChange}
-                        personas={personas.map(persona => ({ id: persona.id, name: persona.name }))}
+                        personas={qaPersonaOptions}
                         currentPersonaId={activePersonaId}
                         onPersonaChange={handlePersonaChange}
+                        qaToolsDisabled={isFoundryAgentActive}
                         setTextareaRef={ref => {
                           textareaRef.current = ref;
                         }}
@@ -2400,9 +2448,10 @@ const SidePanel = () => {
                       availableModels={availableModels}
                       currentQAModel={currentQAModel}
                       onQAModelChange={handleQAModelChange}
-                      personas={personas.map(persona => ({ id: persona.id, name: persona.name }))}
+                      personas={qaPersonaOptions}
                       currentPersonaId={activePersonaId}
                       onPersonaChange={handlePersonaChange}
+                      qaToolsDisabled={isFoundryAgentActive}
                       setTextareaRef={ref => {
                         textareaRef.current = ref;
                       }}

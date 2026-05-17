@@ -319,6 +319,51 @@
   "options_tabs_about": {
     "message": "Sobre"
   },
+  "options_tabs_foundry": {
+    "message": "Azure Foundry"
+  },
+  "options_foundry_header": {
+    "message": "Agentes Azure Foundry"
+  },
+  "options_foundry_desc": {
+    "message": "Configure agentes Azure Foundry para o modo QA. Eles aparecem na lista de personas com o prefixo AzF: e usam o endpoint de responses do agente (ferramentas desativadas)."
+  },
+  "options_foundry_namePlaceholder": {
+    "message": "Nome de exibição"
+  },
+  "options_foundry_projectEndpointPlaceholder": {
+    "message": "Endpoint do projeto (https://…/api/projects/…)"
+  },
+  "options_foundry_agentNamePlaceholder": {
+    "message": "Nome do agente (recurso no Foundry)"
+  },
+  "options_foundry_apiKeyPlaceholder": {
+    "message": "Chave de API"
+  },
+  "options_foundry_responsesEndpointPlaceholder": {
+    "message": "Override do endpoint responses (opcional)"
+  },
+  "options_foundry_openaiBaseUrlPlaceholder": {
+    "message": "URL base OpenAI v1 (opcional)"
+  },
+  "options_foundry_resolvedEndpoint": {
+    "message": "URL responses resolvida"
+  },
+  "options_foundry_addHeading": {
+    "message": "Adicionar agente Azure Foundry"
+  },
+  "options_foundry_save": {
+    "message": "Salvar"
+  },
+  "options_foundry_delete": {
+    "message": "Excluir"
+  },
+  "options_foundry_add": {
+    "message": "Adicionar agente"
+  },
+  "chat_qaTools_disabledFoundry": {
+    "message": "Ferramentas não estão disponíveis para agentes Azure Foundry"
+  },
   "options_about_header": {
     "message": "Sobre"
   },

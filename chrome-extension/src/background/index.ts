@@ -25,6 +25,8 @@ import { Actors, type ToolEvent } from '@extension/storage/lib/chat/types';
 import { z } from 'zod';
 import { readUrlWithJina } from './services/jinaReader';
 import { discoverMcpTools, executeMcpTool } from './services/mcpClient';
+import { buildFoundryResponseInput, streamFoundryAgentResponse } from './services/foundryAgentClient';
+import { foundryAgentsStore } from '@extension/storage/lib/settings/foundryAgents';
 import { getQaEnabledToolCountCached, invalidateQaToolCountCache } from './qaToolCount';
 
 const logger = createLogger('background');
@@ -879,6 +881,7 @@ chrome.runtime.onConnect.addListener(port => {
                 const includeWebSearchTool = wantWebAssist && generalSettings.qaEnableWebSearchTool && hasSearxng;
                 const includeFetchUrlTool = wantWebAssist && generalSettings.qaEnableFetchUrlTool && hasSearxng;
                 const session = await chatHistoryStore.getSession(sessionId);
+                const foundryAgentId = typeof message.foundryAgentId === 'string' ? message.foundryAgentId.trim() : '';
 
                 // 0. Only get page content if includePageContent is true
                 if (includePageContent) {
@@ -887,6 +890,45 @@ chrome.runtime.onConnect.addListener(port => {
 
                   // Get page markdown content
                   pageContent = await getMarkdownContent(tabId);
+                }
+
+                if (foundryAgentId) {
+                  const foundryAgent = await foundryAgentsStore.getAgent(foundryAgentId);
+                  if (!foundryAgent) {
+                    throw new Error('Azure Foundry agent not found. Add or update it in Settings → Azure Foundry.');
+                  }
+
+                  const foundryInput = buildFoundryResponseInput({
+                    messages: session?.messages ?? [],
+                    userQuery,
+                    pageContent,
+                    includePageContent,
+                  });
+
+                  await streamFoundryAgentResponse({
+                    agent: foundryAgent,
+                    input: foundryInput,
+                    signal: abortController.signal,
+                    onDelta: content => {
+                      if (streamTabConn?.port && !abortController.signal.aborted && content) {
+                        streamTabConn.port.postMessage({
+                          type: 'qa_response_chunk',
+                          sessionId,
+                          tabId,
+                          content,
+                        });
+                      }
+                    },
+                  });
+
+                  if (streamTabConn?.port && !abortController.signal.aborted) {
+                    streamTabConn.port.postMessage({
+                      type: 'qa_response_complete',
+                      sessionId,
+                      tabId,
+                    });
+                  }
+                  return;
                 }
 
                 // 2. Get QA model config

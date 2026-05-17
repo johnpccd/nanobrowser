@@ -101,6 +101,8 @@ interface ChatInputProps {
     discoveredNames: string[];
   }) => void;
   onToggleQaBuiltinTool?: (id: QaBuiltinToolToggleId, nextEnabled: boolean) => void;
+  /** When true (e.g. Azure Foundry agent selected), QA tools menu is disabled. */
+  qaToolsDisabled?: boolean;
 }
 
 // File attachment interface
@@ -264,6 +266,7 @@ export default function ChatInput({
   onQaMcpToolsMenuOpenChange,
   onToggleQaMcpTool,
   onToggleQaBuiltinTool,
+  qaToolsDisabled = false,
 }: ChatInputProps) {
   const [text, setText] = useState('');
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
@@ -926,25 +929,29 @@ export default function ChatInput({
                             <button
                               type="button"
                               onClick={() => {
-                                if (disabled) return;
+                                if (disabled || qaToolsDisabled) return;
                                 onQaMcpToolsMenuOpenChange(!qaMcpToolsMenuOpen);
                               }}
-                              disabled={disabled}
+                              disabled={disabled || qaToolsDisabled}
                               aria-expanded={qaMcpToolsMenuOpen}
                               aria-haspopup="dialog"
                               aria-label={
-                                qaEnabledToolCount != null
-                                  ? t('chat_qaTools_tooltip', [String(qaEnabledToolCount)])
-                                  : t('chat_qaTools_button')
+                                qaToolsDisabled
+                                  ? t('chat_qaTools_disabledFoundry')
+                                  : qaEnabledToolCount != null
+                                    ? t('chat_qaTools_tooltip', [String(qaEnabledToolCount)])
+                                    : t('chat_qaTools_button')
                               }
                               title={
-                                qaEnabledToolCount != null
-                                  ? t('chat_qaTools_tooltip', [String(qaEnabledToolCount)])
-                                  : t('chat_qaTools_button')
+                                qaToolsDisabled
+                                  ? t('chat_qaTools_disabledFoundry')
+                                  : qaEnabledToolCount != null
+                                    ? t('chat_qaTools_tooltip', [String(qaEnabledToolCount)])
+                                    : t('chat_qaTools_button')
                               }
                               className={toolbarIconButtonClass(
                                 isDarkMode,
-                                disabled,
+                                disabled || qaToolsDisabled,
                                 qaMcpToolsMenuOpen ? 'active' : 'neutral',
                                 'badge',
                               )}
@@ -975,6 +982,7 @@ export default function ChatInput({
                             </button>
                           </div>
                           {qaMcpToolsMenuOpen &&
+                            !qaToolsDisabled &&
                             mcpMenuFixedStyle &&
                             createPortal(
                               <div

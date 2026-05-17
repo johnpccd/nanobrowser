@@ -3,18 +3,20 @@ import '@src/Options.css';
 import { Button } from '@extension/ui';
 import { withErrorBoundary, withSuspense } from '@extension/shared';
 import { t } from '@extension/i18n';
-import { FiSettings, FiCpu, FiInfo, FiTool, FiUser } from 'react-icons/fi';
+import { FiSettings, FiCpu, FiInfo, FiTool, FiUser, FiCloud } from 'react-icons/fi';
 import { GeneralSettings } from './components/GeneralSettings';
 import { ModelSettings } from './components/ModelSettings';
 import { McpToolsSettings } from './components/McpToolsSettings';
 import { PersonasSettings } from './components/PersonasSettings';
+import { FoundryAgentsSettings } from './components/FoundryAgentsSettings';
 import { AboutSettings } from './components/AboutSettings';
-type TabTypes = 'general' | 'models' | 'personas' | 'mcp' | 'about';
+type TabTypes = 'general' | 'models' | 'personas' | 'foundry' | 'mcp' | 'about';
 
 const TABS: { id: TabTypes; icon: React.ComponentType<{ className?: string }>; label: string }[] = [
   { id: 'general', icon: FiSettings, label: t('options_tabs_general') },
   { id: 'models', icon: FiCpu, label: t('options_tabs_models') },
   { id: 'personas', icon: FiUser, label: 'Personas' },
+  { id: 'foundry', icon: FiCloud, label: t('options_tabs_foundry' as never) },
   { id: 'mcp', icon: FiTool, label: t('options_tabs_mcp' as never) },
   { id: 'about', icon: FiInfo, label: t('options_tabs_about' as never) },
 ];
@@ -24,7 +26,7 @@ function tabFromLocationHash(): TabTypes | null {
     return null;
   }
   const h = window.location.hash.replace(/^#/, '').trim();
-  const ids: TabTypes[] = ['general', 'models', 'personas', 'mcp', 'about'];
+  const ids: TabTypes[] = ['general', 'models', 'personas', 'foundry', 'mcp', 'about'];
   return ids.includes(h as TabTypes) ? (h as TabTypes) : null;
 }
 
@@ -73,6 +75,8 @@ const Options = () => {
         return <ModelSettings isDarkMode={isDarkMode} />;
       case 'personas':
         return <PersonasSettings isDarkMode={isDarkMode} />;
+      case 'foundry':
+        return <FoundryAgentsSettings isDarkMode={isDarkMode} />;
       case 'mcp':
         return <McpToolsSettings isDarkMode={isDarkMode} />;
       case 'about':
