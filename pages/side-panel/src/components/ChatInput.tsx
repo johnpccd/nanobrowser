@@ -147,6 +147,7 @@ function useQaToolbarSelectWidths(
   personaSelectRef: RefObject<HTMLSelectElement | null>,
   modelLabel: string,
   personaLabel: string,
+  hasModel: boolean,
   hasPersona: boolean,
   enabled: boolean,
 ): { modelWidthPx?: number; personaWidthPx?: number } {
@@ -159,8 +160,7 @@ function useQaToolbarSelectWidths(
     }
 
     const container = containerRef.current;
-    const modelEl = modelSelectRef.current;
-    if (!container || !modelEl) {
+    if (!container) {
       return;
     }
 
@@ -170,8 +170,20 @@ function useQaToolbarSelectWidths(
         return;
       }
 
+      const modelEl = hasModel ? modelSelectRef.current : null;
+      const personaEl = hasPersona ? personaSelectRef.current : null;
+
+      if (!modelEl && personaEl) {
+        const personaContent = Math.max(measureSelectLabelPx(personaEl, personaLabel), QA_SELECT_MIN_PERSONA_PX);
+        setWidths({ modelWidthPx: undefined, personaWidthPx: Math.min(personaContent, growWidth) });
+        return;
+      }
+
+      if (!modelEl) {
+        return;
+      }
+
       const modelContent = Math.max(measureSelectLabelPx(modelEl, modelLabel), QA_SELECT_MIN_MODEL_PX);
-      const personaEl = personaSelectRef.current;
 
       if (!hasPersona || !personaEl) {
         setWidths({ modelWidthPx: Math.min(modelContent, growWidth), personaWidthPx: undefined });
@@ -201,7 +213,7 @@ function useQaToolbarSelectWidths(
     const ro = new ResizeObserver(update);
     ro.observe(container);
     return () => ro.disconnect();
-  }, [containerRef, modelSelectRef, personaSelectRef, modelLabel, personaLabel, hasPersona, enabled]);
+  }, [containerRef, modelSelectRef, personaSelectRef, modelLabel, personaLabel, hasModel, hasPersona, enabled]);
 
   return widths;
 }
@@ -300,14 +312,18 @@ export default function ChatInput({
   );
 
   const hasQaPersonaSelect = personas.length > 0 && Boolean(onPersonaChange);
+  const showQaModelSelect = isQAMode && availableModels.length > 0 && Boolean(onQAModelChange) && !qaToolsDisabled;
+  const showQaToolbarSelects = isQAMode && (showQaModelSelect || hasQaPersonaSelect);
+
   const qaSelectWidths = useQaToolbarSelectWidths(
     qaSelectsGrowRef,
     qaModelSelectRef,
     qaPersonaSelectRef,
     selectedModelLabel,
     selectedPersonaLabel,
+    showQaModelSelect,
     hasQaPersonaSelect,
-    isQAMode && availableModels.length > 0,
+    showQaToolbarSelects,
   );
 
   const qaSelectClass = (disabledSelect: boolean) =>
@@ -812,71 +828,75 @@ export default function ChatInput({
                     <FaMicrophone className={`size-4 ${isRecording ? 'animate-pulse' : ''}`} />
                   )}
                 </button>
-                {isQAMode && availableModels.length > 0 && onQAModelChange && (
+                {isQAMode && (
                   <>
-                    <div
-                      ref={qaSelectsGrowRef}
-                      data-qa-growable
-                      className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
-                      <select
-                        ref={qaModelSelectRef}
-                        value={currentQAModel || ''}
-                        onChange={e => {
-                          const value = e.target.value;
-                          if (value) {
-                            const [provider, model] = value.split('>');
-                            if (provider && model) {
-                              onQAModelChange(provider, model);
-                            }
-                          }
-                        }}
-                        disabled={disabled || qaToolsDisabled}
-                        title={qaToolsDisabled ? t('chat_qaTools_disabledFoundry') : selectedModelLabel}
-                        className={qaSelectClass(disabled || qaToolsDisabled)}
-                        style={{
-                          ...neutralControlStyle,
-                          ...(qaSelectWidths.modelWidthPx != null
-                            ? { width: `${qaSelectWidths.modelWidthPx}px` }
-                            : { minWidth: `${QA_SELECT_MIN_MODEL_PX}px` }),
-                        }}
-                        aria-label={t('chat_select_model_a11y')}>
-                        {!currentQAModel && (
-                          <option value="" disabled>
-                            {t('chat_select_model')}
-                          </option>
+                    {showQaToolbarSelects && (
+                      <div
+                        ref={qaSelectsGrowRef}
+                        data-qa-growable
+                        className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
+                        {hasQaPersonaSelect && (
+                          <select
+                            ref={qaPersonaSelectRef}
+                            value={currentPersonaId || ''}
+                            onChange={e => onPersonaChange!(e.target.value)}
+                            disabled={disabled}
+                            title={selectedPersonaLabel}
+                            className={qaSelectClass(disabled)}
+                            style={{
+                              ...neutralControlStyle,
+                              ...(qaSelectWidths.personaWidthPx != null
+                                ? { width: `${qaSelectWidths.personaWidthPx}px` }
+                                : { minWidth: `${QA_SELECT_MIN_PERSONA_PX}px` }),
+                            }}
+                            aria-label={t('chat_select_persona_a11y')}>
+                            {personas.map(persona => (
+                              <option key={persona.id} value={persona.id}>
+                                {persona.name}
+                              </option>
+                            ))}
+                          </select>
                         )}
-                        {availableModels.map(option => {
-                          const value = `${option.provider}>${option.model}`;
-                          return (
-                            <option key={value} value={value}>
-                              {option.displayName}
-                            </option>
-                          );
-                        })}
-                      </select>
-                      {hasQaPersonaSelect && (
-                        <select
-                          ref={qaPersonaSelectRef}
-                          value={currentPersonaId || ''}
-                          onChange={e => onPersonaChange!(e.target.value)}
-                          disabled={disabled}
-                          title={selectedPersonaLabel}
-                          className={qaSelectClass(disabled)}
-                          style={{
-                            ...neutralControlStyle,
-                            ...(qaSelectWidths.personaWidthPx != null
-                              ? { width: `${qaSelectWidths.personaWidthPx}px` }
-                              : { minWidth: `${QA_SELECT_MIN_PERSONA_PX}px` }),
-                          }}
-                          aria-label={t('chat_select_persona_a11y')}>
-                          {personas.map(persona => (
-                            <option key={persona.id} value={persona.id}>
-                              {persona.name}
-                            </option>
-                          ))}
-                        </select>
-                      )}
-                    </div>
+                        {showQaModelSelect && (
+                          <select
+                            ref={qaModelSelectRef}
+                            value={currentQAModel || ''}
+                            onChange={e => {
+                              const value = e.target.value;
+                              if (value) {
+                                const [provider, model] = value.split('>');
+                                if (provider && model) {
+                                  onQAModelChange!(provider, model);
+                                }
+                              }
+                            }}
+                            disabled={disabled}
+                            title={selectedModelLabel}
+                            className={qaSelectClass(disabled)}
+                            style={{
+                              ...neutralControlStyle,
+                              ...(qaSelectWidths.modelWidthPx != null
+                                ? { width: `${qaSelectWidths.modelWidthPx}px` }
+                                : { minWidth: `${QA_SELECT_MIN_MODEL_PX}px` }),
+                            }}
+                            aria-label={t('chat_select_model_a11y')}>
+                            {!currentQAModel && (
+                              <option value="" disabled>
+                                {t('chat_select_model')}
+                              </option>
+                            )}
+                            {availableModels.map(option => {
+                              const value = `${option.provider}>${option.model}`;
+                              return (
+                                <option key={value} value={value}>
+                                  {option.displayName}
+                                </option>
+                              );
+                            })}
+                          </select>
+                        )}
+                      </div>
+                    )}
                     {/* Page content (current tab) vs generic chat */}
                     {onToggleIncludePageContent && (
                       <button

@@ -157,17 +157,22 @@ export async function createFoundryConversation(agent: FoundryAgent, signal: Abo
   return json.id.trim();
 }
 
+function foundryConversationStorageKey(sessionId: string, foundryAgentId: string): string {
+  return `${sessionId.trim()}::${foundryAgentId.trim()}`;
+}
+
 export async function getOrCreateFoundryConversation(
   agent: FoundryAgent,
   sessionId: string,
   signal: AbortSignal,
 ): Promise<string> {
-  const existing = await foundryConversationStore.getConversationId(sessionId);
+  const storageKey = foundryConversationStorageKey(sessionId, agent.id);
+  const existing = await foundryConversationStore.getConversationId(storageKey);
   if (existing) {
     return existing;
   }
   const conversationId = await createFoundryConversation(agent, signal);
-  await foundryConversationStore.setConversationId(sessionId, conversationId);
+  await foundryConversationStore.setConversationId(storageKey, conversationId);
   return conversationId;
 }
 
@@ -196,7 +201,8 @@ export async function streamFoundryAgentResponse(params: {
     conversation: conversationId,
     input,
     stream: true,
-    store: false,
+    // Required for multi-turn history when using the conversation id (store=false drops prior turns).
+    store: true,
   };
 
   const response = await fetch(url, {
