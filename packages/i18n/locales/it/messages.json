@@ -1,164 +1,164 @@
 {
   "app_metadata_description": {
-    "description": "Extension description",
-    "message": "Automate web tasks with AI! NanoBrowser is an open-source browser extension that lets you extract data, fill forms, and more."
+    "description": "Descrizione dell'estensione",
+    "message": "Automatizza le attività web con l'intelligenza artificiale! "
   },
   "app_metadata_name": {
-    "description": "Extension name",
-    "message": "HR Browser Agent"
+    "description": "Nome dell'estensione",
+    "message": "Agente browser HR"
   },
   "errors_unknown": {
-    "message": "Unknown error occurred"
+    "message": "Si è verificato un errore sconosciuto"
   },
   "errors_conn_serviceWorker": {
-    "message": "Failed to connect to service worker"
+    "message": "Impossibile connettersi all'operatore del servizio"
   },
   "errors_cmd_unknown": {
-    "message": "Unsupported command: $COMMAND$.\n\nAvailable commands: /state, /nohighlight, /replay <historySessionId>",
+    "message": "Comando non supportato: $COMMAND$.\n\n",
     "placeholders": {
       "command": {
         "content": "$1",
-        "example": "/unknown"
+        "example": "/sconosciuto"
       }
     }
   },
   "nav_newChat_a11y": {
-    "message": "New Chat"
+    "message": "Nuova chiacchierata"
   },
   "nav_loadHistory_a11y": {
-    "message": "Load History"
+    "message": "Carica cronologia"
   },
   "nav_settings_a11y": {
-    "message": "Settings"
+    "message": "Impostazioni"
   },
   "nav_back": {
-    "message": "← Back"
+    "message": "← Indietro"
   },
   "nav_back_a11y": {
-    "message": "Back to chat"
+    "message": "Torniamo alla chat"
   },
   "welcome_title": {
-    "message": "Welcome to HR Browser Agent!"
+    "message": "Benvenuto nell'agente HR Browser!"
   },
   "welcome_instruction": {
-    "message": "To get started, please configure your API keys in the settings page."
+    "message": "Per iniziare, configura le tue chiavi API nella pagina delle impostazioni."
   },
   "welcome_openSettings": {
-    "message": "Open Settings"
+    "message": "Apri Impostazioni"
   },
   "welcome_quickStart": {
-    "message": "Quick Start Guide"
+    "message": "Guida rapida"
   },
   "welcome_joinCommunity": {
-    "message": "Join Our Community"
+    "message": "Unisciti alla nostra comunità"
   },
   "status_checkingConfig": {
-    "message": "Checking configuration..."
+    "message": "Controllo della configurazione..."
   },
   "chat_buttons_stop": {
-    "message": "Stop"
+    "message": "Fermare"
   },
   "chat_buttons_replay": {
-    "message": "Replay"
+    "message": "Rigiocare"
   },
   "chat_buttons_send": {
-    "message": "Send"
+    "message": "Inviare"
   },
   "chat_message_edit": {
-    "message": "Edit"
+    "message": "Modificare"
   },
   "chat_message_edit_a11y": {
-    "message": "Edit message"
+    "message": "Modifica messaggio"
   },
   "chat_message_edit_cancel": {
-    "message": "Cancel"
+    "message": "Cancellare"
   },
   "chat_message_edit_resend": {
-    "message": "Save & resend"
+    "message": "Salva e invia nuovamente"
   },
   "chat_input_placeholder": {
-    "message": "What can I help you with?"
+    "message": "In cosa posso aiutarti?"
   },
   "chat_input_placeholder_attachments": {
-    "message": "Add a message (optional)..."
+    "message": "Aggiungi un messaggio (facoltativo)..."
   },
   "chat_select_model": {
-    "message": "Select model..."
+    "message": "Seleziona modello..."
   },
   "chat_select_model_a11y": {
-    "message": "Select QA model"
+    "message": "Seleziona il modello QA"
   },
   "chat_select_persona_a11y": {
-    "message": "Select QA persona"
+    "message": "Seleziona il personaggio QA"
   },
   "chat_progress_message": {
-    "message": "Showing progress..."
+    "message": "Visualizzazione dei progressi..."
   },
   "chat_input_form": {
-    "message": "Chat input form"
+    "message": "Modulo di input della chat"
   },
   "chat_input_editor": {
-    "message": "Message input"
+    "message": "Inserimento del messaggio"
   },
   "chat_attach_files_button": {
-    "message": "Attach"
+    "message": "Allegare"
   },
   "chat_attach_files_tooltip": {
-    "message": "Attach text files: txt, md, json, csv, log, xml, yaml (max 1 MB each)"
+    "message": "Allega file di testo: txt, md, json, csv, log, xml, yaml (max 1 MB ciascuno)"
   },
   "chat_history_title": {
-    "message": "Chat History"
+    "message": "Cronologia chat"
   },
   "chat_history_empty": {
-    "message": "No chat history available"
+    "message": "Nessuna cronologia chat disponibile"
   },
   "chat_history_bookmark": {
-    "message": "Bookmark session"
+    "message": "Sessione dei segnalibri"
   },
   "chat_history_delete": {
-    "message": "Delete session"
+    "message": "Elimina sessione"
   },
   "chat_bookmarks_header": {
-    "message": "Quick Start"
+    "message": "Avvio rapido"
   },
   "chat_bookmarks_saveEdit": {
-    "message": "Save changes"
+    "message": "Salva modifiche"
   },
   "chat_bookmarks_cancelEdit": {
-    "message": "Cancel changes"
+    "message": "Annulla modifiche"
   },
   "chat_bookmarks_edit": {
-    "message": "Edit bookmark title"
+    "message": "Modifica il titolo del segnalibro"
   },
   "chat_bookmarks_delete": {
-    "message": "Delete bookmark"
+    "message": "Elimina segnalibro"
   },
   "chat_replay_starting": {
-    "message": "Starting replay of task:\n\n\"$TASK$\"",
+    "message": "Avvio della riproduzione dell'attività:\n\n",
     "placeholders": {
       "task": {
         "content": "$1",
-        "example": "Navigate to example.com"
+        "example": "Passare a example.com"
       }
     }
   },
   "chat_replay_failed": {
-    "message": "Replay failed: $ERROR_MESSAGE$",
+    "message": "Riproduzione non riuscita: $ERROR_MESSAGE$",
     "placeholders": {
       "error_message": {
         "content": "$1",
-        "example": "Connection timeout"
+        "example": "Timeout della connessione"
       }
     }
   },
   "chat_replay_invalidArgs": {
-    "message": "Invalid arguments. Please use the format: /replay <historySessionId>"
+    "message": "Argomenti non validi. "
   },
   "chat_replay_disabled": {
-    "message": "Replay is disabled in general settings. Please enable \"Replay Historical Tasks\" in the extension settings to use this feature."
+    "message": "La riproduzione è disabilitata nelle impostazioni generali. "
   },
   "chat_replay_noHistory": {
-    "message": "No action history found for session \"$SESSION_ID$...\". This session may not contain replayable actions.\n\nIt's a replay session itself (replay sessions cannot be replayed again), or it was created before the replay feature was available.",
+    "message": "Nessuna cronologia delle azioni trovata per la sessione \"$SESSION_ID$...\". ",
     "placeholders": {
       "session_id": {
         "content": "$1",
@@ -167,73 +167,73 @@
     }
   },
   "chat_stt_processing": {
-    "message": "Processing speech..."
+    "message": "Elaborazione del discorso..."
   },
   "chat_stt_recording_stop": {
-    "message": "Stop recording"
+    "message": "Interrompi la registrazione"
   },
   "chat_stt_input_start": {
-    "message": "Start voice input"
+    "message": "Avvia l'input vocale"
   },
   "chat_stt_processingFailed": {
-    "message": "Failed to process speech recording"
+    "message": "Impossibile elaborare la registrazione vocale"
   },
   "chat_stt_model_notFound": {
-    "message": "No speech-to-text model configured or not a Gemini model. Please configure a Gemini model in settings."
+    "message": "Nessun modello di sintesi vocale configurato o meno modello Gemini. "
   },
   "chat_stt_recognitionFailed": {
-    "message": "Speech recognition failed"
+    "message": "Il riconoscimento vocale non è riuscito"
   },
   "chat_stt_microphone_permissionDenied": {
-    "message": "Microphone access denied. Please enable microphone permissions in browser settings."
+    "message": "Accesso al microfono negato. "
   },
   "chat_stt_microphone_accessFailed": {
-    "message": "Failed to access microphone. "
+    "message": "Impossibile accedere al microfono."
   },
   "chat_stt_microphone_grantPermission": {
-    "message": "Please grant microphone permission."
+    "message": "Concedere l'autorizzazione al microfono."
   },
   "chat_stt_microphone_notFound": {
-    "message": "No microphone found."
+    "message": "Nessun microfono trovato."
   },
   "chat_imageCapture_button": {
-    "message": "Capture page screenshot"
+    "message": "Cattura screenshot della pagina"
   },
   "chat_imageCapture_tooltip": {
-    "message": "Capture a screenshot of the current page to include with your message"
+    "message": "Cattura uno screenshot della pagina corrente da includere nel tuo messaggio"
   },
   "chat_imageCapture_label": {
-    "message": "Capture"
+    "message": "Catturare"
   },
   "chat_imageCapture_preview": {
-    "message": "Screenshot preview"
+    "message": "Anteprima dello screenshot"
   },
   "chat_imageCapture_remove": {
-    "message": "Remove screenshot"
+    "message": "Rimuovi schermata"
   },
   "chat_imageCapture_attached": {
-    "message": "Screenshot attached"
+    "message": "Screenshot allegato"
   },
   "chat_imageCapture_failed": {
-    "message": "Failed to capture screenshot. Please try again."
+    "message": "Impossibile acquisire lo screenshot. "
   },
   "chat_imageCapture_viewFull": {
-    "message": "View full image"
+    "message": "Visualizza l'immagine completa"
   },
   "chat_imageCapture_clickToExpand": {
-    "message": "Click to expand"
+    "message": "Fare clic per espandere"
   },
   "chat_imageCapture_closeModal": {
-    "message": "Close image"
+    "message": "Chiudi immagine"
   },
   "chat_imageCapture_fullImage": {
-    "message": "Full size screenshot"
+    "message": "Schermata a grandezza naturale"
   },
   "chat_qaTools_button": {
-    "message": "QA tools settings"
+    "message": "Impostazioni degli strumenti QA"
   },
   "chat_qaTools_tooltip": {
-    "message": "$COUNT$ QA tool(s) are currently exposed to the model (built-in + MCP). Open this menu or settings to toggle individual MCP tools and reduce token use.",
+    "message": "Gli strumenti $COUNT$ QA sono attualmente esposti al modello (integrato + MCP). ",
     "placeholders": {
       "count": {
         "content": "$1",
@@ -245,211 +245,211 @@
     "message": "…"
   },
   "chat_mcpTools_menu_title": {
-    "message": "Tools"
+    "message": "Utensili"
   },
   "chat_mcpTools_loading": {
-    "message": "Loading tools from servers..."
+    "message": "Caricamento strumenti dai server..."
   },
   "chat_mcpTools_loadError": {
-    "message": "Could not load MCP tools. Check your servers or try again."
+    "message": "Impossibile caricare gli strumenti MCP. "
   },
   "chat_mcpTools_empty": {
-    "message": "No MCP servers with an endpoint are configured yet."
+    "message": "Nessun server MCP con un endpoint è ancora configurato."
   },
   "chat_mcpTools_manage_servers": {
-    "message": "Manage MCP servers..."
+    "message": "Gestisci i server MCP..."
   },
   "chat_mcpTools_builtins_heading": {
-    "message": "Built-in tools"
+    "message": "Strumenti integrati"
   },
   "chat_mcpTools_mcpServers_heading": {
-    "message": "Remote MCP servers"
+    "message": "Server MCP remoti"
   },
   "chat_mcpTools_builtin_needsSearxng": {
-    "message": "Configure a SearXNG base URL in General settings for this tool to be exposed to the model."
+    "message": "Configura un URL di base SearXNG nelle Impostazioni generali affinché questo strumento venga esposto al modello."
   },
   "chat_mcpTools_noMcpServers": {
-    "message": "No MCP servers with an endpoint are configured."
+    "message": "Non è configurato alcun server MCP con un endpoint."
   },
   "chat_mcpTools_builtin_desc_thinking": {
-    "message": "Extended reasoning text the model can emit before answering."
+    "message": "Testo argomentativo esteso che il modello può emettere prima di rispondere."
   },
   "chat_mcpTools_builtin_desc_webSearch": {
-    "message": "Search the web via your SearXNG instance."
+    "message": "Cerca sul Web tramite la tua istanza SearXNG."
   },
   "chat_mcpTools_builtin_desc_fetchUrl": {
-    "message": "Fetch and read page content via your SearXNG instance."
+    "message": "Recupera e leggi il contenuto della pagina tramite la tua istanza SearXNG."
   },
   "chat_pageContent_toggle": {
-    "message": "Toggle page content"
+    "message": "Attiva/disattiva il contenuto della pagina"
   },
   "chat_pageContent_enabled": {
-    "message": "Page content included"
+    "message": "Contenuto della pagina incluso"
   },
   "chat_pageContent_disabled": {
-    "message": "Generic chat mode"
+    "message": "Modalità chat generica"
   },
   "chat_pageContent_tooltip_enabled": {
-    "message": "Click to disable page content - responses will be generic LLM chat without page context"
+    "message": "Fare clic per disabilitare il contenuto della pagina: le risposte saranno chat LLM generiche senza contesto di pagina"
   },
   "chat_pageContent_tooltip_disabled": {
-    "message": "Click to enable page content - responses will be based on the current page"
+    "message": "Fai clic per abilitare il contenuto della pagina: le risposte saranno basate sulla pagina corrente"
   },
   "permissions_microphone_title": {
-    "message": "Enable Voice Input"
+    "message": "Abilita input vocale"
   },
   "permissions_microphone_description": {
-    "message": "Nanobrowser needs microphone access to convert your speech to text."
+    "message": "Nanobrowser necessita dell'accesso al microfono per convertire il tuo discorso in testo."
   },
   "permissions_microphone_grantButton": {
-    "message": "Grant Microphone Permission"
+    "message": "Concedere l'autorizzazione al microfono"
   },
   "permissions_microphone_requesting": {
-    "message": "Requesting microphone permission..."
+    "message": "Richiesta autorizzazione microfono..."
   },
   "permissions_microphone_grantedSuccess": {
-    "message": "✅ Microphone permission granted! You can now use voice input."
+    "message": "✅ Autorizzazione microfono concessa! "
   },
   "permissions_microphone_grantedButton": {
-    "message": "Permission Granted"
+    "message": "Autorizzazione concessa"
   },
   "permissions_microphone_denied": {
-    "message": "Permission denied. "
+    "message": "Autorizzazione negata."
   },
   "permissions_microphone_allowHelp": {
-    "message": "Please click \"Allow\" when prompted for microphone access."
+    "message": "Fare clic su \"Consenti\" quando viene richiesto l'accesso al microfono."
   },
   "permissions_microphone_notFound": {
-    "message": "No microphone found. Please check your audio devices."
+    "message": "Nessun microfono trovato. "
   },
   "permissions_microphone_alreadyGranted": {
-    "message": "✅ Microphone permission already granted!"
+    "message": "✅ Autorizzazione microfono già concessa!"
   },
   "permissions_microphone_alreadyGrantedButton": {
-    "message": "Permission Already Granted"
+    "message": "Autorizzazione già concessa"
   },
   "options_nav_header": {
-    "message": "Settings"
+    "message": "Impostazioni"
   },
   "options_tabs_general": {
-    "message": "General"
+    "message": "Generale"
   },
   "options_tabs_models": {
-    "message": "Models"
+    "message": "Modelli"
   },
   "options_tabs_personas": {
-    "message": "Personas"
+    "message": "Persona"
   },
   "options_tabs_firewall": {
     "message": "Firewall"
   },
   "options_tabs_mcp": {
-    "message": "MCP Tools"
+    "message": "Strumenti MCP"
   },
   "options_tabs_foundry": {
-    "message": "Azure Foundry"
+    "message": "Fonderia Azzurra"
   },
   "options_foundry_header": {
-    "message": "Azure Foundry Agents"
+    "message": "Agenti della fonderia di Azure"
   },
   "options_foundry_desc": {
-    "message": "Configure Azure Foundry agents for QA mode. Uses the project openai/v1 conversations + responses API (same as the Foundry agent webapp). Agents appear in the persona list with an AzF: prefix; tools are disabled."
+    "message": "Configurare gli agenti Azure Foundry per la modalità QA. "
   },
   "options_foundry_namePlaceholder": {
-    "message": "Display name"
+    "message": "Nome da visualizzare"
   },
   "options_foundry_projectEndpointPlaceholder": {
-    "message": "Project endpoint (https://…/api/projects/…)"
+    "message": "Endpoint del progetto (https://…/api/projects/…)"
   },
   "options_foundry_agentNamePlaceholder": {
-    "message": "Agent name (e.g. eng-agent-impact-analysis or eng-agent-impact-analysis:1)"
+    "message": "Nome dell'agente (ad esempio eng-agent-impact-analysis o eng-agent-impact-analysis:1)"
   },
   "options_foundry_agentVersionPlaceholder": {
-    "message": "Agent version (optional if using name:version above)"
+    "message": "Versione dell'agente (facoltativo se si utilizza nome:versione sopra)"
   },
   "options_foundry_apiKeyPlaceholder": {
-    "message": "API key"
+    "message": "Chiave API"
   },
   "options_foundry_responsesEndpointPlaceholder": {
-    "message": "Responses endpoint override (optional)"
+    "message": "Override dell'endpoint delle risposte (facoltativo)"
   },
   "options_foundry_openaiBaseUrlPlaceholder": {
-    "message": "OpenAI v1 base URL (optional)"
+    "message": "URL di base OpenAI v1 (facoltativo)"
   },
   "options_foundry_apiVersionPlaceholder": {
-    "message": "API version query param (default: v1)"
+    "message": "Parametro query versione API (impostazione predefinita: v1)"
   },
   "options_foundry_resolvedEndpoint": {
-    "message": "Resolved responses URL"
+    "message": "URL delle risposte risolte"
   },
   "options_foundry_addHeading": {
-    "message": "Add Azure Foundry Agent"
+    "message": "Aggiungi l'agente Azure Foundry"
   },
   "options_foundry_save": {
-    "message": "Save"
+    "message": "Salva"
   },
   "options_foundry_delete": {
-    "message": "Delete"
+    "message": "Eliminare"
   },
   "options_foundry_add": {
-    "message": "Add Agent"
+    "message": "Aggiungi agente"
   },
   "options_foundry_memory_header": {
-    "message": "Memory management"
+    "message": "Gestione della memoria"
   },
   "options_foundry_memory_desc": {
-    "message": "Manage long-term memories for this agent's memory store and scope (Foundry Memory Store API). Save the agent after changing store or scope."
+    "message": "Gestisci le memorie a lungo termine per l'archivio di memoria e l'ambito di questo agente (API Foundry Memory Store). "
   },
   "options_foundry_memory_storeLabel": {
-    "message": "Memory store name"
+    "message": "Nome dell'archivio di memoria"
   },
   "options_foundry_memory_storePlaceholder": {
-    "message": "e.g. my_memory_store"
+    "message": "per esempio. "
   },
   "options_foundry_memory_scopeLabel": {
-    "message": "Scope"
+    "message": "Ambito"
   },
   "options_foundry_memory_scopePlaceholder": {
-    "message": "e.g. user_123 or nanobrowser"
+    "message": "per esempio. "
   },
   "options_foundry_memory_listStores": {
-    "message": "List stores"
+    "message": "Elenca i negozi"
   },
   "options_foundry_memory_load": {
-    "message": "Load memories"
+    "message": "Carica ricordi"
   },
   "options_foundry_memory_clearScope": {
-    "message": "Clear scope"
+    "message": "Ambito chiaro"
   },
   "options_foundry_memory_searchPlaceholder": {
-    "message": "Optional search query (semantic)"
+    "message": "Query di ricerca facoltativa (semantica)"
   },
   "options_foundry_memory_addLabel": {
-    "message": "Add memory from text"
+    "message": "Aggiungi memoria dal testo"
   },
   "options_foundry_memory_addPlaceholder": {
-    "message": "e.g. I prefer dark roast coffee in the morning"
+    "message": "per esempio. "
   },
   "options_foundry_memory_add": {
-    "message": "Add memory"
+    "message": "Aggiungi memoria"
   },
   "options_foundry_memory_listHeader": {
-    "message": "Memories"
+    "message": "Ricordi"
   },
   "options_foundry_memory_edit": {
-    "message": "Edit"
+    "message": "Modificare"
   },
   "options_foundry_memory_forget": {
-    "message": "Remove"
+    "message": "Rimuovere"
   },
   "options_foundry_memory_cancel": {
-    "message": "Cancel"
+    "message": "Cancellare"
   },
   "options_foundry_memory_saveEdit": {
-    "message": "Save"
+    "message": "Salva"
   },
   "options_foundry_memory_storesLoaded": {
-    "message": "Found $COUNT$ memory store(s).",
+    "message": "Trovato/i archivio/i di memoria $COUNT$.",
     "placeholders": {
       "count": {
         "content": "$1",
@@ -458,7 +458,7 @@
     }
   },
   "options_foundry_memory_loaded": {
-    "message": "Loaded $COUNT$ memory item(s).",
+    "message": "Elementi di memoria $COUNT$ caricati.",
     "placeholders": {
       "count": {
         "content": "$1",
@@ -467,208 +467,208 @@
     }
   },
   "options_foundry_memory_added": {
-    "message": "Memory update submitted. Processing may take up to a minute."
+    "message": "Aggiornamento della memoria inviato. "
   },
   "options_foundry_memory_updated": {
-    "message": "Memory update submitted."
+    "message": "Aggiornamento della memoria inviato."
   },
   "options_foundry_memory_forgetSubmitted": {
-    "message": "Removal request submitted. Reload memories to confirm."
+    "message": "Richiesta di rimozione inviata. "
   },
   "options_foundry_memory_scopeCleared": {
-    "message": "All memories for this scope were deleted."
+    "message": "Tutte le memorie per questo scopo sono state cancellate."
   },
   "options_foundry_memory_forgetConfirm": {
-    "message": "Ask Foundry to remove this memory? This uses an update request and may take up to a minute."
+    "message": "Chiedere a Foundry di rimuovere questa memoria? "
   },
   "options_foundry_memory_clearScopeConfirm": {
-    "message": "Delete ALL memories for this scope? This cannot be undone."
+    "message": "Eliminare TUTTE le memorie per questo ambito? "
   },
   "options_foundry_memory_errors_bgUnreachable": {
-    "message": "Background service worker is not reachable. Reload the extension."
+    "message": "L'operatore del servizio in background non è raggiungibile. "
   },
   "options_foundry_memory_errors_requestFailed": {
-    "message": "Memory request failed."
+    "message": "Richiesta di memoria non riuscita."
   },
   "options_foundry_memory_errors_notConfigured": {
-    "message": "Set memory store name and scope first, then save the agent."
+    "message": "Impostare prima il nome e l'ambito dell'archivio di memoria, quindi salvare l'agente."
   },
   "options_foundry_memory_errors_contentRequired": {
-    "message": "Enter memory text to add."
+    "message": "Immettere il testo in memoria da aggiungere."
   },
   "options_foundry_memory_errors_agentNotReady": {
-    "message": "Save project endpoint and API key before listing memory stores."
+    "message": "Salva l'endpoint del progetto e la chiave API prima di elencare gli archivi di memoria."
   },
   "options_foundry_memory_storeSelectPlaceholder": {
-    "message": "Select a memory store…"
+    "message": "Seleziona un archivio di memoria..."
   },
   "options_foundry_memory_configureHint": {
-    "message": "Choose a memory store and enter a scope to enable load and add actions."
+    "message": "Scegli un archivio di memoria e inserisci un ambito per abilitare il caricamento e aggiungere azioni."
   },
   "chat_qaTools_disabledFoundry": {
-    "message": "Tools are not available for Azure Foundry agents"
+    "message": "Gli strumenti non sono disponibili per gli agenti Azure Foundry"
   },
   "options_tabs_help": {
-    "message": "Help"
+    "message": "Aiuto"
   },
   "options_tabs_about": {
-    "message": "About"
+    "message": "Di"
   },
   "options_about_header": {
-    "message": "About"
+    "message": "Di"
   },
   "options_about_buildSha": {
-    "message": "Build SHA-1"
+    "message": "Costruisci SHA-1"
   },
   "options_mcp_header": {
-    "message": "MCP Tools"
+    "message": "Strumenti MCP"
   },
   "options_mcp_desc": {
-    "message": "Configure remote MCP servers and expose their tools to QA mode. Streamable HTTP uses one POST URL. Legacy SSE uses a GET SSE URL plus a separate JSON-RPC POST URL (or the stream’s endpoint event)."
+    "message": "Configura i server MCP remoti ed esponi i loro strumenti alla modalità QA. "
   },
   "options_mcp_perTool_hint": {
-    "message": "Which MCP tools the model may call is configured per tool in QA chat — open the tool button next to the message box."
+    "message": "Gli strumenti MCP che il modello può chiamare vengono configurati per strumento nella chat QA: apri il pulsante dello strumento accanto alla finestra del messaggio."
   },
   "options_mcp_enable": {
-    "message": "Enable MCP tools in QA mode"
+    "message": "Abilita gli strumenti MCP in modalità QA"
   },
   "options_mcp_enable_desc": {
-    "message": "When enabled, QA can call tools discovered from your active MCP servers."
+    "message": "Se abilitato, il QA può richiamare gli strumenti rilevati dai server MCP attivi."
   },
   "options_mcp_qaBuiltin_header": {
-    "message": "QA built-in tools"
+    "message": "Strumenti integrati per il QA"
   },
   "options_mcp_qaBuiltin_desc": {
-    "message": "Choose which first-party QA tools the model may use alongside MCP servers. Thinking is reasoning-only; web tools require QA “web search” mode in chat (toolbar toggle / default preference) and a configured SearXNG base URL in General settings."
+    "message": "Scegli quali strumenti di QA proprietari il modello può utilizzare insieme ai server MCP. "
   },
   "options_mcp_qaBuiltin_thinking": {
-    "message": "Thinking (`thinking`)"
+    "message": "Pensare (`pensare`)"
   },
   "options_mcp_qaBuiltin_thinking_desc": {
-    "message": "Let the model call the internal reasoning tool before answering."
+    "message": "Lascia che il modello chiami lo strumento di ragionamento interno prima di rispondere."
   },
   "options_mcp_qaBuiltin_webSearch": {
-    "message": "Web search (`web_search`)"
+    "message": "Ricerca sul Web (\"ricerca_web\")"
   },
   "options_mcp_qaBuiltin_webSearch_desc": {
-    "message": "When web assist is enabled for a reply, expose SearXNG web search."
+    "message": "Quando l'assistenza web è abilitata per una risposta, espone la ricerca web SearXNG."
   },
   "options_mcp_qaBuiltin_fetchUrl": {
-    "message": "Fetch URL (`fetch_url`)"
+    "message": "Recupera URL (`fetch_url`)"
   },
   "options_mcp_qaBuiltin_fetchUrl_desc": {
-    "message": "When web assist is enabled for a reply, expose readable-page fetch via Jina Reader for http(s) URLs."
+    "message": "Quando l'assistenza Web è abilitata per una risposta, espone il recupero della pagina leggibile tramite Jina Reader per gli URL http(s)."
   },
   "options_mcp_addServer": {
-    "message": "Add server"
+    "message": "Aggiungi server"
   },
   "options_mcp_editServer": {
-    "message": "Edit server"
+    "message": "Modifica server"
   },
   "options_mcp_name_placeholder": {
-    "message": "Server name"
+    "message": "Nome del server"
   },
   "options_mcp_transport_streamableHttp": {
-    "message": "Streamable HTTP"
+    "message": "HTTP streaming"
   },
   "options_mcp_transport_sse": {
     "message": "SSE"
   },
   "options_mcp_endpoint_placeholder_streamable": {
-    "message": "POST endpoint (e.g. https://host/mcp)"
+    "message": "Endpoint POST (ad esempio https://host/mcp)"
   },
   "options_mcp_endpoint_placeholder_sse": {
-    "message": "SSE stream URL — GET only (e.g. https://host/sse)"
+    "message": "URL del flusso SSE: solo GET (ad esempio https://host/sse)"
   },
   "options_mcp_sseMessageEndpoint_placeholder": {
-    "message": "JSON-RPC POST URL if not sent in stream (e.g. https://host/messages)"
+    "message": "URL POST JSON-RPC se non inviato nel flusso (ad esempio https://host/messages)"
   },
   "options_mcp_sse_hint": {
-    "message": "Do not POST to the SSE URL — that causes 405. The extension opens the stream here and sends RPC to the message URL (or the URL from the endpoint event)."
+    "message": "Non eseguire il POST sull'URL SSE: ciò causa 405. L'estensione apre il flusso qui e invia RPC all'URL del messaggio (o all'URL dall'evento endpoint)."
   },
   "options_mcp_auth_none": {
-    "message": "No authentication"
+    "message": "Nessuna autenticazione"
   },
   "options_mcp_auth_bearer": {
-    "message": "Bearer token"
+    "message": "Gettone al portatore"
   },
   "options_mcp_authToken_placeholder": {
-    "message": "Bearer token"
+    "message": "Gettone al portatore"
   },
   "options_mcp_access_all": {
-    "message": "Allow all discovered tools"
+    "message": "Consenti tutti gli strumenti rilevati"
   },
   "options_mcp_access_allowlist": {
-    "message": "Allow only listed tools"
+    "message": "Consenti solo gli strumenti elencati"
   },
   "options_mcp_allowedTools_placeholder": {
-    "message": "Allowed tool names (comma separated)"
+    "message": "Nomi degli strumenti consentiti (separati da virgole)"
   },
   "options_mcp_addButton": {
-    "message": "Save server"
+    "message": "Salva server"
   },
   "options_mcp_saveChanges": {
-    "message": "Update server"
+    "message": "Aggiorna server"
   },
   "options_mcp_cancelEdit": {
-    "message": "Cancel edit"
+    "message": "Annulla modifica"
   },
   "options_mcp_servers": {
-    "message": "Configured servers"
+    "message": "Server configurati"
   },
   "options_mcp_empty": {
-    "message": "No MCP servers configured yet."
+    "message": "Nessun server MCP ancora configurato."
   },
   "options_mcp_serverEnabled": {
-    "message": "Enabled"
+    "message": "Abilitato"
   },
   "options_mcp_edit": {
-    "message": "Edit"
+    "message": "Modificare"
   },
   "options_mcp_discoverTools": {
-    "message": "Discover tools"
+    "message": "Scopri gli strumenti"
   },
   "options_mcp_discovering": {
-    "message": "Discovering..."
+    "message": "Alla scoperta..."
   },
   "options_mcp_remove": {
-    "message": "Remove"
+    "message": "Rimuovere"
   },
   "options_mcp_allowedTools_label": {
-    "message": "Allowed tools"
+    "message": "Strumenti consentiti"
   },
   "options_mcp_errors_nameRequired": {
-    "message": "Server name is required."
+    "message": "Il nome del server è obbligatorio."
   },
   "options_mcp_errors_endpointRequired": {
-    "message": "Server endpoint is required."
+    "message": "L'endpoint del server è obbligatorio."
   },
   "options_mcp_errors_endpointProtocol": {
-    "message": "Server endpoint must use http or https."
+    "message": "L'endpoint server deve utilizzare http o https."
   },
   "options_mcp_errors_endpointInvalid": {
-    "message": "Server endpoint is not a valid URL."
+    "message": "L'endpoint del server non è un URL valido."
   },
   "options_mcp_errors_sseMessageProtocol": {
-    "message": "SSE message endpoint must use http or https."
+    "message": "L'endpoint del messaggio SSE deve utilizzare http o https."
   },
   "options_mcp_errors_sseMessageInvalid": {
-    "message": "SSE message endpoint is not a valid URL."
+    "message": "L'endpoint del messaggio SSE non è un URL valido."
   },
   "options_mcp_errors_tokenRequired": {
-    "message": "Bearer token is required when bearer auth is selected."
+    "message": "Il token al portatore è richiesto quando è selezionata l'autenticazione al portatore."
   },
   "options_mcp_errors_allowlistRequired": {
-    "message": "Add at least one allowed tool when allowlist mode is selected."
+    "message": "Aggiungi almeno uno strumento consentito quando è selezionata la modalità lista consentita."
   },
   "options_mcp_errors_discoveryFailed": {
-    "message": "Tool discovery failed."
+    "message": "Rilevamento dello strumento non riuscito."
   },
   "options_mcp_errors_discoveryEmpty": {
-    "message": "No tools were discovered from this server."
+    "message": "Nessuno strumento è stato scoperto da questo server."
   },
   "options_mcp_discover_success": {
-    "message": "Discovered $COUNT$ tool(s) on this server.",
+    "message": "Rilevati strumenti $COUNT$ su questo server.",
     "placeholders": {
       "count": {
         "content": "$1",
@@ -677,142 +677,142 @@
     }
   },
   "options_mcp_discover_allowlistHint": {
-    "message": "Allowlist mode: names were added to your allowed-tools field (save the server if you are editing)."
+    "message": "Modalità lista consentita: i nomi sono stati aggiunti al campo degli strumenti consentiti (salva il server se stai modificando)."
   },
   "options_mcp_discover_toolTogglesHint": {
-    "message": "Turn individual tools on or off from QA chat using the MCP tools menu beside the composer."
+    "message": "Attiva o disattiva i singoli strumenti dalla chat QA utilizzando il menu degli strumenti MCP accanto al compositore."
   },
   "options_mcp_errors_bgUnreachable": {
-    "message": "Could not reach the extension background. Open chrome://extensions, reload this extension, then try again."
+    "message": "Impossibile raggiungere lo sfondo dell'estensione. "
   },
   "options_general_header": {
-    "message": "General"
+    "message": "Generale"
   },
   "options_general_maxSteps": {
-    "message": "Max Steps per Task"
+    "message": "Passi massimi per attività"
   },
   "options_general_maxSteps_desc": {
-    "message": "Step limit per task"
+    "message": "Limite di passi per attività"
   },
   "options_general_maxActions": {
-    "message": "Max Actions per Step"
+    "message": "Azioni massime per passaggio"
   },
   "options_general_maxActions_desc": {
-    "message": "Action limit per step"
+    "message": "Limite di azioni per passaggio"
   },
   "options_general_maxFailures": {
-    "message": "Failure Tolerance"
+    "message": "Tolleranza al fallimento"
   },
   "options_general_maxFailures_desc": {
-    "message": "How many consecutive failures before stopping"
+    "message": "Quanti fallimenti consecutivi prima di fermarsi"
   },
   "options_general_enableVision": {
-    "message": "Enable Vision"
+    "message": "Abilita visione"
   },
   "options_general_enableVision_desc": {
-    "message": "Use vision capability of LLMs (consumes more tokens for better results)"
+    "message": "Utilizza la capacità di visione degli LLM (consuma più token per risultati migliori)"
   },
   "options_general_displayHighlights": {
-    "message": "Display Highlights"
+    "message": "Visualizza i punti salienti"
   },
   "options_general_displayHighlights_desc": {
-    "message": "Show visual highlights on interactive elements (e.g. buttons, links, etc.)"
+    "message": "Mostra evidenziazioni visive sugli elementi interattivi (ad esempio pulsanti, collegamenti, ecc.)"
   },
   "options_general_planningInterval": {
-    "message": "Replanning Frequency"
+    "message": "Frequenza di ripianificazione"
   },
   "options_general_planningInterval_desc": {
-    "message": "Reconsider and update the plan every [Number] steps"
+    "message": "Riconsiderare e aggiornare il piano ogni [Numero] passaggi"
   },
   "options_general_minWaitPageLoad": {
-    "message": "Page Load Wait Time"
+    "message": "Tempo di attesa per il caricamento della pagina"
   },
   "options_general_minWaitPageLoad_desc": {
-    "message": "Minimum wait time after page loads (250-5000ms)"
+    "message": "Tempo minimo di attesa dopo il caricamento della pagina (250-5000 ms)"
   },
   "options_general_replayHistoricalTasks": {
-    "message": "Replay Historical Tasks( experimental )"
+    "message": "Riproduci attività storiche (sperimentale)"
   },
   "options_general_replayHistoricalTasks_desc": {
-    "message": "Enable storing and replaying of agent step history (experimental, may have issues)"
+    "message": "Abilita l'archiviazione e la riproduzione della cronologia dei passaggi dell'agente (sperimentale, potrebbe presentare problemi)"
   },
   "options_general_includePageContent": {
-    "message": "Include Page Content in QA Mode"
+    "message": "Includi il contenuto della pagina in modalità QA"
   },
   "options_general_includePageContent_desc": {
-    "message": "When enabled, page content is sent with QA queries for context-aware answers. Disable for generic LLM chat."
+    "message": "Se abilitato, il contenuto della pagina viene inviato con query di QA per risposte sensibili al contesto. "
   },
   "options_general_enableWebSearch": {
-    "message": "Enable QA Web Search"
+    "message": "Abilita la ricerca Web QA"
   },
   "options_general_enableWebSearch_desc": {
-    "message": "Allow QA mode to fetch fresh search results from your SearXNG instance for web/current questions."
+    "message": "Consenti alla modalità QA di recuperare nuovi risultati di ricerca dalla tua istanza SearXNG per domande web/correnti."
   },
   "options_general_enableWebSearch_a11y": {
-    "message": "Enable QA Web Search"
+    "message": "Abilita la ricerca Web QA"
   },
   "options_general_searxngBaseUrl": {
-    "message": "SearXNG Base URL"
+    "message": "URL di base di SearXNG"
   },
   "options_general_searxngBaseUrl_desc": {
-    "message": "Example: https://search.yourdomain.com"
+    "message": "Esempio: https://search.tuodominio.com"
   },
   "options_general_searxngBaseUrl_placeholder": {
-    "message": "https://search.yourdomain.com"
+    "message": "https://search.tuodominio.com"
   },
   "options_general_searxngBaseUrl_a11y": {
-    "message": "SearXNG Base URL"
+    "message": "URL di base di SearXNG"
   },
   "options_general_searxngApiKey": {
-    "message": "SearXNG API Key"
+    "message": "Chiave API SearXNG"
   },
   "options_general_searxngApiKey_desc": {
-    "message": "Optional. Leave blank if your instance allows public JSON search requests."
+    "message": "Opzionale. "
   },
   "options_general_searxngApiKey_a11y": {
-    "message": "SearXNG API Key"
+    "message": "Chiave API SearXNG"
   },
   "options_general_optionalPlaceholder": {
-    "message": "Optional"
+    "message": "Opzionale"
   },
   "options_general_jinaReaderApiKey": {
-    "message": "Jina Reader API Key"
+    "message": "Chiave API Jina Reader"
   },
   "options_general_jinaReaderApiKey_desc": {
-    "message": "Optional. Used by the QA read_url tool to open result links with higher Jina Reader rate limits."
+    "message": "Opzionale. "
   },
   "options_general_jinaReaderApiKey_a11y": {
-    "message": "Jina Reader API Key"
+    "message": "Chiave API Jina Reader"
   },
   "options_general_searxngMaxResults": {
-    "message": "Search Result Count"
+    "message": "Conteggio dei risultati della ricerca"
   },
   "options_general_searxngMaxResults_desc": {
-    "message": "How many web results QA mode should include from SearXNG per search."
+    "message": "Quanti risultati web la modalità QA dovrebbe includere da SearXNG per ricerca."
   },
   "options_general_searxngMaxResults_a11y": {
-    "message": "Search Result Count"
+    "message": "Conteggio dei risultati della ricerca"
   },
   "options_general_searxngIntegrationTest": {
-    "message": "Integration Test"
+    "message": "Prova di integrazione"
   },
   "options_general_searxngIntegrationTest_desc": {
-    "message": "Sends a real test search through the extension background worker and verifies usable results come back."
+    "message": "Invia una ricerca di prova reale tramite il lavoratore in background dell'estensione e verifica che vengano restituiti risultati utilizzabili."
   },
   "options_general_searxngTestButton": {
-    "message": "Test SearXNG"
+    "message": "Prova SearXNG"
   },
   "options_general_searxngTestTesting": {
-    "message": "Testing..."
+    "message": "Prova..."
   },
   "options_general_searxngTest_noUrl": {
-    "message": "Enter a SearXNG base URL first."
+    "message": "Inserisci prima un URL di base SearXNG."
   },
   "options_general_searxngTest_failed": {
-    "message": "SearXNG test failed."
+    "message": "Il test SearXNG è fallito."
   },
   "options_general_searxngTest_ok": {
-    "message": "SearXNG integration test passed using \"$QUERY$\". Parsed $COUNT$ result(s).$FIRST$",
+    "message": "Test di integrazione SearXNG superato utilizzando \"$QUERY$\". ",
     "placeholders": {
       "query": {
         "content": "$1",
@@ -829,369 +829,369 @@
     }
   },
   "options_general_searxngTest_firstResult": {
-    "message": " First result: $TITLE$ ($URL$)",
+    "message": "Primo risultato: $TITLE$ ($URL$)",
     "placeholders": {
       "title": {
         "content": "$1",
-        "example": "Example"
+        "example": "Esempio"
       },
       "url": {
         "content": "$2",
-        "example": "https://example.com"
+        "example": "https://esempio.com"
       }
     }
   },
   "options_general_fontSize": {
-    "message": "Chat Font Size"
+    "message": "Dimensione carattere chat"
   },
   "options_general_fontSize_desc": {
-    "message": "Adjust the font size for chat messages (in pixels). Changes apply immediately to visible chat."
+    "message": "Regola la dimensione del carattere per i messaggi di chat (in pixel). "
   },
   "options_general_maxInputTokens": {
-    "message": "Max Input Tokens"
+    "message": "Token di input massimi"
   },
   "options_general_maxInputTokens_desc": {
-    "message": "Maximum number of tokens allowed in the chat history context. When exceeded, older messages are trimmed. Default: 1,000,000 tokens."
+    "message": "Numero massimo di token consentiti nel contesto della cronologia chat. "
   },
   "options_general_qaMaxNonThinkingToolCalls": {
-    "message": "QA: max non-thinking tool calls per answer"
+    "message": "QA: numero massimo di chiamate a strumenti non pensanti per risposta"
   },
   "options_general_qaMaxNonThinkingToolCalls_desc": {
-    "message": "Cap for web_search, fetch_url, MCP, and similar tools in QA mode per assistant reply (the thinking tool has its own limit). Range 1–50. Default: 3."
+    "message": "Limite per web_search, fetch_url, MCP e strumenti simili in modalità QA per risposta dell'assistente (lo strumento di riflessione ha i suoi limiti). "
   },
   "options_general_qaMaxThinkingCalls": {
-    "message": "QA: max thinking tool calls per answer"
+    "message": "QA: numero massimo di chiamate dello strumento di pensiero per risposta"
   },
   "options_general_qaMaxThinkingCalls_desc": {
-    "message": "How many times the model may call the internal thinking tool per answer. Range 0–30. Default: 5."
+    "message": "Quante volte il modello può chiamare lo strumento di pensiero interno per risposta. "
   },
   "options_general_qaMaxToolRounds": {
-    "message": "QA: max tool rounds per answer"
+    "message": "QA: numero massimo di cicli di strumenti per risposta"
   },
   "options_general_qaMaxToolRounds_desc": {
-    "message": "Upper bound on back-and-forth model invocations with tools for one answer. Range 1–64. Default: 16."
+    "message": "Limite superiore per le invocazioni di modelli avanti e indietro con strumenti per una risposta. "
   },
   "options_qa_appearance_header": {
-    "message": "QA mode appearance"
+    "message": "Aspetto della modalità QA"
   },
   "options_qa_appearance_description": {
-    "message": "Customize fonts and colors for the side panel when QA mode is selected. Leave a color empty to use the default light/dark theme. Changes apply after you return to the side panel."
+    "message": "Personalizza caratteri e colori per il pannello laterale quando è selezionata la modalità QA. "
   },
   "options_qa_fontFamily": {
-    "message": "Font family"
+    "message": "Famiglia di caratteri"
   },
   "options_qa_fontFamily_desc": {
-    "message": "CSS font stack for the QA chat panel (e.g. system-ui or \"Inter\", sans-serif). Leave empty for the default."
+    "message": "Stack di caratteri CSS per il pannello della chat QA (ad esempio system-ui o \"Inter\", sans-serif). "
   },
   "options_qa_chromeFontSize": {
-    "message": "UI font size"
+    "message": "Dimensioni del carattere dell'interfaccia utente"
   },
   "options_qa_chromeFontSize_desc": {
-    "message": "Font size in pixels for bookmarks, labels, and toolbar controls (10–22). 0 uses 13px."
+    "message": "Dimensioni del carattere in pixel per segnalibri, etichette e controlli della barra degli strumenti (10–22). "
   },
   "options_qa_inputFontSize": {
-    "message": "Input font size"
+    "message": "Inserisci la dimensione del carattere"
   },
   "options_qa_inputFontSize_desc": {
-    "message": "Font size in pixels for the message box (10–28). 0 matches chat message size."
+    "message": "Dimensione del carattere in pixel per la finestra di messaggio (10–28). "
   },
   "options_qa_reset": {
-    "message": "Reset QA appearance"
+    "message": "Reimposta l'aspetto del QA"
   },
   "options_qa_reset_desc": {
-    "message": "Clear custom fonts and colors for QA mode."
+    "message": "Cancella caratteri e colori personalizzati per la modalità QA."
   },
   "options_qa_color_panel": {
-    "message": "Panel background"
+    "message": "Sfondo del pannello"
   },
   "options_qa_color_panel_desc": {
-    "message": "Outer side panel background (replaces default wallpaper or dark fill)."
+    "message": "Sfondo del pannello laterale esterno (sostituisce lo sfondo predefinito o il riempimento scuro)."
   },
   "options_qa_color_chat": {
-    "message": "Chat area background"
+    "message": "Sfondo dell'area chat"
   },
   "options_qa_color_chat_desc": {
-    "message": "Background behind the message list."
+    "message": "Sfondo dietro l'elenco dei messaggi."
   },
   "options_qa_color_message": {
-    "message": "Message text"
+    "message": "Testo del messaggio"
   },
   "options_qa_color_message_desc": {
-    "message": "Main text color for chat content."
+    "message": "Colore del testo principale per il contenuto della chat."
   },
   "options_qa_color_heading": {
-    "message": "Speaker / heading text"
+    "message": "Testo dell'altoparlante/intestazione"
   },
   "options_qa_color_heading_desc": {
-    "message": "Color for actor names and section headings in chat."
+    "message": "Colore per i nomi degli attori e i titoli delle sezioni nella chat."
   },
   "options_qa_color_muted": {
-    "message": "Muted text"
+    "message": "Testo disattivato"
   },
   "options_qa_color_muted_desc": {
-    "message": "Timestamps and secondary hints."
+    "message": "Timestamp e suggerimenti secondari."
   },
   "options_qa_color_link": {
-    "message": "Links"
+    "message": "Collegamenti"
   },
   "options_qa_color_link_desc": {
-    "message": "Color for links inside assistant messages."
+    "message": "Colore per i collegamenti all'interno dei messaggi dell'assistente."
   },
   "options_qa_color_separator": {
-    "message": "Dividers & borders"
+    "message": "Divisori e bordi"
   },
   "options_qa_color_separator_desc": {
-    "message": "Message separators and bookmark card borders."
+    "message": "Separatori di messaggi e bordi delle carte dei segnalibri."
   },
   "options_qa_color_inputSurface": {
-    "message": "Input area background"
+    "message": "Sfondo dell'area di input"
   },
   "options_qa_color_inputSurface_desc": {
-    "message": "Background for the compose box and attachment strip."
+    "message": "Sfondo per la casella di composizione e la striscia di collegamento."
   },
   "options_qa_color_inputBorder": {
-    "message": "Input outline"
+    "message": "Contorno di input"
   },
   "options_qa_color_inputBorder_desc": {
-    "message": "Border around the compose box."
+    "message": "Bordo attorno alla casella di composizione."
   },
   "options_qa_color_inputText": {
-    "message": "Input text"
+    "message": "Inserisci il testo"
   },
   "options_qa_color_inputText_desc": {
-    "message": "Text color while typing a message."
+    "message": "Colore del testo durante la digitazione di un messaggio."
   },
   "options_qa_color_accent": {
-    "message": "Accent"
+    "message": "Accento"
   },
   "options_qa_color_accent_desc": {
-    "message": "Highlights such as streaming cursor and waiting indicators."
+    "message": "Evidenziazioni come cursore in streaming e indicatori di attesa."
   },
   "options_qa_colors_section": {
-    "message": "Colors"
+    "message": "Colori"
   },
   "options_qa_color_clear": {
-    "message": "Clear"
+    "message": "Chiaro"
   },
   "options_prompts_header": {
-    "message": "Quick Start Prompts"
+    "message": "Prompt di avvio rapido"
   },
   "options_prompts_description": {
-    "message": "Manage predefined prompts that appear in the Quick Start section below the chat. These prompts help you quickly start common tasks."
+    "message": "Gestisci i suggerimenti predefiniti visualizzati nella sezione Avvio rapido sotto la chat. "
   },
   "options_prompts_add": {
-    "message": "Add Prompt"
+    "message": "Aggiungi richiesta"
   },
   "options_prompts_title": {
-    "message": "Title"
+    "message": "Titolo"
   },
   "options_prompts_titlePlaceholder": {
-    "message": "Enter prompt title"
+    "message": "Inserisci il titolo della richiesta"
   },
   "options_prompts_content": {
-    "message": "Content"
+    "message": "Contenuto"
   },
   "options_prompts_contentPlaceholder": {
-    "message": "Enter prompt content"
+    "message": "Inserisci il contenuto richiesto"
   },
   "options_prompts_save": {
-    "message": "Save"
+    "message": "Salva"
   },
   "options_prompts_cancel": {
-    "message": "Cancel"
+    "message": "Cancellare"
   },
   "options_prompts_edit": {
-    "message": "Edit prompt"
+    "message": "Modifica richiesta"
   },
   "options_prompts_delete": {
-    "message": "Delete prompt"
+    "message": "Elimina richiesta"
   },
   "options_prompts_confirmDelete": {
-    "message": "Are you sure you want to delete this prompt?"
+    "message": "Sei sicuro di voler eliminare questo messaggio?"
   },
   "options_prompts_empty": {
-    "message": "No prompts yet. Click \"Add Prompt\" to create your first Quick Start prompt."
+    "message": "Nessuna richiesta ancora. "
   },
   "options_personas_header": {
-    "message": "Personas"
+    "message": "Persona"
   },
   "options_personas_desc": {
-    "message": "Configure QA personas. Each persona defines a name and system prompt."
+    "message": "Configura i personaggi QA. "
   },
   "options_personas_default": {
-    "message": "Default persona"
+    "message": "Persona predefinita"
   },
   "options_personas_label": {
     "message": "Persona"
   },
   "options_personas_activeBadge": {
-    "message": "Active"
+    "message": "Attivo"
   },
   "options_personas_setActive": {
-    "message": "Set Active"
+    "message": "Imposta attivo"
   },
   "options_personas_save": {
-    "message": "Save"
+    "message": "Salva"
   },
   "options_personas_delete": {
-    "message": "Delete"
+    "message": "Eliminare"
   },
   "options_personas_namePlaceholder": {
-    "message": "Persona name"
+    "message": "Nome della persona"
   },
   "options_personas_systemPromptPlaceholder": {
-    "message": "System prompt"
+    "message": "Richiesta di sistema"
   },
   "options_personas_addHeading": {
-    "message": "Add Persona"
+    "message": "Aggiungi Persona"
   },
   "options_personas_add": {
-    "message": "Add Persona"
+    "message": "Aggiungi Persona"
   },
   "options_models_providers_header": {
-    "message": "LLM Providers"
+    "message": "Fornitori LLM"
   },
   "options_models_providers_notConfigured": {
-    "message": "No providers configured yet. Add a provider to get started."
+    "message": "Nessun provider ancora configurato. "
   },
   "options_models_providers_btnCancel": {
-    "message": "Cancel"
+    "message": "Cancellare"
   },
   "options_models_providers_btnSave": {
-    "message": "Save"
+    "message": "Salva"
   },
   "options_models_providers_btnDelete": {
-    "message": "Delete"
+    "message": "Eliminare"
   },
   "options_models_providers_setupInstructions": {
-    "message": "Enter your API key and click Save to set it up."
+    "message": "Inserisci la tua chiave API e fai clic su Salva per configurarla."
   },
   "options_models_providers_custom_name": {
-    "message": "Name"
+    "message": "Nome"
   },
   "options_models_providers_custom_name_desc": {
-    "message": "Provider name (spaces are not allowed when saving)"
+    "message": "Nome del provider (gli spazi non sono consentiti durante il salvataggio)"
   },
   "options_models_providers_custom_name_placeholder": {
-    "message": "Provider name"
+    "message": "Nome del fornitore"
   },
   "options_models_providers_apiKey": {
-    "message": "API Key"
+    "message": "Chiave API"
   },
   "options_models_providers_apiKey_placeholder_optional": {
-    "message": "API Key (optional)"
+    "message": "Chiave API (facoltativa)"
   },
   "options_models_providers_apiKey_placeholder_required": {
-    "message": "API Key (required)"
+    "message": "Chiave API (richiesto)"
   },
   "options_models_providers_apiKey_placeholder_ollama": {
-    "message": "API Key (leave empty for Ollama)"
+    "message": "Chiave API (lasciare vuoto per Ollama)"
   },
   "options_models_providers_apiKey_hide": {
-    "message": "Hide API key"
+    "message": "Nascondi la chiave API"
   },
   "options_models_providers_apiKey_show": {
-    "message": "Show API key"
+    "message": "Mostra la chiave API"
   },
   "options_models_selection_header": {
-    "message": "Model Selection"
+    "message": "Selezione del modello"
   },
   "options_models_speechToText_header": {
-    "message": "Speech-to-Text Model"
+    "message": "Modello di sintesi vocale"
   },
   "options_models_agents_navigator": {
-    "message": "Navigates websites and performs actions"
+    "message": "Naviga nei siti Web ed esegue azioni"
   },
   "options_models_agents_planner": {
-    "message": "Develops and refines strategies to complete tasks"
+    "message": "Sviluppa e perfeziona le strategie per completare le attività"
   },
   "options_models_agents_qa": {
-    "message": "QA Mode - Direct question answering based on page content"
+    "message": "Modalità QA: risposta diretta alle domande in base al contenuto della pagina"
   },
   "options_models_labels_model": {
-    "message": "Model"
+    "message": "Modello"
   },
   "options_models_labels_temperature": {
-    "message": "Temperature"
+    "message": "Temperatura"
   },
   "options_models_labels_topP": {
-    "message": "Top P"
+    "message": "Superiore P"
   },
   "options_models_labels_reasoning": {
-    "message": "Reasoning"
+    "message": "Ragionamento"
   },
   "options_models_stt_desc": {
-    "message": "Configure the Gemini model used for converting speech to text when using the microphone feature."
+    "message": "Configura il modello Gemini utilizzato per convertire la voce in testo quando si utilizza la funzione microfono."
   },
   "options_models_chooseModel": {
-    "message": "Choose Model"
+    "message": "Scegli modello"
   },
   "options_models_addNewProvider": {
-    "message": "Add New Provider"
+    "message": "Aggiungi nuovo fornitore"
   },
   "options_models_providers_openaiCompatible": {
-    "message": "OpenAI-compatible API Provider"
+    "message": "Provider API compatibile con OpenAI"
   },
   "options_models_providers_baseUrl": {
-    "message": "Base URL"
+    "message": "URL di base"
   },
   "options_models_providers_endpoint": {
-    "message": "Endpoint"
+    "message": "Punto finale"
   },
   "options_models_providers_deployment": {
-    "message": "Deployment"
+    "message": "Distribuzione"
   },
   "options_models_providers_apiVersion": {
-    "message": "API Version"
+    "message": "Versione dell'API"
   },
   "options_models_providers_models": {
-    "message": "Models"
+    "message": "Modelli"
   },
   "options_models_providers_placeholders_baseUrl_custom": {
-    "message": "Required OpenAI-compatible API endpoint"
+    "message": "Endpoint API compatibile con OpenAI obbligatorio"
   },
   "options_models_providers_placeholders_baseUrl_azure": {
     "message": "https://YOUR_RESOURCE_NAME.openai.azure.com/"
   },
   "options_models_providers_placeholders_baseUrl_openrouter": {
-    "message": "OpenRouter Base URL (optional, defaults to https://openrouter.ai/api/v1)"
+    "message": "URL di base OpenRouter (facoltativo, il valore predefinito è https://openrouter.ai/api/v1)"
   },
   "options_models_providers_placeholders_baseUrl_llama": {
-    "message": "Llama API Base URL (defaults to https://api.llama.com/v1)"
+    "message": "URL di base dell'API Llama (il valore predefinito è https://api.llama.com/v1)"
   },
   "options_models_providers_placeholders_baseUrl_ollama": {
-    "message": "Ollama base URL"
+    "message": "URL di base di Ollama"
   },
   "options_models_providers_placeholders_azureDeployment": {
-    "message": "Enter Azure model name (e.g. gpt-4o, gpt-4o-mini)"
+    "message": "Inserisci il nome del modello di Azure (ad esempio gpt-4o, gpt-4o-mini)"
   },
   "options_models_providers_placeholders_azureApiVersion": {
-    "message": "e.g., 2025-04-01-preview"
+    "message": "ad esempio, 2025-04-01-anteprima"
   },
   "options_models_providers_deployment_desc": {
-    "message": "Type model name and press Enter or Space to set. Deployment name should match OpenAI model name (e.g., gpt-4o) for best compatibility."
+    "message": "Digitare il nome del modello e premere Invio o Spazio per impostare. "
   },
   "options_models_providers_models_instructions": {
-    "message": "Type and Press Enter or Space to add."
+    "message": "Digita e premi Invio o Spazio per aggiungere."
   },
   "options_models_providers_models_openrouter_empty": {
-    "message": "No models selected. Add model names manually if needed."
+    "message": "Nessun modello selezionato. "
   },
   "options_models_providers_ollama_reminder": {
-    "message": "environment variable MUST be set for the Ollama server."
+    "message": "la variabile d'ambiente DEVE essere impostata per il server Ollama."
   },
   "options_models_providers_ollama_learnMore": {
-    "message": "Learn more"
+    "message": "Saperne di più"
   },
   "options_models_providers_errors_spacesNotAllowed": {
-    "message": "Spaces are not allowed in provider names. Please use underscores or other characters instead."
+    "message": "Gli spazi non sono consentiti nei nomi dei provider. "
   },
   "options_models_providers_errors_baseUrlRequired": {
-    "message": "Base URL is required for $PROVIDER$. Please enter it.",
+    "message": "L'URL di base è obbligatorio per $PROVIDER$. ",
     "placeholders": {
       "provider": {
         "content": "$1",
-        "example": "Custom OpenAI"
+        "example": "OpenAI personalizzato"
       }
     }
   },
@@ -1199,85 +1199,85 @@
     "message": "Firewall"
   },
   "options_firewall_enableToggle": {
-    "message": "Enable Firewall"
+    "message": "Abilita firewall"
   },
   "options_firewall_toggleFirewall_a11y": {
-    "message": "Toggle Firewall"
+    "message": "Attiva/disattiva il firewall"
   },
   "options_firewall_allowList_header": {
-    "message": "Allow List"
+    "message": "Elenco consentiti"
   },
   "options_firewall_allowList_empty": {
-    "message": "No domains in allow list. Empty allow list means all non-denied domains are allowed."
+    "message": "Nessun dominio nell'elenco consentito. "
   },
   "options_firewall_denyList_header": {
-    "message": "Deny List"
+    "message": "Elenco negati"
   },
   "options_firewall_denyList_empty": {
-    "message": "No domains in deny list"
+    "message": "Nessun dominio nell'elenco negato"
   },
   "options_firewall_placeholders_domainUrl": {
-    "message": "Enter domain or URL (e.g. example.com, localhost, 127.0.0.1)"
+    "message": "Inserisci il dominio o l'URL (ad esempio example.com, localhost, 127.0.0.1)"
   },
   "options_firewall_btnAdd": {
-    "message": "Add"
+    "message": "Aggiungere"
   },
   "options_firewall_btnRemove": {
-    "message": "Remove"
+    "message": "Rimuovere"
   },
   "options_firewall_howItWorks_header": {
-    "message": "How the Firewall Works"
+    "message": "Come funziona il firewall"
   },
   "options_firewall_howItWorks": {
-    "message": "The firewall contains a deny list and an allow list.\nIf both lists are empty, all URLs are allowed\nDeny list takes priority - if a URL matches any deny list entry, it's blocked\nWhen allow list is empty, all non-denied URLs are allowed\nWhen allow list is not empty, only matching URLs are allowed\nWildcards are NOT supported yet\nAllow list is preferred over deny list"
+    "message": "Il firewall contiene un elenco di rifiuto e un elenco di consenso.\n"
   },
   "bg_errors_noTabId": {
-    "message": "No tab ID provided"
+    "message": "Nessun ID scheda fornito"
   },
   "bg_errors_noTaskId": {
-    "message": "No task ID provided"
+    "message": "Nessun ID attività fornito"
   },
   "bg_errors_noRunningTask": {
-    "message": "No running task"
+    "message": "Nessuna attività in esecuzione"
   },
   "bg_cmd_newTask_noTask": {
-    "message": "No task provided"
+    "message": "Nessun compito fornito"
   },
   "bg_cmd_followUpTask_noTask": {
-    "message": "No follow up task provided"
+    "message": "Nessuna attività di follow-up fornita"
   },
   "bg_cmd_followUpTask_cleaned": {
-    "message": "Executor was cleaned up, can not add follow-up task"
+    "message": "L'esecutore è stato ripulito, non è possibile aggiungere attività di follow-up"
   },
   "bg_cmd_resumeTask_noTask": {
-    "message": "No task to resume"
+    "message": "Nessuna attività da riprendere"
   },
   "bg_cmd_state_printed": {
-    "message": "State printed to console"
+    "message": "Stato stampato su console"
   },
   "bg_cmd_state_failed": {
-    "message": "Failed to get state"
+    "message": "Impossibile ottenere lo stato"
   },
   "bg_cmd_nohighlight_ok": {
-    "message": "highlight removed"
+    "message": "evidenziazione rimossa"
   },
   "bg_cmd_stt_noAudioData": {
-    "message": "No audio data provided"
+    "message": "Nessun dato audio fornito"
   },
   "bg_cmd_stt_failed": {
-    "message": "Speech recognition failed"
+    "message": "Il riconoscimento vocale non è riuscito"
   },
   "bg_cmd_replay_noHistory": {
-    "message": "No history session ID provided"
+    "message": "Nessun ID sessione della cronologia fornito"
   },
   "bg_cmd_replay_failed": {
-    "message": "Replay failed"
+    "message": "Riproduzione fallita"
   },
   "bg_setup_noApiKeys": {
-    "message": "Please configure API keys in the settings first"
+    "message": "Configura prima le chiavi API nelle impostazioni"
   },
   "bg_setup_noProvider": {
-    "message": "Provider $PROVIDER$ not found in the settings",
+    "message": "Fornitore $PROVIDER$ non trovato nelle impostazioni",
     "placeholders": {
       "provider": {
         "content": "$1",
@@ -1286,94 +1286,94 @@
     }
   },
   "bg_setup_noNavigatorModel": {
-    "message": "Please choose a model for the navigator in the settings first"
+    "message": "Scegli prima un modello per il navigatore nelle impostazioni"
   },
   "exec_errors_maxStepsReached": {
-    "message": "Max steps reached"
+    "message": "Numero massimo di passi raggiunto"
   },
   "exec_errors_maxFailuresReached": {
-    "message": "Max failures reached"
+    "message": "Raggiunto il numero massimo di errori"
   },
   "exec_task_cancel": {
-    "message": "Task cancelled"
+    "message": "Attività annullata"
   },
   "exec_task_pause": {
-    "message": "Task paused"
+    "message": "Attività sospesa"
   },
   "exec_task_fail": {
-    "message": "Task failed: \n\n$ERROR_MESSAGE$",
+    "message": "Attività non riuscita: \n\n",
     "placeholders": {
       "error_message": {
         "content": "$1",
-        "example": "Connection timeout"
+        "example": "Timeout della connessione"
       }
     }
   },
   "exec_replay_cancel": {
-    "message": "Replay cancelled"
+    "message": "Riproduzione annullata"
   },
   "exec_replay_ok": {
-    "message": "Replay completed"
+    "message": "Riproduzione completata"
   },
   "exec_replay_fail": {
-    "message": "Replay failed: \n\n$ERROR_MESSAGE$",
+    "message": "Riproduzione fallita: \n\n",
     "placeholders": {
       "error_message": {
         "content": "$1",
-        "example": "Network error"
+        "example": "Errore di rete"
       }
     }
   },
   "exec_replay_historyNotFound": {
-    "message": "History not found"
+    "message": "Cronologia non trovata"
   },
   "exec_replay_historyEmpty": {
-    "message": "History is empty"
+    "message": "La storia è vuota"
   },
   "act_searchGoogle_start": {
-    "message": "Searching for \"$QUERY$\" in Google",
+    "message": "Cercando \"$QUERY$\" su Google",
     "placeholders": {
       "query": {
         "content": "$1",
-        "example": "weather today"
+        "example": "tempo oggi"
       }
     }
   },
   "act_searchGoogle_ok": {
-    "message": "Searched for \"$QUERY$\" in Google",
+    "message": "Ho cercato \"$QUERY$\" su Google",
     "placeholders": {
       "query": {
         "content": "$1",
-        "example": "weather today"
+        "example": "tempo oggi"
       }
     }
   },
   "act_goToUrl_start": {
-    "message": "Navigating to $URL$",
+    "message": "Navigazione verso $URL$",
     "placeholders": {
       "url": {
         "content": "$1",
-        "example": "https://example.com"
+        "example": "https://esempio.com"
       }
     }
   },
   "act_goToUrl_ok": {
-    "message": "Navigated to $URL$",
+    "message": "Navigazione verso $URL$",
     "placeholders": {
       "url": {
         "content": "$1",
-        "example": "https://example.com"
+        "example": "https://esempio.com"
       }
     }
   },
   "act_goBack_start": {
-    "message": "Navigating back"
+    "message": "Navigazione indietro"
   },
   "act_goBack_ok": {
-    "message": "Navigated back"
+    "message": "Tornato indietro"
   },
   "act_wait_start": {
-    "message": "Waiting for $SECONDS$ seconds",
+    "message": "In attesa di $SECONDS$ secondi",
     "placeholders": {
       "seconds": {
         "content": "$1",
@@ -1382,7 +1382,7 @@
     }
   },
   "act_wait_ok": {
-    "message": "$SECONDS$ seconds elapsed",
+    "message": "$SECONDS$ secondi trascorsi",
     "placeholders": {
       "seconds": {
         "content": "$1",
@@ -1391,7 +1391,7 @@
     }
   },
   "act_click_start": {
-    "message": "Click element with index $INDEX$",
+    "message": "Fare clic sull'elemento con indice $INDEX$",
     "placeholders": {
       "index": {
         "content": "$1",
@@ -1400,7 +1400,7 @@
     }
   },
   "act_errors_elementNotExist": {
-    "message": "Element with index $INDEX$ does not exist - retry or use alternative actions",
+    "message": "L'elemento con indice $INDEX$ non esiste: riprova o utilizza azioni alternative",
     "placeholders": {
       "index": {
         "content": "$1",
@@ -1409,7 +1409,7 @@
     }
   },
   "act_errors_elementNoLongerAvailable": {
-    "message": "Element no longer available with index $INDEX$ - most likely the page changed",
+    "message": "Elemento non più disponibile con indice $INDEX$ - molto probabilmente la pagina è cambiata",
     "placeholders": {
       "index": {
         "content": "$1",
@@ -1418,7 +1418,7 @@
     }
   },
   "act_click_fileUploader": {
-    "message": "Index $INDEX$ - has an element which opens file upload dialog. To upload files please use a specific function to upload files",
+    "message": "Indice $INDEX$ - ha un elemento che apre la finestra di dialogo di caricamento file. ",
     "placeholders": {
       "index": {
         "content": "$1",
@@ -1427,7 +1427,7 @@
     }
   },
   "act_click_ok": {
-    "message": "Clicked button with index $INDEX$: $TEXT$",
+    "message": "Pulsante cliccato con indice $INDEX$: $TEXT$",
     "placeholders": {
       "index": {
         "content": "$1",
@@ -1435,15 +1435,15 @@
       },
       "text": {
         "content": "$2",
-        "example": "Submit Button"
+        "example": "Pulsante Invia"
       }
     }
   },
   "act_click_newTabOpened": {
-    "message": "New tab opened - switching to it"
+    "message": "Nuova scheda aperta: passaggio alla nuova scheda"
   },
   "act_inputText_start": {
-    "message": "Input text into index $INDEX$",
+    "message": "Inserimento testo nell'elemento con indice $INDEX$",
     "placeholders": {
       "index": {
         "content": "$1",
@@ -1452,11 +1452,11 @@
     }
   },
   "act_inputText_ok": {
-    "message": "Input $TEXT$ into index $INDEX$",
+    "message": "Inserito $TEXT$ nell'elemento con indice $INDEX$",
     "placeholders": {
       "text": {
         "content": "$1",
-        "example": "Hello World"
+        "example": "Ciao mondo"
       },
       "index": {
         "content": "$2",
@@ -1465,7 +1465,7 @@
     }
   },
   "act_switchTab_start": {
-    "message": "Switching to tab $TAB_ID$",
+    "message": "Passaggio alla scheda $TAB_ID$",
     "placeholders": {
       "tab_id": {
         "content": "$1",
@@ -1474,7 +1474,7 @@
     }
   },
   "act_switchTab_ok": {
-    "message": "Switched to tab $TAB_ID$",
+    "message": "Passato alla scheda $TAB_ID$",
     "placeholders": {
       "tab_id": {
         "content": "$1",
@@ -1483,25 +1483,25 @@
     }
   },
   "act_openTab_start": {
-    "message": "Opening $URL$ in new tab",
+    "message": "Apertura di $URL$ in una nuova scheda",
     "placeholders": {
       "url": {
         "content": "$1",
-        "example": "https://example.com"
+        "example": "https://esempio.com"
       }
     }
   },
   "act_openTab_ok": {
-    "message": "Opened $URL$ in new tab",
+    "message": "Aperto $URL$ in una nuova scheda",
     "placeholders": {
       "url": {
         "content": "$1",
-        "example": "https://example.com"
+        "example": "https://esempio.com"
       }
     }
   },
   "act_closeTab_start": {
-    "message": "Closing tab $TAB_ID$",
+    "message": "Chiusura della scheda $TAB_ID$",
     "placeholders": {
       "tab_id": {
         "content": "$1",
@@ -1510,7 +1510,7 @@
     }
   },
   "act_closeTab_ok": {
-    "message": "Closed tab $TAB_ID$",
+    "message": "Scheda $TAB_ID$ chiusa",
     "placeholders": {
       "tab_id": {
         "content": "$1",
@@ -1519,25 +1519,25 @@
     }
   },
   "act_cache_start": {
-    "message": "Caching findings: $CONTENT$",
+    "message": "Memorizzazione dei risultati: $CONTENT$",
     "placeholders": {
       "content": {
         "content": "$1",
-        "example": "User preferences saved"
+        "example": "Preferenze utente salvate"
       }
     }
   },
   "act_cache_ok": {
-    "message": "Cached findings: $CONTENT$",
+    "message": "Risultati memorizzati: $CONTENT$",
     "placeholders": {
       "content": {
         "content": "$1",
-        "example": "User preferences saved"
+        "example": "Preferenze utente salvate"
       }
     }
   },
   "act_scrollToPercent_start": {
-    "message": "Scroll to percent: $PERCENT$",
+    "message": "Scorrimento al $PERCENT$%",
     "placeholders": {
       "percent": {
         "content": "$1",
@@ -1546,7 +1546,7 @@
     }
   },
   "act_scrollToPercent_ok": {
-    "message": "Scrolled to percent: $PERCENT$",
+    "message": "Scorrimento al $PERCENT$% completato",
     "placeholders": {
       "percent": {
         "content": "$1",
@@ -1555,31 +1555,31 @@
     }
   },
   "act_scrollToTop_start": {
-    "message": "Scroll to top"
+    "message": "Scorrimento in alto"
   },
   "act_scrollToTop_ok": {
-    "message": "Scrolled to top"
+    "message": "Scorso in alto"
   },
   "act_scrollToBottom_start": {
-    "message": "Scroll to bottom"
+    "message": "Scorrimento in basso"
   },
   "act_scrollToBottom_ok": {
-    "message": "Scrolled to bottom"
+    "message": "Scorso in basso"
   },
   "act_previousPage_start": {
-    "message": "Scroll to previous page"
+    "message": "Scorrimento alla pagina precedente"
   },
   "act_previousPage_ok": {
-    "message": "Scrolled to previous page"
+    "message": "Scorrimento alla pagina precedente completato"
   },
   "act_nextPage_start": {
-    "message": "Scroll to next page"
+    "message": "Scorrimento alla pagina successiva"
   },
   "act_nextPage_ok": {
-    "message": "Scrolled to next page"
+    "message": "Scorrimento alla pagina successiva completato"
   },
   "act_errors_alreadyAtTop": {
-    "message": "Element with index $INDEX$ is already at top, cannot scroll to previous page",
+    "message": "L'elemento con indice $INDEX$ è già in alto, impossibile scorrere alla pagina precedente",
     "placeholders": {
       "index": {
         "content": "$1",
@@ -1588,10 +1588,10 @@
     }
   },
   "act_errors_pageAlreadyAtTop": {
-    "message": "Already at top of page, cannot scroll to previous page"
+    "message": "Già in cima alla pagina, impossibile scorrere alla pagina precedente"
   },
   "act_errors_alreadyAtBottom": {
-    "message": "Element with index $INDEX$ is already at bottom, cannot scroll to next page",
+    "message": "L'elemento con indice $INDEX$ è già in basso, impossibile scorrere alla pagina successiva",
     "placeholders": {
       "index": {
         "content": "$1",
@@ -1600,14 +1600,14 @@
     }
   },
   "act_errors_pageAlreadyAtBottom": {
-    "message": "Already at bottom of page, cannot scroll to next page"
+    "message": "Già in fondo alla pagina, impossibile scorrere alla pagina successiva"
   },
   "act_scrollToText_start": {
-    "message": "Scroll to text: $TEXT$, occurrence $OCCURRENCE$",
+    "message": "Scorrimento al testo: $TEXT$, occorrenza $OCCURRENCE$",
     "placeholders": {
       "text": {
         "content": "$1",
-        "example": "Contact Us"
+        "example": "Contattaci"
       },
       "occurrence": {
         "content": "$2",
@@ -1616,11 +1616,11 @@
     }
   },
   "act_scrollToText_ok": {
-    "message": "Scrolled to text: $TEXT$, occurrence $OCCURRENCE$",
+    "message": "Scorrimento al testo: $TEXT$, occorrenza $OCCURRENCE$ completato",
     "placeholders": {
       "text": {
         "content": "$1",
-        "example": "Contact Us"
+        "example": "Contattaci"
       },
       "occurrence": {
         "content": "$2",
@@ -1629,11 +1629,11 @@
     }
   },
   "act_scrollToText_notFound": {
-    "message": "Text '$TEXT$' (occurrence $OCCURRENCE$) not found or not visible",
+    "message": "Testo '$TEXT$' (occorrenza $OCCURRENCE$) non trovato o non visibile",
     "placeholders": {
       "text": {
         "content": "$1",
-        "example": "Contact Us"
+        "example": "Contattaci"
       },
       "occurrence": {
         "content": "$2",
@@ -1642,34 +1642,34 @@
     }
   },
   "act_scrollToText_failed": {
-    "message": "Failed to scroll to text: $ERROR$",
+    "message": "Scorrimento al testo non riuscito: $ERROR$",
     "placeholders": {
       "error": {
         "content": "$1",
-        "example": "Element not found"
+        "example": "Elemento non trovato"
       }
     }
   },
   "act_sendKeys_start": {
-    "message": "Send keys: $KEYS$",
+    "message": "Invio tasti: $KEYS$",
     "placeholders": {
       "keys": {
         "content": "$1",
-        "example": "Enter"
+        "example": "Entra"
       }
     }
   },
   "act_sendKeys_ok": {
-    "message": "Sent keys: $KEYS$",
+    "message": "Tasti inviati: $KEYS$",
     "placeholders": {
       "keys": {
         "content": "$1",
-        "example": "Enter"
+        "example": "Entra"
       }
     }
   },
   "act_getDropdownOptions_start": {
-    "message": "Getting options from dropdown with index $INDEX$",
+    "message": "Recupero opzioni dal menu a tendina con indice $INDEX$",
     "placeholders": {
       "index": {
         "content": "$1",
@@ -1678,10 +1678,10 @@
     }
   },
   "act_getDropdownOptions_useExactText": {
-    "message": "Use the exact text string in select_dropdown_option"
+    "message": "Usa la stringa di testo esatta in select_dropdown_option"
   },
   "act_getDropdownOptions_ok": {
-    "message": "Got $COUNT$ options from dropdown",
+    "message": "Trovate $COUNT$ opzioni nel menu a tendina",
     "placeholders": {
       "count": {
         "content": "$1",
@@ -1690,23 +1690,23 @@
     }
   },
   "act_getDropdownOptions_noOptions": {
-    "message": "No options found in dropdown"
+    "message": "Nessuna opzione trovata nel menu a tendina"
   },
   "act_getDropdownOptions_failed": {
-    "message": "Failed to get dropdown options: $ERROR$",
+    "message": "Recupero opzioni non riuscito: $ERROR$",
     "placeholders": {
       "error": {
         "content": "$1",
-        "example": "Element not found"
+        "example": "Elemento non trovato"
       }
     }
   },
   "act_selectDropdownOption_start": {
-    "message": "Select option \"$TEXT$\" from dropdown with index $INDEX$",
+    "message": "Selezione opzione \"$TEXT$\" nel menu a tendina con indice $INDEX$",
     "placeholders": {
       "text": {
         "content": "$1",
-        "example": "Option 1"
+        "example": "Opzione 1"
       },
       "index": {
         "content": "$2",
@@ -1715,11 +1715,11 @@
     }
   },
   "act_selectDropdownOption_ok": {
-    "message": "Selected option \"$TEXT$\" from dropdown with index $INDEX$",
+    "message": "Opzione \"$TEXT$\" selezionata nel menu a tendina con indice $INDEX$",
     "placeholders": {
       "text": {
         "content": "$1",
-        "example": "Option 1"
+        "example": "Opzione 1"
       },
       "index": {
         "content": "$2",
@@ -1728,7 +1728,7 @@
     }
   },
   "act_selectDropdownOption_notSelect": {
-    "message": "Cannot select option: Element with index $INDEX$ is a $TAG_NAME$, not a SELECT",
+    "message": "Impossibile selezionare l'opzione: l'elemento con indice $INDEX$ è un $TAG_NAME$, non un SELECT",
     "placeholders": {
       "index": {
         "content": "$1",
@@ -1741,11 +1741,11 @@
     }
   },
   "act_selectDropdownOption_failed": {
-    "message": "Failed to select option: $ERROR$",
+    "message": "Selezione opzione non riuscita: $ERROR$",
     "placeholders": {
       "error": {
         "content": "$1",
-        "example": "Option not found"
+        "example": "Opzione non trovata"
       }
     }
   }
