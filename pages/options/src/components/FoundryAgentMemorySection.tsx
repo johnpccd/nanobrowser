@@ -11,6 +11,12 @@ export interface FoundryMemoryRow {
   updatedAt?: number;
 }
 
+interface FoundryMemoryStoreOption {
+  name: string;
+  chatModel?: string;
+  embeddingModel?: string;
+}
+
 interface FoundryAgentMemorySectionProps {
   agent: FoundryAgent;
   isDarkMode?: boolean;
@@ -36,7 +42,8 @@ export const FoundryAgentMemorySection = ({ agent, isDarkMode = false, onPatch }
   const [memoryStoreName, setMemoryStoreName] = useState(agent.memoryStoreName ?? '');
   const [memoryScope, setMemoryScope] = useState(agent.memoryScope ?? '');
   const [memories, setMemories] = useState<FoundryMemoryRow[]>([]);
-  const [storeNames, setStoreNames] = useState<string[]>([]);
+  const [stores, setStores] = useState<FoundryMemoryStoreOption[]>([]);
+  const [activeStore, setActiveStore] = useState<FoundryMemoryStoreOption | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [newMemoryText, setNewMemoryText] = useState('');
   const [editMemoryId, setEditMemoryId] = useState<string | null>(null);
@@ -60,7 +67,8 @@ export const FoundryAgentMemorySection = ({ agent, isDarkMode = false, onPatch }
   const memoryConfigured = Boolean(trimmedStore && trimmedScope);
 
   const resetDiscoveredState = () => {
-    setStoreNames([]);
+    setStores([]);
+    setActiveStore(null);
     setMemories([]);
     setSearchQuery('');
     setNewMemoryText('');

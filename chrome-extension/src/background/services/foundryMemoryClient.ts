@@ -17,6 +17,8 @@ export interface FoundryMemoryStoreSummary {
   name: string;
   id?: string;
   description?: string;
+  chatModel?: string;
+  embeddingModel?: string;
 }
 
 function memoryHeaders(apiKey: string): Record<string, string> {
@@ -38,6 +40,80 @@ function buildMemoryUrl(projectEndpoint: string, path: string): string {
 async function readFoundryError(response: Response): Promise<string> {
   const errorBody = await response.text().catch(() => '');
   return errorBody.slice(0, 500) || response.statusText;
+}
+
+/** Parse nested Foundry memory update failure (often model deployment auth). */
+export function formatMemoryOperationError(payload: unknown): string {
+  if (!payload || typeof payload !== 'object') {
+    return 'Memory update failed.';
+  }
+  const record = payload as Record<string, unknown>;
+  const error = record.error && typeof record.error === 'object' ? (record.error as Record<string, unknown>) : record;
+
+  const parts: string[] = [];
+  if (typeof error.message === 'string' && error.message.trim()) {
+    parts.push(error.message.trim());
+  }
+
+  const details =
+    error.details && typeof error.details === 'object'
+      ? (error.details as Record<string, unknown>)
+      : error.additionalInfo && typeof error.additionalInfo === 'object'
+        ? (error.additionalInfo as Record<string, unknown>)
+        : null;
+
+  if (details) {
+    if (typeof details.deployment === 'string' && details.deployment.trim()) {
+      parts.push(`Deployment: ${details.deployment.trim()}`);
+    }
+    if (typeof details.description === 'string' && details.description.trim()) {
+      parts.push(details.description.trim());
+    }
+    if (typeof details.type === 'string' && details.type.trim()) {
+      parts.push(`(${details.type})`);
+    }
+  }
+
+  if (parts.length === 0) {
+    return 'Memory update failed.';
+  }
+
+  parts.push(
+    'Memory add/edit runs on the memory store’s chat and embedding deployments (not your agent model). In Azure Foundry, open the memory store and ensure those deployments exist and accept this API key.',
+  );
+  return parts.join(' ');
+}
+
+export function parseMemoryStoreRecord(row: unknown): FoundryMemoryStoreSummary | null {
+  if (!row || typeof row !== 'object') {
+    return null;
+  }
+  const record = row as Record<string, unknown>;
+  const name = typeof record.name === 'string' ? record.name.trim() : '';
+  if (!name) {
+    return null;
+  }
+
+  let chatModel: string | undefined;
+  let embeddingModel: string | undefined;
+  const definition = record.definition;
+  if (definition && typeof definition === 'object') {
+    const def = definition as Record<string, unknown>;
+    if (typeof def.chat_model === 'string') {
+      chatModel = def.chat_model.trim() || undefined;
+    }
+    if (typeof def.embedding_model === 'string') {
+      embeddingModel = def.embedding_model.trim() || undefined;
+    }
+  }
+
+  return {
+    name,
+    id: typeof record.id === 'string' ? record.id : undefined,
+    description: typeof record.description === 'string' ? record.description : undefined,
+    chatModel,
+    embeddingModel,
+  };
 }
 
 function parseMemoryItem(raw: unknown): FoundryMemoryItem | null {
@@ -63,7 +139,8 @@ function parseMemoryItem(raw: unknown): FoundryMemoryItem | null {
   };
 }
 
-function buildUserMessageItem(text: string): Record<string, unknown> {
+/** REST + SDK-compatible user message for update_memories. */
+export function buildUserMessageItem(text: string): Record<string, unknown> {
   const trimmed = text.trim();
   return {
     type: 'message',
@@ -114,9 +191,7 @@ async function pollMemoryUpdate(
     const status = typeof json.status === 'string' ? json.status : '';
 
     if (status === 'failed') {
-      const error = json.error as Record<string, unknown> | undefined;
-      const message = typeof error?.message === 'string' ? error.message : 'Memory update failed.';
-      throw new Error(message);
+      throw new Error(formatMemoryOperationError(json));
     }
 
     if (status === 'completed') {
@@ -133,6 +208,38 @@ async function pollMemoryUpdate(
   }
 
   throw new Error('Memory update timed out. Check the memory store in Azure Foundry.');
+}
+
+export async function getFoundryMemoryStore(
+  agent: FoundryAgent,
+  memoryStoreName: string,
+  signal?: AbortSignal,
+): Promise<FoundryMemoryStoreSummary> {
+  if (!agent.projectEndpoint.trim() || !agent.apiKey.trim()) {
+    throw new Error('Configure project endpoint and API key before loading memory stores.');
+  }
+  const name = memoryStoreName.trim();
+  if (!name) {
+    throw new Error('Memory store name is required.');
+  }
+
+  const url = buildMemoryUrl(agent.projectEndpoint, `/memory_stores/${encodeURIComponent(name)}`);
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: memoryHeaders(agent.apiKey),
+    signal,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Get memory store failed (${response.status}): ${await readFoundryError(response)}`);
+  }
+
+  const json = (await response.json()) as unknown;
+  const parsed = parseMemoryStoreRecord(json);
+  if (!parsed) {
+    throw new Error('Memory store response was invalid.');
+  }
+  return parsed;
 }
 
 export async function listFoundryMemoryStores(
@@ -158,19 +265,10 @@ export async function listFoundryMemoryStores(
   const rows = Array.isArray(json.data) ? json.data : [];
   const stores: FoundryMemoryStoreSummary[] = [];
   for (const row of rows) {
-    if (!row || typeof row !== 'object') {
-      continue;
+    const parsed = parseMemoryStoreRecord(row);
+    if (parsed) {
+      stores.push(parsed);
     }
-    const record = row as Record<string, unknown>;
-    const name = typeof record.name === 'string' ? record.name.trim() : '';
-    if (!name) {
-      continue;
-    }
-    stores.push({
-      name,
-      id: typeof record.id === 'string' ? record.id : undefined,
-      description: typeof record.description === 'string' ? record.description : undefined,
-    });
   }
   return stores;
 }
@@ -261,6 +359,9 @@ export async function updateFoundryMemoriesFromText(params: {
   }
 
   const status = typeof json.status === 'string' ? json.status : '';
+  if (status === 'failed') {
+    throw new Error(formatMemoryOperationError(json));
+  }
   if (status === 'completed') {
     const result = json.result as Record<string, unknown> | undefined;
     const operations = Array.isArray(result?.memory_operations) ? result.memory_operations : [];

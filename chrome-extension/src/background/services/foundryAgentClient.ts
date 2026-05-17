@@ -6,12 +6,17 @@ import {
 } from '@extension/storage/lib/settings/foundryAgents';
 import { foundryConversationStore } from '@extension/storage/lib/settings/foundryConversations';
 
-function foundryHeaders(apiKey: string, accept = 'application/json'): Record<string, string> {
-  return {
+function foundryHeaders(apiKey: string, accept = 'application/json', memoryUserId?: string): Record<string, string> {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     Accept: accept,
     'api-key': apiKey.trim(),
   };
+  const scope = memoryUserId?.trim();
+  if (scope) {
+    headers['x-memory-user-id'] = scope;
+  }
+  return headers;
 }
 
 async function readFoundryError(response: Response): Promise<string> {
@@ -207,7 +212,7 @@ export async function streamFoundryAgentResponse(params: {
 
   const response = await fetch(url, {
     method: 'POST',
-    headers: foundryHeaders(agent.apiKey, 'text/event-stream'),
+    headers: foundryHeaders(agent.apiKey, 'text/event-stream', agent.memoryScope),
     body: JSON.stringify(body),
     signal,
   });

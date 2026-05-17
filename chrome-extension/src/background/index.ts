@@ -28,6 +28,7 @@ import { discoverMcpTools, executeMcpTool } from './services/mcpClient';
 import { buildFoundryTurnInput, streamFoundryAgentResponse } from './services/foundryAgentClient';
 import {
   deleteFoundryMemoryScope,
+  getFoundryMemoryStore,
   listFoundryMemoryStores,
   searchFoundryMemories,
   updateFoundryMemoriesFromText,
@@ -580,6 +581,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   if (
     message?.type === 'foundry_memory_list_stores' ||
+    message?.type === 'foundry_memory_get_store' ||
     message?.type === 'foundry_memory_search' ||
     message?.type === 'foundry_memory_update' ||
     message?.type === 'foundry_memory_delete_scope'
@@ -605,6 +607,11 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         if (message.type === 'foundry_memory_list_stores') {
           const stores = await listFoundryMemoryStores(agent);
           return { ok: true, stores };
+        }
+
+        if (message.type === 'foundry_memory_get_store') {
+          const store = await getFoundryMemoryStore(agent, memoryStoreName);
+          return { ok: true, store };
         }
 
         if (message.type === 'foundry_memory_search') {
