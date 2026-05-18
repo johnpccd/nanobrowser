@@ -1982,6 +1982,25 @@ const SidePanel = () => {
     [fetchQaMcpToolState, refreshQaToolCount],
   );
 
+  const handleToggleQaMcpServer = useCallback(
+    async (payload: { serverId: string; nextEnabled: boolean; discoveredNames: string[] }) => {
+      const { serverId, nextEnabled, discoveredNames } = payload;
+      if (discoveredNames.length === 0) return;
+      try {
+        const latest = await mcpToolsSettingsStore.getSettings();
+        const server = latest.servers.find(s => s.id === serverId);
+        if (!server) return;
+        const nextNames = nextEnabled ? null : [];
+        await mcpToolsSettingsStore.upsertServer({ ...server, enabledToolNames: nextNames });
+        void refreshQaToolCount(true);
+        await fetchQaMcpToolState();
+      } catch (e) {
+        console.error('Failed to toggle MCP server tools', e);
+      }
+    },
+    [fetchQaMcpToolState, refreshQaToolCount],
+  );
+
   const handleToggleQaBuiltinTool = useCallback(
     async (id: QaBuiltinToolToggleId, nextEnabled: boolean) => {
       const patch =
@@ -2456,6 +2475,7 @@ const SidePanel = () => {
                         qaMcpToolsMenuOpen={mode === 'qa' ? qaMcpToolsMenuOpen : false}
                         onQaMcpToolsMenuOpenChange={mode === 'qa' ? setQaMcpToolsMenuOpen : undefined}
                         onToggleQaMcpTool={mode === 'qa' ? handleToggleQaMcpTool : undefined}
+                        onToggleQaMcpServer={mode === 'qa' ? handleToggleQaMcpServer : undefined}
                         onToggleQaBuiltinTool={mode === 'qa' ? handleToggleQaBuiltinTool : undefined}
                       />
                     </div>
@@ -2523,6 +2543,7 @@ const SidePanel = () => {
                       qaMcpToolsMenuOpen={mode === 'qa' ? qaMcpToolsMenuOpen : false}
                       onQaMcpToolsMenuOpenChange={mode === 'qa' ? setQaMcpToolsMenuOpen : undefined}
                       onToggleQaMcpTool={mode === 'qa' ? handleToggleQaMcpTool : undefined}
+                      onToggleQaMcpServer={mode === 'qa' ? handleToggleQaMcpServer : undefined}
                       onToggleQaBuiltinTool={mode === 'qa' ? handleToggleQaBuiltinTool : undefined}
                     />
                   </div>

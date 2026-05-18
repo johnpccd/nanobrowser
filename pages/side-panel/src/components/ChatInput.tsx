@@ -100,6 +100,7 @@ interface ChatInputProps {
     nextEnabled: boolean;
     discoveredNames: string[];
   }) => void;
+  onToggleQaMcpServer?: (payload: { serverId: string; nextEnabled: boolean; discoveredNames: string[] }) => void;
   onToggleQaBuiltinTool?: (id: QaBuiltinToolToggleId, nextEnabled: boolean) => void;
   /** When true (e.g. Azure Foundry agent selected), QA model + tools controls are disabled. */
   qaToolsDisabled?: boolean;
@@ -277,6 +278,7 @@ export default function ChatInput({
   qaMcpToolsMenuOpen = false,
   onQaMcpToolsMenuOpenChange,
   onToggleQaMcpTool,
+  onToggleQaMcpServer,
   onToggleQaBuiltinTool,
   qaToolsDisabled = false,
 }: ChatInputProps) {
@@ -1093,45 +1095,71 @@ export default function ChatInput({
                                       qaMcpToolsPanel.servers.length === 0 && (
                                         <p className="p-1 text-xs text-gray-400">{t('chat_mcpTools_noMcpServers')}</p>
                                       )}
-                                    {qaMcpToolsPanel.servers.map(server => (
-                                      <div key={server.id} className="mb-3 last:mb-0">
-                                        <p className="break-all px-1 font-mono text-[11px] font-semibold">
-                                          {server.name}
-                                        </p>
-                                        {server.error && (
-                                          <p
-                                            className={`mt-0.5 px-1 text-[11px] ${isDarkMode ? 'text-amber-300' : 'text-amber-700'}`}>
-                                            {server.error}
-                                          </p>
-                                        )}
-                                        <ul className="mt-1 space-y-0.5">
-                                          {server.tools.map(tool => (
-                                            <li key={`${server.id}:${tool.name}`}>
-                                              <label
-                                                className={`flex cursor-pointer items-center gap-2 rounded px-1 py-0.5 text-xs hover:bg-black/10 ${isDarkMode ? 'hover:bg-white/10' : ''}`}>
-                                                <input
-                                                  type="checkbox"
-                                                  checked={tool.enabled}
-                                                  disabled={
-                                                    disabled || qaMcpToolsPanel.loading || Boolean(server.error)
-                                                  }
-                                                  onChange={e =>
-                                                    onToggleQaMcpTool({
-                                                      serverId: server.id,
-                                                      toolName: tool.name,
-                                                      nextEnabled: e.target.checked,
-                                                      discoveredNames: server.tools.map(t => t.name),
-                                                    })
-                                                  }
-                                                  className="rounded border-gray-400"
-                                                />
-                                                <span className="truncate font-mono">{tool.name}</span>
-                                              </label>
-                                            </li>
-                                          ))}
-                                        </ul>
-                                      </div>
-                                    ))}
+                                    {qaMcpToolsPanel.servers.map(server => {
+                                      const allEnabled = server.tools.length > 0 && server.tools.every(t => t.enabled);
+                                      const someEnabled = server.tools.some(t => t.enabled);
+                                      return (
+                                        <div key={server.id} className="mb-3 last:mb-0">
+                                          <label
+                                            className={`flex cursor-pointer items-center gap-2 break-all rounded px-1 py-1 text-sm font-bold hover:bg-black/10 ${isDarkMode ? 'hover:bg-white/10' : ''}`}>
+                                            <input
+                                              type="checkbox"
+                                              checked={allEnabled}
+                                              ref={el => {
+                                                if (el) el.indeterminate = !allEnabled && someEnabled;
+                                              }}
+                                              disabled={
+                                                disabled ||
+                                                qaMcpToolsPanel.loading ||
+                                                Boolean(server.error) ||
+                                                server.tools.length === 0
+                                              }
+                                              onChange={e =>
+                                                onToggleQaMcpServer?.({
+                                                  serverId: server.id,
+                                                  nextEnabled: e.target.checked,
+                                                  discoveredNames: server.tools.map(t => t.name),
+                                                })
+                                              }
+                                              className="rounded border-gray-400"
+                                            />
+                                            {server.name}
+                                          </label>
+                                          {server.error && (
+                                            <p
+                                              className={`mt-0.5 px-1 text-[11px] ${isDarkMode ? 'text-amber-300' : 'text-amber-700'}`}>
+                                              {server.error}
+                                            </p>
+                                          )}
+                                          <ul className="mt-1 space-y-0.5">
+                                            {server.tools.map(tool => (
+                                              <li key={`${server.id}:${tool.name}`}>
+                                                <label
+                                                  className={`flex cursor-pointer items-center gap-2 rounded px-1 py-0.5 text-xs hover:bg-black/10 ${isDarkMode ? 'hover:bg-white/10' : ''}`}>
+                                                  <input
+                                                    type="checkbox"
+                                                    checked={tool.enabled}
+                                                    disabled={
+                                                      disabled || qaMcpToolsPanel.loading || Boolean(server.error)
+                                                    }
+                                                    onChange={e =>
+                                                      onToggleQaMcpTool({
+                                                        serverId: server.id,
+                                                        toolName: tool.name,
+                                                        nextEnabled: e.target.checked,
+                                                        discoveredNames: server.tools.map(t => t.name),
+                                                      })
+                                                    }
+                                                    className="rounded border-gray-400"
+                                                  />
+                                                  <span className="truncate font-mono">{tool.name}</span>
+                                                </label>
+                                              </li>
+                                            ))}
+                                          </ul>
+                                        </div>
+                                      );
+                                    })}
                                   </div>
                                 </div>
                                 <div className="border-t border-inherit p-2">
