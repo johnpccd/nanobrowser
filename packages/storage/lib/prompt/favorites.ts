@@ -7,7 +7,7 @@ const defaultFavoritePrompts = [
   {
     title: '📝 Summarize',
     content:
-      'Summarize the current page content. Extract the main points and provide a concise summary of the key information.',
+      'Summarize the current page content. Extract the main points and provide a concise summary of the key information. Max 5 paragraphs. Bullet points are preferred.',
   },
   {
     title: '🔍 Analyze Error',
