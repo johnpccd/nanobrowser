@@ -297,6 +297,8 @@ export default function ChatInput({
   const qaModelSelectRef = useRef<HTMLSelectElement>(null);
   const qaPersonaSelectRef = useRef<HTMLSelectElement>(null);
 
+  const showAgentGlow = isQAMode && showStopButton;
+
   /** Fixed geometry for portaled MCP menu (escapes overflow-hidden + paints above header). */
   const [mcpMenuFixedStyle, setMcpMenuFixedStyle] = useState<CSSProperties | null>(null);
 
@@ -362,7 +364,14 @@ export default function ChatInput({
     if (setTextareaRef) {
       setTextareaRef(textareaRef.current);
     }
-  }, [setTextareaRef]);
+  }, [setTextareaRef, showAgentGlow]);
+
+  // Keep focus in QA mode when the agent glow wrapper activates (showStopButton toggles on submit).
+  useLayoutEffect(() => {
+    if (isQAMode && showAgentGlow && !disabled) {
+      textareaRef.current?.focus();
+    }
+  }, [isQAMode, showAgentGlow, disabled]);
 
   // Initial resize when component mounts
   useEffect(() => {
@@ -535,8 +544,6 @@ export default function ChatInput({
     root.appendChild(inner);
     document.body.appendChild(root);
   }, []);
-
-  const showAgentGlow = isQAMode && showStopButton;
 
   const agentGlowSpinBackground = isDarkMode
     ? 'conic-gradient(from 0deg, #38bdf8, #0ea5e9, #818cf8, #22d3ee, #38bdf8)'
@@ -1222,17 +1229,17 @@ export default function ChatInput({
     </form>
   );
 
-  if (!showAgentGlow) {
-    return form;
-  }
-
+  // Always use the same outer wrapper so toggling the glow on submit does not remount the form/textarea.
   return (
-    <div className="relative isolate overflow-hidden rounded-xl p-[2px] animate-qa-input-glow">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute left-1/2 top-1/2 z-0 aspect-square w-[280%] max-w-none animate-qa-glow-spin"
-        style={{ background: agentGlowSpinBackground }}
-      />
+    <div
+      className={`relative isolate overflow-hidden rounded-xl ${showAgentGlow ? 'p-[2px] animate-qa-input-glow' : ''}`}>
+      {showAgentGlow ? (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute left-1/2 top-1/2 z-0 aspect-square w-[280%] max-w-none animate-qa-glow-spin"
+          style={{ background: agentGlowSpinBackground }}
+        />
+      ) : null}
       {form}
     </div>
   );
