@@ -200,7 +200,7 @@
     "message": "Capture page screenshot"
   },
   "chat_imageCapture_tooltip": {
-    "message": "Capture a screenshot of the current page to include with your message"
+    "message": "Capture a screenshot of the current page or paste an image (Ctrl+V) to include with your message"
   },
   "chat_imageCapture_label": {
     "message": "Capture"
@@ -216,6 +216,9 @@
   },
   "chat_imageCapture_failed": {
     "message": "Failed to capture screenshot. Please try again."
+  },
+  "chat_imageCapture_pasteFailed": {
+    "message": "Failed to paste image from clipboard. Please try again."
   },
   "chat_imageCapture_viewFull": {
     "message": "View full image"

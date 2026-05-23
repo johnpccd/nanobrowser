@@ -1854,6 +1854,18 @@ const SidePanel = () => {
     }
   }, [isCapturingImage, setupConnection, appendMessage]);
 
+  const handleAddCapturedImage = useCallback((image: string) => {
+    setCapturedImages(prev => [...prev, image]);
+  }, []);
+
+  const handleImageAttachError = useCallback(() => {
+    appendMessage({
+      actor: Actors.SYSTEM,
+      content: t('chat_imageCapture_pasteFailed'),
+      timestamp: Date.now(),
+    });
+  }, [appendMessage]);
+
   // Remove a single captured screenshot by index. Passing no index clears all.
   const handleRemoveCapturedImage = useCallback((index?: number) => {
     if (index === undefined) {
@@ -2463,6 +2475,8 @@ const SidePanel = () => {
                           textareaRef.current = ref;
                         }}
                         onCaptureImage={mode === 'qa' ? handleCaptureImage : undefined}
+                        onAddCapturedImage={mode === 'qa' ? handleAddCapturedImage : undefined}
+                        onImageAttachError={mode === 'qa' ? handleImageAttachError : undefined}
                         capturedImages={capturedImages}
                         onRemoveCapturedImage={handleRemoveCapturedImage}
                         isCapturingImage={isCapturingImage}
@@ -2531,6 +2545,8 @@ const SidePanel = () => {
                         textareaRef.current = ref;
                       }}
                       onCaptureImage={mode === 'qa' ? handleCaptureImage : undefined}
+                      onAddCapturedImage={mode === 'qa' ? handleAddCapturedImage : undefined}
+                      onImageAttachError={mode === 'qa' ? handleImageAttachError : undefined}
                       capturedImages={capturedImages}
                       onRemoveCapturedImage={handleRemoveCapturedImage}
                       isCapturingImage={isCapturingImage}

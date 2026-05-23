@@ -243,7 +243,7 @@ QA-only toolbar:
 - Page content toggle (tab vs generic chat).
 - Web search toggle (web assist).
 - Tools menu: built-in toggles + per-MCP-tool switches (disabled for Foundry).
-- Screenshot capture, file attach, microphone (speech) hooks.
+- Screenshot capture, clipboard image paste (Ctrl+V), file attach, microphone (speech) hooks.
 - Tool count badge via `qaEnabledToolCount`.
 
 ### Options page (`Options.tsx`)

@@ -80,6 +80,9 @@ interface ChatInputProps {
   setTextareaRef?: (ref: HTMLTextAreaElement | null) => void;
   // Image capture — supports multiple screenshots per message.
   onCaptureImage?: () => Promise<string | null>;
+  /** Append a base64 JPEG image (same format as page capture). Used for clipboard paste. */
+  onAddCapturedImage?: (base64: string) => void;
+  onImageAttachError?: () => void;
   capturedImages?: string[];
   /** Pass an index to remove a single screenshot; omit to clear all. */
   onRemoveCapturedImage?: (index?: number) => void;
@@ -111,6 +114,25 @@ interface AttachedFile {
   name: string;
   content: string;
   type: string;
+}
+
+/** Convert a clipboard/file image to JPEG base64 (no data: prefix), matching screenshot capture format. */
+async function imageBlobToJpegBase64(blob: Blob): Promise<string> {
+  const bitmap = await createImageBitmap(blob);
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Canvas not available');
+    ctx.drawImage(bitmap, 0, 0);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+    const base64 = dataUrl.split(',')[1];
+    if (!base64) throw new Error('Failed to encode image');
+    return base64;
+  } finally {
+    bitmap.close();
+  }
 }
 
 function qaBuiltinToolDescription(id: QaBuiltinToolToggleId): string {
@@ -266,6 +288,8 @@ export default function ChatInput({
   onPersonaChange,
   setTextareaRef,
   onCaptureImage,
+  onAddCapturedImage,
+  onImageAttachError,
   capturedImages = [],
   onRemoveCapturedImage,
   isCapturingImage = false,
@@ -448,6 +472,34 @@ export default function ChatInput({
       }
     },
     [handleSubmit],
+  );
+
+  const handlePaste = useCallback(
+    async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      if (disabled || !onAddCapturedImage) return;
+
+      const items = e.clipboardData?.items;
+      if (!items?.length) return;
+
+      const imageItem = Array.from(items).find(item => item.type.startsWith('image/'));
+      if (!imageItem) return;
+
+      e.preventDefault();
+      const file = imageItem.getAsFile();
+      if (!file) {
+        onImageAttachError?.();
+        return;
+      }
+
+      try {
+        const base64 = await imageBlobToJpegBase64(file);
+        onAddCapturedImage(base64);
+      } catch (error) {
+        console.error('Failed to paste image from clipboard:', error);
+        onImageAttachError?.();
+      }
+    },
+    [disabled, onAddCapturedImage, onImageAttachError],
   );
 
   const handleReplay = useCallback(() => {
@@ -733,6 +785,7 @@ export default function ChatInput({
           value={text}
           onChange={handleTextChange}
           onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
           disabled={disabled}
           aria-disabled={disabled}
           rows={5}

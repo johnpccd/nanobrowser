@@ -200,7 +200,7 @@
     "message": "Cattura screenshot della pagina"
   },
   "chat_imageCapture_tooltip": {
-    "message": "Cattura uno screenshot della pagina corrente da includere nel tuo messaggio"
+    "message": "Cattura uno screenshot della pagina corrente o incolla un'immagine (Ctrl+V) da includere nel messaggio"
   },
   "chat_imageCapture_label": {
     "message": "Catturare"
@@ -216,6 +216,9 @@
   },
   "chat_imageCapture_failed": {
     "message": "Impossibile acquisire lo screenshot. "
+  },
+  "chat_imageCapture_pasteFailed": {
+    "message": "Impossibile incollare l'immagine dagli appunti. Riprova."
   },
   "chat_imageCapture_viewFull": {
     "message": "Visualizza l'immagine completa"

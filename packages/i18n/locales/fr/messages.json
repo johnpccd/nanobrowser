@@ -200,7 +200,7 @@
     "message": "Capturer une capture d'écran de la page"
   },
   "chat_imageCapture_tooltip": {
-    "message": "Capturer la page visible pour l'inclure dans votre message"
+    "message": "Capturer la page visible ou coller une image (Ctrl+V) pour l'inclure dans votre message"
   },
   "chat_imageCapture_label": {
     "message": "Capturer"
@@ -216,6 +216,9 @@
   },
   "chat_imageCapture_failed": {
     "message": "Échec de la capture d'écran. Veuillez réessayer."
+  },
+  "chat_imageCapture_pasteFailed": {
+    "message": "Impossible de coller l'image depuis le presse-papiers. Veuillez réessayer."
   },
   "chat_imageCapture_viewFull": {
     "message": "Voir l'image en grand"

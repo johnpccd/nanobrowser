@@ -61,7 +61,7 @@ Success means a user can install Nanobrowser, configure one QA model, and get ac
 ### Page grounding
 
 - As a user, I can toggle **Include page content** so that the model sees markdown from the active tab (or turn it off for generic chat).
-- As a user, I can **capture one or more screenshots** and send them with a message so that vision-capable QA models can analyze images.
+- As a user, I can **capture one or more screenshots** or **paste images from the clipboard (Ctrl+V)** and send them with a message so that vision-capable QA models can analyze images.
 
 ### Models and personas
 

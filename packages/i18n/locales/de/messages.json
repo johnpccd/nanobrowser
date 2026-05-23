@@ -200,7 +200,7 @@
     "message": "Capture page screenshot"
   },
   "chat_imageCapture_tooltip": {
-    "message": "Capture a screenshot of the current page to include with your message"
+    "message": "Screenshot der aktuellen Seite aufnehmen oder ein Bild einfügen (Strg+V), um es der Nachricht beizufügen"
   },
   "chat_imageCapture_label": {
     "message": "Capture"
@@ -216,6 +216,9 @@
   },
   "chat_imageCapture_failed": {
     "message": "Failed to capture screenshot. Please try again."
+  },
+  "chat_imageCapture_pasteFailed": {
+    "message": "Bild aus der Zwischenablage konnte nicht eingefügt werden. Bitte erneut versuchen."
   },
   "chat_imageCapture_viewFull": {
     "message": "View full image"
