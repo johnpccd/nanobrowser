@@ -268,8 +268,8 @@
   "chat_mcpTools_mcpServers_heading": {
     "message": "Remote MCP servers"
   },
-  "chat_mcpTools_builtin_needsSearxng": {
-    "message": "Configure a SearXNG base URL in General settings for this tool to be exposed to the model."
+  "chat_mcpTools_builtin_needsTinyfish": {
+    "message": "Configure a TinyFish API key in General settings for this tool to be exposed to the model."
   },
   "chat_mcpTools_noMcpServers": {
     "message": "No MCP servers with an endpoint are configured."
@@ -278,10 +278,10 @@
     "message": "Extended reasoning text the model can emit before answering."
   },
   "chat_mcpTools_builtin_desc_webSearch": {
-    "message": "Search the web via your SearXNG instance."
+    "message": "Search the web via TinyFish Search API."
   },
   "chat_mcpTools_builtin_desc_fetchUrl": {
-    "message": "Fetch and read page content via your SearXNG instance."
+    "message": "Fetch and read page content via TinyFish Fetch API."
   },
   "chat_pageContent_toggle": {
     "message": "Toggle page content"
@@ -548,7 +548,7 @@
     "message": "QA built-in tools"
   },
   "options_mcp_qaBuiltin_desc": {
-    "message": "Choose which first-party QA tools the model may use alongside MCP servers. Thinking is reasoning-only; web tools require QA “web search” mode in chat (toolbar toggle / default preference) and a configured SearXNG base URL in General settings."
+    "message": "Choose which first-party QA tools the model may use alongside MCP servers. Thinking is reasoning-only; web tools require QA “web search” mode in chat (toolbar toggle / default preference) and a configured TinyFish API key in General settings."
   },
   "options_mcp_qaBuiltin_thinking": {
     "message": "Thinking (`thinking`)"
@@ -560,13 +560,13 @@
     "message": "Web search (`web_search`)"
   },
   "options_mcp_qaBuiltin_webSearch_desc": {
-    "message": "When web assist is enabled for a reply, expose SearXNG web search."
+    "message": "When web assist is enabled for a reply, expose TinyFish web search."
   },
   "options_mcp_qaBuiltin_fetchUrl": {
     "message": "Fetch URL (`fetch_url`)"
   },
   "options_mcp_qaBuiltin_fetchUrl_desc": {
-    "message": "When web assist is enabled for a reply, expose readable-page fetch via Jina Reader for http(s) URLs."
+    "message": "When web assist is enabled for a reply, expose readable-page fetch via TinyFish Fetch for http(s) URLs."
   },
   "options_mcp_addServer": {
     "message": "Add server"
@@ -776,73 +776,55 @@
     "message": "Enable QA Web Search"
   },
   "options_general_enableWebSearch_desc": {
-    "message": "Allow QA mode to fetch fresh search results from your SearXNG instance for web/current questions."
+    "message": "Allow QA mode to fetch fresh search results from TinyFish Search for web/current questions."
   },
   "options_general_enableWebSearch_a11y": {
     "message": "Enable QA Web Search"
   },
-  "options_general_searxngBaseUrl": {
-    "message": "SearXNG Base URL"
+  "options_general_tinyfishApiKey": {
+    "message": "TinyFish API Key"
   },
-  "options_general_searxngBaseUrl_desc": {
-    "message": "Example: https://search.yourdomain.com"
+  "options_general_tinyfishApiKey_desc": {
+    "message": "Required for web_search and fetch_url tools. Get your free API key at search.tinyfish.ai"
   },
-  "options_general_searxngBaseUrl_placeholder": {
-    "message": "https://search.yourdomain.com"
+  "options_general_tinyfishApiKey_a11y": {
+    "message": "TinyFish API Key"
   },
-  "options_general_searxngBaseUrl_a11y": {
-    "message": "SearXNG Base URL"
-  },
-  "options_general_searxngApiKey": {
-    "message": "SearXNG API Key"
-  },
-  "options_general_searxngApiKey_desc": {
-    "message": "Optional. Leave blank if your instance allows public JSON search requests."
-  },
-  "options_general_searxngApiKey_a11y": {
-    "message": "SearXNG API Key"
+  "options_general_tinyfishApiKey_placeholder": {
+    "message": "Enter your TinyFish API key"
   },
   "options_general_optionalPlaceholder": {
     "message": "Optional"
   },
-  "options_general_jinaReaderApiKey": {
-    "message": "Jina Reader API Key"
-  },
-  "options_general_jinaReaderApiKey_desc": {
-    "message": "Optional. Used by the QA read_url tool to open result links with higher Jina Reader rate limits."
-  },
-  "options_general_jinaReaderApiKey_a11y": {
-    "message": "Jina Reader API Key"
-  },
-  "options_general_searxngMaxResults": {
+  "options_general_tinyfishMaxResults": {
     "message": "Search Result Count"
   },
-  "options_general_searxngMaxResults_desc": {
-    "message": "How many web results QA mode should include from SearXNG per search."
+  "options_general_tinyfishMaxResults_desc": {
+    "message": "How many web results QA mode should include from TinyFish Search per search."
   },
-  "options_general_searxngMaxResults_a11y": {
+  "options_general_tinyfishMaxResults_a11y": {
     "message": "Search Result Count"
   },
-  "options_general_searxngIntegrationTest": {
+  "options_general_tinyfishIntegrationTest": {
     "message": "Integration Test"
   },
-  "options_general_searxngIntegrationTest_desc": {
+  "options_general_tinyfishIntegrationTest_desc": {
     "message": "Sends a real test search through the extension background worker and verifies usable results come back."
   },
-  "options_general_searxngTestButton": {
-    "message": "Test SearXNG"
+  "options_general_tinyfishTestButton": {
+    "message": "Test TinyFish"
   },
-  "options_general_searxngTestTesting": {
+  "options_general_tinyfishTestTesting": {
     "message": "Testing..."
   },
-  "options_general_searxngTest_noUrl": {
-    "message": "Enter a SearXNG base URL first."
+  "options_general_tinyfishTest_noApiKey": {
+    "message": "Enter a TinyFish API key first."
   },
-  "options_general_searxngTest_failed": {
-    "message": "SearXNG test failed."
+  "options_general_tinyfishTest_failed": {
+    "message": "TinyFish test failed."
   },
-  "options_general_searxngTest_ok": {
-    "message": "SearXNG integration test passed using \"$QUERY$\". Parsed $COUNT$ result(s).$FIRST$",
+  "options_general_tinyfishTest_ok": {
+    "message": "TinyFish integration test passed using \"$QUERY$\". Parsed $COUNT$ result(s).$FIRST$",
     "placeholders": {
       "query": {
         "content": "$1",
@@ -858,7 +840,7 @@
       }
     }
   },
-  "options_general_searxngTest_firstResult": {
+  "options_general_tinyfishTest_firstResult": {
     "message": " First result: $TITLE$ ($URL$)",
     "placeholders": {
       "title": {
