@@ -1,33 +1,36 @@
-export interface SearxngSearchConfig {
+export interface TinyfishSearchConfig {
   enabled: boolean;
-  baseUrl: string;
-  apiKey?: string;
+  apiKey: string;
   maxResults: number;
 }
 
-export interface SearxngSearchResult {
+export interface TinyfishSearchResult {
   title: string;
   url: string;
   content: string;
-  engine?: string;
-  score?: number;
+  siteName?: string;
+  position?: number;
+  date?: string;
 }
 
-interface SearxngSearchResponse {
-  results?: Array<{
-    title?: string;
-    url?: string;
-    content?: string;
-    engine?: string;
-    score?: number;
+interface TinyfishSearchResponse {
+  query: string;
+  results: Array<{
+    position: number;
+    site_name: string;
+    title: string;
+    snippet: string;
+    url: string;
+    date?: string;
   }>;
+  total_results: number;
+  page: number;
 }
 
-function normalizeConfig(config: SearxngSearchConfig): SearxngSearchConfig {
+function normalizeConfig(config: TinyfishSearchConfig): TinyfishSearchConfig {
   return {
     enabled: config.enabled,
-    baseUrl: config.baseUrl.trim().replace(/\/+$/, ''),
-    apiKey: config.apiKey?.trim(),
+    apiKey: config.apiKey.trim(),
     maxResults: Math.min(10, Math.max(1, Math.round(config.maxResults || 5))),
   };
 }
@@ -47,30 +50,24 @@ export function shouldUseWebSearch(query: string, includePageContent: boolean): 
   );
 }
 
-export async function searchSearxng(
+export async function searchTinyfish(
   query: string,
-  config: SearxngSearchConfig,
+  config: TinyfishSearchConfig,
   signal?: AbortSignal,
-): Promise<SearxngSearchResult[]> {
+): Promise<TinyfishSearchResult[]> {
   const normalizedConfig = normalizeConfig(config);
 
-  if (!normalizedConfig.enabled || !normalizedConfig.baseUrl) {
+  if (!normalizedConfig.enabled || !normalizedConfig.apiKey) {
     return [];
   }
 
-  const searchUrl = new URL(`${normalizedConfig.baseUrl}/search`);
-  searchUrl.searchParams.set('q', query);
-  searchUrl.searchParams.set('format', 'json');
-  searchUrl.searchParams.set('language', 'en-US');
-  searchUrl.searchParams.set('safesearch', '1');
+  const searchUrl = new URL('https://api.search.tinyfish.ai');
+  searchUrl.searchParams.set('query', query);
 
   const headers: HeadersInit = {
     Accept: 'application/json',
+    'X-API-Key': normalizedConfig.apiKey,
   };
-
-  if (normalizedConfig.apiKey) {
-    headers.Authorization = `Bearer ${normalizedConfig.apiKey}`;
-  }
 
   const response = await fetch(searchUrl.toString(), {
     method: 'GET',
@@ -79,10 +76,10 @@ export async function searchSearxng(
   });
 
   if (!response.ok) {
-    throw new Error(`SearXNG request failed with status ${response.status}`);
+    throw new Error(`TinyFish Search request failed with status ${response.status}`);
   }
 
-  const data = (await response.json()) as SearxngSearchResponse;
+  const data = (await response.json()) as TinyfishSearchResponse;
   const results = data.results ?? [];
 
   return results
@@ -91,13 +88,14 @@ export async function searchSearxng(
     .map(result => ({
       title: result.title ?? '',
       url: result.url ?? '',
-      content: result.content ?? '',
-      engine: result.engine,
-      score: result.score,
+      content: result.snippet ?? '',
+      siteName: result.site_name,
+      position: result.position,
+      date: result.date,
     }));
 }
 
-export function formatSearchResultsForPrompt(results: SearxngSearchResult[]): string {
+export function formatSearchResultsForPrompt(results: TinyfishSearchResult[]): string {
   if (results.length === 0) {
     return '';
   }
@@ -106,8 +104,8 @@ export function formatSearchResultsForPrompt(results: SearxngSearchResult[]): st
     .map((result, index) => {
       const lines = [`[${index + 1}] ${result.title}`, `URL: ${result.url}`];
 
-      if (result.engine) {
-        lines.push(`Engine: ${result.engine}`);
+      if (result.siteName) {
+        lines.push(`Source: ${result.siteName}`);
       }
 
       if (result.content) {

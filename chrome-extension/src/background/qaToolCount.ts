@@ -15,11 +15,11 @@ export async function computeQaEnabledToolCount(): Promise<number> {
   if (general.qaEnableThinkingTool) {
     count += 1;
   }
-  const hasSearxng = Boolean(general.searxngBaseUrl?.trim());
-  if (general.qaEnableWebSearchTool && hasSearxng) {
+  const hasTinyfish = Boolean(general.tinyfishApiKey?.trim());
+  if (general.qaEnableWebSearchTool && hasTinyfish) {
     count += 1;
   }
-  if (general.qaEnableFetchUrlTool && hasSearxng) {
+  if (general.qaEnableFetchUrlTool && hasTinyfish) {
     count += 1;
   }
 

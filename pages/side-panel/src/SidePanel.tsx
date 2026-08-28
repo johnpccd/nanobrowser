@@ -55,7 +55,7 @@ import './SidePanel.css';
 import { useUiLocaleSync } from './hooks/useUiLocaleSync';
 
 function qaBuiltinRowsFromGeneral(g: GeneralSettingsConfig): QaBuiltinToolPanelRow[] {
-  const hasSearxng = Boolean(g.searxngBaseUrl?.trim());
+  const hasTinyfish = Boolean(g.tinyfishApiKey?.trim());
   return [
     {
       id: 'thinking',
@@ -65,12 +65,12 @@ function qaBuiltinRowsFromGeneral(g: GeneralSettingsConfig): QaBuiltinToolPanelR
     {
       id: 'web_search',
       prefEnabled: g.qaEnableWebSearchTool,
-      exposesToModel: g.qaEnableWebSearchTool && hasSearxng,
+      exposesToModel: g.qaEnableWebSearchTool && hasTinyfish,
     },
     {
       id: 'fetch_url',
       prefEnabled: g.qaEnableFetchUrlTool,
-      exposesToModel: g.qaEnableFetchUrlTool && hasSearxng,
+      exposesToModel: g.qaEnableFetchUrlTool && hasTinyfish,
     },
   ];
 }

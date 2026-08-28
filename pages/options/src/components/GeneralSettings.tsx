@@ -12,8 +12,8 @@ interface GeneralSettingsProps {
 
 export const GeneralSettings = ({ isDarkMode = false }: GeneralSettingsProps) => {
   const [settings, setSettings] = useState<GeneralSettingsConfig>(DEFAULT_GENERAL_SETTINGS);
-  const [isTestingSearxng, setIsTestingSearxng] = useState(false);
-  const [searxngTestResult, setSearxngTestResult] = useState<{
+  const [isTestingTinyfish, setIsTestingTinyfish] = useState(false);
+  const [tinyfishTestResult, setTinyfishTestResult] = useState<{
     ok: boolean;
     message: string;
   } | null>(null);
@@ -36,51 +36,50 @@ export const GeneralSettings = ({ isDarkMode = false }: GeneralSettingsProps) =>
     setSettings(latestSettings);
   };
 
-  const testSearxngConnection = async () => {
-    if (!settings.searxngBaseUrl.trim()) {
-      setSearxngTestResult({
+  const testTinyfishConnection = async () => {
+    if (!settings.tinyfishApiKey.trim()) {
+      setTinyfishTestResult({
         ok: false,
-        message: t('options_general_searxngTest_noUrl'),
+        message: t('options_general_tinyfishTest_noApiKey'),
       });
       return;
     }
 
-    setIsTestingSearxng(true);
-    setSearxngTestResult(null);
+    setIsTestingTinyfish(true);
+    setTinyfishTestResult(null);
 
     try {
       const response = await chrome.runtime.sendMessage({
-        type: 'test_searxng',
+        type: 'test_tinyfish',
         config: {
-          baseUrl: settings.searxngBaseUrl,
-          apiKey: settings.searxngApiKey,
-          maxResults: settings.searxngMaxResults,
+          apiKey: settings.tinyfishApiKey,
+          maxResults: settings.tinyfishMaxResults,
         },
       });
 
       if (!response?.ok) {
-        setSearxngTestResult({
+        setTinyfishTestResult({
           ok: false,
-          message: response?.error || t('options_general_searxngTest_failed'),
+          message: response?.error || t('options_general_tinyfishTest_failed'),
         });
         return;
       }
 
       const firstResult = response.firstResult
-        ? t('options_general_searxngTest_firstResult', [response.firstResult.title, response.firstResult.url])
+        ? t('options_general_tinyfishTest_firstResult', [response.firstResult.title, response.firstResult.url])
         : '';
 
-      setSearxngTestResult({
+      setTinyfishTestResult({
         ok: true,
-        message: t('options_general_searxngTest_ok', [response.query, String(response.resultCount), firstResult]),
+        message: t('options_general_tinyfishTest_ok', [response.query, String(response.resultCount), firstResult]),
       });
     } catch (error) {
-      setSearxngTestResult({
+      setTinyfishTestResult({
         ok: false,
-        message: error instanceof Error ? error.message : t('options_general_searxngTest_failed'),
+        message: error instanceof Error ? error.message : t('options_general_tinyfishTest_failed'),
       });
     } finally {
-      setIsTestingSearxng(false);
+      setIsTestingTinyfish(false);
     }
   };
 
@@ -436,43 +435,21 @@ export const GeneralSettings = ({ isDarkMode = false }: GeneralSettingsProps) =>
             <div className="flex items-center justify-between gap-4">
               <div className="flex-1">
                 <h3 className={`text-base font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  {t('options_general_searxngBaseUrl')}
+                  {t('options_general_tinyfishApiKey')}
                 </h3>
                 <p className={`text-sm font-normal ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  {t('options_general_searxngBaseUrl_desc')}
+                  {t('options_general_tinyfishApiKey_desc')}
                 </p>
               </div>
-              <label htmlFor="searxngBaseUrl" className="sr-only">
-                {t('options_general_searxngBaseUrl_a11y')}
+              <label htmlFor="tinyfishApiKey" className="sr-only">
+                {t('options_general_tinyfishApiKey_a11y')}
               </label>
               <input
-                id="searxngBaseUrl"
-                type="url"
-                value={settings.searxngBaseUrl}
-                onChange={e => updateSetting('searxngBaseUrl', e.target.value)}
-                placeholder={t('options_general_searxngBaseUrl_placeholder')}
-                className={`w-72 rounded-md border ${isDarkMode ? 'border-slate-600 bg-slate-700 text-gray-200' : 'border-gray-300 bg-white text-gray-700'} px-3 py-2`}
-              />
-            </div>
-
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex-1">
-                <h3 className={`text-base font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  {t('options_general_searxngApiKey')}
-                </h3>
-                <p className={`text-sm font-normal ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  {t('options_general_searxngApiKey_desc')}
-                </p>
-              </div>
-              <label htmlFor="searxngApiKey" className="sr-only">
-                {t('options_general_searxngApiKey_a11y')}
-              </label>
-              <input
-                id="searxngApiKey"
+                id="tinyfishApiKey"
                 type="password"
-                value={settings.searxngApiKey}
-                onChange={e => updateSetting('searxngApiKey', e.target.value)}
-                placeholder={t('options_general_optionalPlaceholder')}
+                value={settings.tinyfishApiKey}
+                onChange={e => updateSetting('tinyfishApiKey', e.target.value)}
+                placeholder={t('options_general_tinyfishApiKey_placeholder')}
                 className={`w-72 rounded-md border ${isDarkMode ? 'border-slate-600 bg-slate-700 text-gray-200' : 'border-gray-300 bg-white text-gray-700'} px-3 py-2`}
               />
             </div>
@@ -480,44 +457,22 @@ export const GeneralSettings = ({ isDarkMode = false }: GeneralSettingsProps) =>
             <div className="flex items-center justify-between gap-4">
               <div className="flex-1">
                 <h3 className={`text-base font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  {t('options_general_jinaReaderApiKey')}
+                  {t('options_general_tinyfishMaxResults')}
                 </h3>
                 <p className={`text-sm font-normal ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  {t('options_general_jinaReaderApiKey_desc')}
+                  {t('options_general_tinyfishMaxResults_desc')}
                 </p>
               </div>
-              <label htmlFor="jinaReaderApiKey" className="sr-only">
-                {t('options_general_jinaReaderApiKey_a11y')}
+              <label htmlFor="tinyfishMaxResults" className="sr-only">
+                {t('options_general_tinyfishMaxResults_a11y')}
               </label>
               <input
-                id="jinaReaderApiKey"
-                type="password"
-                value={settings.jinaReaderApiKey}
-                onChange={e => updateSetting('jinaReaderApiKey', e.target.value)}
-                placeholder={t('options_general_optionalPlaceholder')}
-                className={`w-72 rounded-md border ${isDarkMode ? 'border-slate-600 bg-slate-700 text-gray-200' : 'border-gray-300 bg-white text-gray-700'} px-3 py-2`}
-              />
-            </div>
-
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex-1">
-                <h3 className={`text-base font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  {t('options_general_searxngMaxResults')}
-                </h3>
-                <p className={`text-sm font-normal ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  {t('options_general_searxngMaxResults_desc')}
-                </p>
-              </div>
-              <label htmlFor="searxngMaxResults" className="sr-only">
-                {t('options_general_searxngMaxResults_a11y')}
-              </label>
-              <input
-                id="searxngMaxResults"
+                id="tinyfishMaxResults"
                 type="number"
                 min={1}
                 max={10}
-                value={settings.searxngMaxResults}
-                onChange={e => updateSetting('searxngMaxResults', Number.parseInt(e.target.value, 10))}
+                value={settings.tinyfishMaxResults}
+                onChange={e => updateSetting('tinyfishMaxResults', Number.parseInt(e.target.value, 10))}
                 className={`w-20 rounded-md border ${isDarkMode ? 'border-slate-600 bg-slate-700 text-gray-200' : 'border-gray-300 bg-white text-gray-700'} px-3 py-2`}
               />
             </div>
@@ -525,31 +480,31 @@ export const GeneralSettings = ({ isDarkMode = false }: GeneralSettingsProps) =>
             <div className="flex items-center justify-between gap-4">
               <div className="flex-1">
                 <h3 className={`text-base font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  {t('options_general_searxngIntegrationTest')}
+                  {t('options_general_tinyfishIntegrationTest')}
                 </h3>
                 <p className={`text-sm font-normal ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  {t('options_general_searxngIntegrationTest_desc')}
+                  {t('options_general_tinyfishIntegrationTest_desc')}
                 </p>
               </div>
               <button
                 type="button"
-                onClick={testSearxngConnection}
-                disabled={isTestingSearxng || !settings.searxngBaseUrl.trim()}
+                onClick={testTinyfishConnection}
+                disabled={isTestingTinyfish || !settings.tinyfishApiKey.trim()}
                 className={`rounded-md px-4 py-2 text-sm font-medium ${
-                  isTestingSearxng || !settings.searxngBaseUrl.trim()
+                  isTestingTinyfish || !settings.tinyfishApiKey.trim()
                     ? 'cursor-not-allowed bg-gray-300 text-gray-600'
                     : isDarkMode
                       ? 'bg-sky-600 text-white hover:bg-sky-500'
                       : 'bg-sky-500 text-white hover:bg-sky-600'
                 }`}>
-                {isTestingSearxng ? t('options_general_searxngTestTesting') : t('options_general_searxngTestButton')}
+                {isTestingTinyfish ? t('options_general_tinyfishTestTesting') : t('options_general_tinyfishTestButton')}
               </button>
             </div>
 
-            {searxngTestResult && (
+            {tinyfishTestResult && (
               <div
                 className={`rounded-md border px-3 py-2 text-sm ${
-                  searxngTestResult.ok
+                  tinyfishTestResult.ok
                     ? isDarkMode
                       ? 'border-emerald-700 bg-emerald-950/40 text-emerald-300'
                       : 'border-emerald-200 bg-emerald-50 text-emerald-700'
@@ -557,7 +512,7 @@ export const GeneralSettings = ({ isDarkMode = false }: GeneralSettingsProps) =>
                       ? 'border-rose-700 bg-rose-950/40 text-rose-300'
                       : 'border-rose-200 bg-rose-50 text-rose-700'
                 }`}>
-                {searxngTestResult.message}
+                {tinyfishTestResult.message}
               </div>
             )}
           </div>

@@ -27,18 +27,15 @@ export interface GeneralSettingsConfig {
   qaEnableThinkingTool: boolean;
   /**
    * When QA “web assist” is on (sidebar toggle / default preference), expose `web_search`
-   * if SearXNG base URL is configured.
+   * if TinyFish API key is configured.
    */
   qaEnableWebSearchTool: boolean;
   /**
-   * When QA web assist is on, expose `fetch_url` if SearXNG base URL is configured
-   * (same gating as today for registering these tools together).
+   * When QA web assist is on, expose `fetch_url` if TinyFish API key is configured.
    */
   qaEnableFetchUrlTool: boolean;
-  searxngBaseUrl: string;
-  searxngApiKey: string;
-  searxngMaxResults: number;
-  jinaReaderApiKey: string;
+  tinyfishApiKey: string;
+  tinyfishMaxResults: number;
   /** Max web_search, fetch_url, MCP, and unsupported tool calls per QA answer (thinking excluded). */
   qaMaxNonThinkingToolCalls: number;
   /** Max `thinking` tool calls per QA answer. */
@@ -88,10 +85,8 @@ export const DEFAULT_GENERAL_SETTINGS: GeneralSettingsConfig = {
   qaEnableThinkingTool: true,
   qaEnableWebSearchTool: false,
   qaEnableFetchUrlTool: false,
-  searxngBaseUrl: '',
-  searxngApiKey: '',
-  searxngMaxResults: 5,
-  jinaReaderApiKey: '',
+  tinyfishApiKey: '',
+  tinyfishMaxResults: 5,
   qaMaxNonThinkingToolCalls: 3,
   qaMaxThinkingCalls: 5,
   qaMaxToolRounds: 16,
@@ -173,16 +168,12 @@ export const generalSettingsStore: GeneralSettingsStorage = {
       ...settings,
     };
 
-    if (typeof updatedSettings.searxngBaseUrl === 'string') {
-      updatedSettings.searxngBaseUrl = updatedSettings.searxngBaseUrl.trim().replace(/\/+$/, '');
+    if (typeof updatedSettings.tinyfishApiKey === 'string') {
+      updatedSettings.tinyfishApiKey = updatedSettings.tinyfishApiKey.trim();
     }
 
-    if (typeof updatedSettings.jinaReaderApiKey === 'string') {
-      updatedSettings.jinaReaderApiKey = updatedSettings.jinaReaderApiKey.trim();
-    }
-
-    if (typeof updatedSettings.searxngMaxResults === 'number') {
-      updatedSettings.searxngMaxResults = Math.min(10, Math.max(1, Math.round(updatedSettings.searxngMaxResults)));
+    if (typeof updatedSettings.tinyfishMaxResults === 'number') {
+      updatedSettings.tinyfishMaxResults = Math.min(10, Math.max(1, Math.round(updatedSettings.tinyfishMaxResults)));
     }
 
     if (typeof updatedSettings.uiLocale === 'string' && !UI_LOCALE_VALUES.includes(updatedSettings.uiLocale)) {

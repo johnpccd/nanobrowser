@@ -37,7 +37,7 @@ export interface QaBuiltinToolPanelRow {
   id: QaBuiltinToolToggleId;
   /** Setting from General / MCP Options (toggle state). */
   prefEnabled: boolean;
-  /** Whether the background actually exposes this tool (e.g. SearXNG required for web tools). */
+  /** Whether the background actually exposes this tool (e.g. TinyFish API key required for web tools). */
   exposesToModel: boolean;
 }
 
@@ -1125,7 +1125,7 @@ export default function ChatInput({
                                           {row.prefEnabled && !row.exposesToModel ? (
                                             <p
                                               className={`ml-6 mt-0.5 text-[10px] ${isDarkMode ? 'text-amber-300/95' : 'text-amber-800'}`}>
-                                              {t('chat_mcpTools_builtin_needsSearxng')}
+                                              {t('chat_mcpTools_builtin_needsTinyfish')}
                                             </p>
                                           ) : null}
                                         </li>

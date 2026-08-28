@@ -17,13 +17,13 @@ import { createChatModel } from './agent/helper';
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { DEFAULT_AGENT_OPTIONS } from './agent/types';
 import { SpeechToTextService } from './services/speechToText';
-import { formatSearchResultsForPrompt, searchSearxng } from './services/searxng';
+import { formatSearchResultsForPrompt, searchTinyfish } from './services/tinyfishSearch';
 import { injectBuildDomTreeScripts, getMarkdownContent } from './browser/dom/service';
 import { HumanMessage, SystemMessage, AIMessage, ToolMessage } from '@langchain/core/messages';
 import { DynamicStructuredTool } from '@langchain/core/tools';
 import { Actors, type ToolEvent } from '@extension/storage/lib/chat/types';
 import { z } from 'zod';
-import { readUrlWithJina } from './services/jinaReader';
+import { fetchUrlWithTinyfish } from './services/tinyfishFetch';
 import { discoverMcpTools, executeMcpTool } from './services/mcpClient';
 import { buildFoundryTurnInput, streamFoundryAgentResponse } from './services/foundryAgentClient';
 import {
@@ -441,15 +441,14 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
 
 // Listen for simple messages (e.g., from options page)
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message?.type === 'test_searxng') {
+  if (message?.type === 'test_tinyfish') {
     (async () => {
       try {
         const testQuery = 'OpenAI latest news';
-        const results = await searchSearxng(
+        const results = await searchTinyfish(
           testQuery,
           {
             enabled: true,
-            baseUrl: String(message.config?.baseUrl || ''),
             apiKey: String(message.config?.apiKey || ''),
             maxResults: Number(message.config?.maxResults || 5),
           },
@@ -460,7 +459,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
           sendResponse({
             ok: false,
             error:
-              'The request reached SearXNG, but no usable search results were returned for the test query. Check whether your instance has working engines enabled and whether JSON search is allowed.',
+              'The request reached TinyFish Search, but no usable search results were returned for the test query.',
           });
           return;
         }
@@ -477,7 +476,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       } catch (error) {
         sendResponse({
           ok: false,
-          error: error instanceof Error ? error.message : 'Unknown SearXNG test failure',
+          error: error instanceof Error ? error.message : 'Unknown TinyFish test failure',
         });
       }
     })();
@@ -957,10 +956,10 @@ chrome.runtime.onConnect.addListener(port => {
                   message.enableWebSearch !== undefined
                     ? Boolean(message.enableWebSearch)
                     : generalSettings.enableWebSearch;
-                const hasSearxng = Boolean(generalSettings.searxngBaseUrl?.trim());
+                const hasTinyfish = Boolean(generalSettings.tinyfishApiKey?.trim());
                 const qaEnableThinkingTool = generalSettings.qaEnableThinkingTool;
-                const includeWebSearchTool = wantWebAssist && generalSettings.qaEnableWebSearchTool && hasSearxng;
-                const includeFetchUrlTool = wantWebAssist && generalSettings.qaEnableFetchUrlTool && hasSearxng;
+                const includeWebSearchTool = wantWebAssist && generalSettings.qaEnableWebSearchTool && hasTinyfish;
+                const includeFetchUrlTool = wantWebAssist && generalSettings.qaEnableFetchUrlTool && hasTinyfish;
                 const session = await chatHistoryStore.getSession(sessionId);
                 const foundryAgentId = typeof message.foundryAgentId === 'string' ? message.foundryAgentId.trim() : '';
 
@@ -1065,7 +1064,7 @@ chrome.runtime.onConnect.addListener(port => {
                 const webSearchTool = new DynamicStructuredTool({
                   name: 'web_search',
                   description:
-                    'Search the public web using SearXNG. You must provide the exact query string to search for.',
+                    'Search the public web using TinyFish Search. You must provide the exact query string to search for.',
                   schema: z.object({
                     query: z
                       .string()
@@ -1076,7 +1075,7 @@ chrome.runtime.onConnect.addListener(port => {
                   }),
                   func: async ({ query }) => {
                     const normalizedQuery = query.trim();
-                    const requestDetail = `Query: ${normalizedQuery}\nBase URL: ${generalSettings.searxngBaseUrl}`;
+                    const requestDetail = `Query: ${normalizedQuery}\nProvider: TinyFish Search`;
                     const toolRunId = crypto.randomUUID();
 
                     emitQAToolEvent(
@@ -1095,13 +1094,12 @@ chrome.runtime.onConnect.addListener(port => {
                     );
 
                     try {
-                      const webSearchResults = await searchSearxng(
+                      const webSearchResults = await searchTinyfish(
                         normalizedQuery,
                         {
                           enabled: true,
-                          baseUrl: generalSettings.searxngBaseUrl,
-                          apiKey: generalSettings.searxngApiKey,
-                          maxResults: generalSettings.searxngMaxResults,
+                          apiKey: generalSettings.tinyfishApiKey,
+                          maxResults: generalSettings.tinyfishMaxResults,
                         },
                         abortController.signal,
                       );
@@ -1148,13 +1146,13 @@ chrome.runtime.onConnect.addListener(port => {
                 const fetchUrlTool = new DynamicStructuredTool({
                   name: 'fetch_url',
                   description:
-                    'Fetch readable page content for a specific public http/https URL using Jina Reader. Use this after search when you need the underlying page content.',
+                    'Fetch readable page content for a specific public http/https URL using TinyFish Fetch. Use this after search when you need the underlying page content.',
                   schema: z.object({
                     url: z.string().url().describe('The exact public http or https URL to fetch'),
                   }),
                   func: async ({ url }) => {
                     const normalizedUrl = url.trim();
-                    const requestDetail = `URL: ${normalizedUrl}`;
+                    const requestDetail = `URL: ${normalizedUrl}\nProvider: TinyFish Fetch`;
                     const toolRunId = crypto.randomUUID();
 
                     emitQAToolEvent(
@@ -1173,10 +1171,10 @@ chrome.runtime.onConnect.addListener(port => {
                     );
 
                     try {
-                      const result = await readUrlWithJina(
+                      const result = await fetchUrlWithTinyfish(
                         normalizedUrl,
                         {
-                          apiKey: generalSettings.jinaReaderApiKey,
+                          apiKey: generalSettings.tinyfishApiKey,
                         },
                         abortController.signal,
                       );

@@ -268,7 +268,7 @@
   "chat_mcpTools_mcpServers_heading": {
     "message": "Server MCP remoti"
   },
-  "chat_mcpTools_builtin_needsSearxng": {
+  "chat_mcpTools_builtin_needsTinyfish": {
     "message": "Configura un URL di base SearXNG nelle Impostazioni generali affinché questo strumento venga esposto al modello."
   },
   "chat_mcpTools_noMcpServers": {

@@ -268,7 +268,7 @@
   "chat_mcpTools_mcpServers_heading": {
     "message": "Serveurs MCP distants"
   },
-  "chat_mcpTools_builtin_needsSearxng": {
+  "chat_mcpTools_builtin_needsTinyfish": {
     "message": "Configurez une URL de base SearXNG dans les paramètres généraux pour exposer cet outil au modèle."
   },
   "chat_mcpTools_noMcpServers": {
@@ -566,7 +566,7 @@
     "message": "Récupération d'URL (`fetch_url`)"
   },
   "options_mcp_qaBuiltin_fetchUrl_desc": {
-    "message": "Lorsque l'assistance web est activée pour une réponse, exposer la récupération de page lisible via Jina Reader pour les URL http(s)."
+    "message": "Lorsque l'assistance web est activée pour une réponse, exposer la récupération de page lisible via TinyFish Fetch pour les URL http(s)."
   },
   "options_mcp_addServer": {
     "message": "Ajouter un serveur"
